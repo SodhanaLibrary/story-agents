@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# Storage (generated content)
+storage/avatars/*
+storage/pages/*
+!storage/avatars/.gitkeep
+!storage/pages/.gitkeep
+
+# Output
+output/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+node_modules/
+.env
+
