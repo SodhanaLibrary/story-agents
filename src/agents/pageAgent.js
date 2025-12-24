@@ -2,12 +2,13 @@ import { generateJsonResponse } from "../services/ai.js";
 
 /**
  * Page Agent - Generates story pages with text and image descriptions
+ * with enhanced character consistency across all illustrations
  */
 export class PageAgent {
   constructor() {
     this.name = "PageAgent";
     this.description =
-      "Generates story pages with text, image descriptions, and character references";
+      "Generates story pages with text, image descriptions, and consistent character references";
   }
 
   /**
@@ -21,18 +22,26 @@ export class PageAgent {
     const pageCount = options.pageCount || 8;
     const targetAudience = options.targetAudience || "children";
 
+    // Build detailed character reference with consistency tags
     const characterList = characters
-      .map((c) => `- ${c.name} (${c.role}): ${c.description}`)
+      .map((c) => {
+        const consistencyTag =
+          c.consistencyTag ||
+          c.avatarPrompt?.substring(0, 100) ||
+          c.description;
+        return `- ${c.name} (${c.role}): ${c.description}\n  VISUAL ID: ${consistencyTag}`;
+      })
       .join("\n");
 
-    const systemPrompt = `You are a professional storybook creator.
+    const systemPrompt = `You are a professional storybook creator focused on DYNAMIC, ACTION-FILLED illustrations with VISUAL CONSISTENCY.
 Your task is to break down a story into illustrated pages for a ${targetAudience}'s book.
 
 For each page, provide:
-1. The text/narrative for that page (appropriate length for the target audience)
-2. A detailed image description for illustration
+1. The text/narrative for that page
+2. A detailed image description that captures the ACTION and EMOTION of the moment
 3. List of characters appearing on that page
-4. Scene description and mood
+4. The specific ACTION happening (what characters are DOING)
+5. Scene description, mood, and emotion
 
 Return a JSON object with this structure:
 {
@@ -44,38 +53,46 @@ Return a JSON object with this structure:
     {
       "pageNumber": 1,
       "text": "The narrative text for this page",
-      "imageDescription": "Detailed description for image generation - CHARACTERS FIRST, then background",
+      "action": "SPECIFIC action happening - verb-driven (e.g., 'running through the forest', 'hugging tightly', 'climbing the tree')",
+      "emotion": "The emotional expression (e.g., 'terrified', 'overjoyed', 'curious', 'determined')",
+      "imageDescription": "Dynamic scene description focusing on CHARACTER ACTION and EMOTION",
       "characters": ["Character Name 1", "Character Name 2"],
-      "scene": "Brief scene description",
+      "scene": "The setting/location",
       "mood": "emotional tone of the page"
     }
   ]
 }
 
-Available characters:
+CHARACTER REFERENCE (use these EXACT visual descriptions):
 ${characterList}
 
-CRITICAL IMAGE DESCRIPTION GUIDELINES:
-- START with character descriptions - their poses, expressions, actions, and emotions
-- Characters should be described as PROMINENT, and in the FOREGROUND and should occupy less than 30% of the frame.
-- Describe character details: facial expressions, body language, what they're doing
-- THEN describe the background/environment briefly - keep it simple and supportive
-- Background should be described as "soft", "atmospheric", or "subtle" - never overpowering
-- Example good format: "[Character] stands in the foreground, eyes wide with wonder, reaching out excitedly. Behind them, a soft, dreamy forest glade with gentle light filtering through."
-- Example bad format: "A vast magical forest with towering trees and glowing mushrooms, where [Character] can be seen."
+CRITICAL: CAPTURE THE STORY ACTION IN EACH IMAGE
+Each imageDescription MUST include:
+1. WHO: Character with their visual ID (brief - just key identifiers like hair color, outfit)
+2. WHAT: The SPECIFIC ACTION they are doing (running, jumping, crying, laughing, reaching, falling, etc.)
+3. HOW: Their EMOTION and body language (eyes wide with fear, grinning with excitement, shoulders slumped with sadness)
+4. WHERE: Brief background context
 
-General Guidelines:
-- Keep page text concise and engaging
-- Characters are the STARS - describe them prominently
-- Ensure character consistency by referencing their established descriptions
-- Create a clear narrative flow across pages
-- Include a mix of action, dialogue, and descriptive scenes`;
+EXAMPLE GOOD imageDescription:
+"Luna, the girl with long silver hair in a blue cloak, is LEAPING across the stepping stones, arms outstretched for balance, her face lit with determination. Behind her, a misty river with glowing fireflies."
+
+EXAMPLE BAD imageDescription:
+"Luna stands in the forest. She has silver hair and wears a blue cloak. The forest is beautiful with trees."
+
+The action words (LEAPING, REACHING, CRYING, LAUGHING, RUNNING, HIDING) are what make illustrations come ALIVE!
+
+CONSISTENCY RULES:
+- Same hair color, outfit, and features across ALL pages
+- Use EXACT same color words every time
+
+ACTION VERBS TO USE: running, jumping, climbing, falling, reaching, hugging, crying, laughing, hiding, discovering, gasping, pointing, dancing, spinning, crawling, swimming, flying, fighting, sleeping, eating, playing, building, breaking, opening, closing, pulling, pushing, throwing, catching`;
 
     const userPrompt = `Create ${pageCount} illustrated pages for the following story:
 
 ${story}
 
-Break it down into engaging pages suitable for ${targetAudience}, with detailed image descriptions for each page.`;
+Break it down into engaging pages suitable for ${targetAudience}. 
+IMPORTANT: Each page illustration MUST capture a SPECIFIC ACTION moment from the story - characters DOING something dynamic, not just standing or posing.`;
 
     const response = await generateJsonResponse([
       { role: "system", content: systemPrompt },
@@ -86,7 +103,35 @@ Break it down into engaging pages suitable for ${targetAudience}, with detailed 
   }
 
   /**
-   * Enhances image descriptions with character visual details
+   * Builds a concise character visual reference (just key identifiers)
+   * @param {object} character - Character object
+   * @returns {string} - Short visual identifier
+   */
+  buildShortCharacterRef(character) {
+    if (!character) return "";
+
+    // Use consistencyTag if available (already short)
+    if (character.consistencyTag) {
+      return character.consistencyTag;
+    }
+
+    // Build from visual identity
+    const vi = character.visualIdentity;
+    if (vi) {
+      const parts = [];
+      if (vi.hairColor) parts.push(`${vi.hairColor} hair`);
+      if (vi.primaryOutfit?.top) parts.push(vi.primaryOutfit.top);
+      if (vi.distinctiveFeatures?.[0]) parts.push(vi.distinctiveFeatures[0]);
+      if (parts.length > 0) return parts.join(", ");
+    }
+
+    // Fallback: extract key details from avatarPrompt
+    const prompt = character.avatarPrompt || character.description || "";
+    return prompt.substring(0, 60);
+  }
+
+  /**
+   * Enhances image descriptions with ACTION-focused structure
    * @param {object} storyPages - Story pages object
    * @param {Array} characters - Characters with avatar descriptions
    * @returns {object} - Enhanced story pages
@@ -98,19 +143,47 @@ Break it down into engaging pages suitable for ${targetAudience}, with detailed 
     });
 
     const enhancedPages = storyPages.pages.map((page) => {
-      let enhancedDescription = page.imageDescription;
+      // Get action and emotion from page (new fields we're adding)
+      const action = page.action || "";
+      const emotion = page.emotion || page.mood || "";
 
-      // Add character visual details to image description
-      page.characters.forEach((charName) => {
-        const character = characterMap.get(charName.toLowerCase());
-        if (character) {
-          enhancedDescription += ` ${charName} appears as: ${character.avatarPrompt}.`;
-        }
-      });
+      // Build character references with their visual IDs
+      const charRefs = (page.characters || [])
+        .map((charName) => {
+          const character = characterMap.get(charName.toLowerCase());
+          if (!character) return charName;
+          const shortRef = this.buildShortCharacterRef(character);
+          return `${charName} (${shortRef})`;
+        })
+        .join("; ");
+
+      // Build the ACTION-focused description
+      // Structure: [WHO with visual ID] is [ACTION] with [EMOTION]. [SCENE CONTEXT]
+      let enhancedDescription;
+
+      if (action && charRefs) {
+        // Best case: we have action and characters
+        enhancedDescription = `${charRefs} - ACTION: ${action}, EMOTION: ${emotion}. ${page.imageDescription}`;
+      } else if (charRefs) {
+        // We have characters but action is embedded in imageDescription
+        enhancedDescription = `${charRefs}. ${page.imageDescription}`;
+      } else {
+        // Fallback to original
+        enhancedDescription = page.imageDescription;
+      }
+
+      // Add scene context if available
+      if (page.scene && !enhancedDescription.includes(page.scene)) {
+        enhancedDescription += ` Setting: ${page.scene}.`;
+      }
 
       return {
         ...page,
         imageDescription: enhancedDescription,
+        originalDescription: page.imageDescription,
+        charactersInScene: page.characters || [],
+        action: action,
+        emotion: emotion,
         enhancedForGeneration: true,
       };
     });

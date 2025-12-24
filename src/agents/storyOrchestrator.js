@@ -71,8 +71,11 @@ export class StoryOrchestrator {
     try {
       // Phase 0: Determine Art Style
       logger.step(1, 5, "Art Style Selection");
-      this.callbacks.onPhaseStart("art_style_selection", "Analyzing story for best art style...");
-      
+      this.callbacks.onPhaseStart(
+        "art_style_selection",
+        "Analyzing story for best art style..."
+      );
+
       let artStylePrompt;
       let artStyleKey;
 
@@ -88,7 +91,10 @@ export class StoryOrchestrator {
         };
       } else if (this.options.artStyleKey) {
         // User selected a predefined style
-        const styleDecision = await this.artStyleAgent.decideStyle(story, this.options.artStyleKey);
+        const styleDecision = await this.artStyleAgent.decideStyle(
+          story,
+          this.options.artStyleKey
+        );
         artStylePrompt = styleDecision.stylePrompt;
         artStyleKey = styleDecision.selectedStyle;
         result.artStyleDecision = styleDecision;
@@ -110,29 +116,46 @@ export class StoryOrchestrator {
         };
       }
 
-      this.callbacks.onPhaseComplete("art_style_selection", result.artStyleDecision);
+      this.callbacks.onPhaseComplete(
+        "art_style_selection",
+        result.artStyleDecision
+      );
       logger.success(`Art style selected: ${artStyleKey}`);
 
       // Phase 1: Extract Characters
       logger.step(2, 5, "Character Extraction");
-      this.callbacks.onPhaseStart("character_extraction", "Extracting characters from story...");
+      this.callbacks.onPhaseStart(
+        "character_extraction",
+        "Extracting characters from story..."
+      );
       result.characters = await this.characterAgent.extractCharacters(story);
       this.callbacks.onPhaseComplete("character_extraction", result.characters);
       logger.success(`Extracted ${result.characters.length} characters`);
 
       // Phase 2: Generate Avatars (with art style)
       logger.step(3, 5, "Avatar Generation");
-      this.callbacks.onPhaseStart("avatar_generation", "Generating character avatars...");
+      this.callbacks.onPhaseStart(
+        "avatar_generation",
+        "Generating character avatars..."
+      );
       // Enhance avatar prompts with selected art style
       const charactersWithStyle = result.characters.map((char) => ({
         ...char,
-        avatarPrompt: this.artStyleAgent.enhancePromptWithStyle(char.avatarPrompt, artStyleKey),
+        avatarPrompt: this.artStyleAgent.enhancePromptWithStyle(
+          char.avatarPrompt,
+          artStyleKey
+        ),
       }));
       result.characters = await this.avatarAgent.generateAvatars(
         charactersWithStyle,
         (name, current, total) => {
           logger.debug(`Avatar ${current}/${total}: ${name}`);
-          this.callbacks.onProgress("avatar", `Generating avatar for ${name}`, current, total);
+          this.callbacks.onProgress(
+            "avatar",
+            `Generating avatar for ${name}`,
+            current,
+            total
+          );
         }
       );
       this.callbacks.onPhaseComplete("avatar_generation", result.characters);
@@ -160,22 +183,43 @@ export class StoryOrchestrator {
 
       // Phase 4: Generate Page Illustrations
       logger.step(5, 5, "Illustration Generation");
-      this.callbacks.onPhaseStart("illustration_generation", "Creating page illustrations...");
+      this.callbacks.onPhaseStart(
+        "illustration_generation",
+        "Creating page illustrations..."
+      );
+
+      // Set character reference for consistent illustrations across all pages
+      this.illustrationAgent.setCharacterReference(result.characters);
+      logger.debug("Character reference set for illustration consistency");
+
       result.storyPages = await this.illustrationAgent.generateAllIllustrations(
         result.storyPages,
         { artStyle: artStylePrompt },
         (pageNum, current, total) => {
           logger.debug(`Illustration ${current}/${total}: Page ${pageNum}`);
-          this.callbacks.onProgress("illustration", `Illustrating page ${pageNum}`, current, total);
+          this.callbacks.onProgress(
+            "illustration",
+            `Illustrating page ${pageNum}`,
+            current,
+            total
+          );
         }
       );
-      this.callbacks.onPhaseComplete("illustration_generation", result.storyPages);
-      logger.success("All page illustrations generated");
+      this.callbacks.onPhaseComplete(
+        "illustration_generation",
+        result.storyPages
+      );
+      logger.success(
+        "All page illustrations generated with character consistency"
+      );
 
       // Phase 5: Generate Cover (optional)
       if (this.options.generateCover) {
         logger.info("Generating cover illustration...");
-        this.callbacks.onPhaseStart("cover_generation", "Creating book cover...");
+        this.callbacks.onPhaseStart(
+          "cover_generation",
+          "Creating book cover..."
+        );
         result.cover = await this.illustrationAgent.generateCoverIllustration(
           result.storyPages,
           result.characters,
@@ -191,7 +235,10 @@ export class StoryOrchestrator {
         key: artStyleKey,
         prompt: artStylePrompt,
       };
-      const outputPath = await saveJson(result, `story_output_${Date.now()}.json`);
+      const outputPath = await saveJson(
+        result,
+        `story_output_${Date.now()}.json`
+      );
       result.outputPaths.fullOutput = outputPath;
 
       logger.section("Story Generation Complete");
@@ -228,25 +275,44 @@ export class StoryOrchestrator {
 
     return {
       characters,
-      storyPages: this.pageAgent.enhanceImageDescriptions(storyPages, characters),
+      storyPages: this.pageAgent.enhanceImageDescriptions(
+        storyPages,
+        characters
+      ),
     };
   }
 
   /**
-   * Regenerates a specific page illustration
+   * Regenerates a specific page illustration with character consistency
    * @param {object} page - Page object
    * @param {string} storyTitle - Story title
    * @param {string} artStyleKey - Art style to use
+   * @param {Array} characters - Character array for consistency (optional if already set)
    * @returns {Promise<object>} - Updated page with new illustration
    */
-  async regeneratePageIllustration(page, storyTitle, artStyleKey = null) {
+  async regeneratePageIllustration(
+    page,
+    storyTitle,
+    artStyleKey = null,
+    characters = null
+  ) {
     const artStyle = artStyleKey
       ? this.artStyleAgent.getStylePrompt(artStyleKey)
-      : this.options.artStyle || this.artStyleAgent.getStylePrompt("illustration");
+      : this.options.artStyle ||
+        this.artStyleAgent.getStylePrompt("illustration");
 
-    return await this.illustrationAgent.generatePageIllustration(page, storyTitle, {
-      artStyle,
-    });
+    // Ensure character reference is set for consistency
+    if (characters) {
+      this.illustrationAgent.setCharacterReference(characters);
+    }
+
+    return await this.illustrationAgent.generatePageIllustration(
+      page,
+      storyTitle,
+      {
+        artStyle,
+      }
+    );
   }
 
   /**

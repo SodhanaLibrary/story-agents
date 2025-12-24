@@ -17,19 +17,19 @@ AI-powered story generation system that creates illustrated storybooks using Ope
 
 The system supports 11 distinct art styles:
 
-| Style | Description | Best For |
-|-------|-------------|----------|
-| **Illustration** | Classic children's book style | Children's stories, fairy tales |
-| **Cartoon** | Fun, exaggerated with bold colors | Comedy, adventure |
-| **Comic** | Western comic book style | Action, superhero |
-| **Webtoon** | Korean webtoon style | Romance, drama |
-| **Manga** | Japanese manga style | Drama, fantasy |
-| **Graphic Novel** | Sophisticated, mature artwork | Literary, noir |
-| **Caricature** | Exaggerated features | Comedy, satire |
-| **Anime** | Japanese anime aesthetic | Fantasy, magical |
-| **Concept Art** | Professional concept art | Sci-fi, world-building |
-| **Chibi** | Cute, super-deformed | Kawaii content |
-| **Storyboard** | Cinematic style | Action, dramatic |
+| Style             | Description                       | Best For                        |
+| ----------------- | --------------------------------- | ------------------------------- |
+| **Illustration**  | Classic children's book style     | Children's stories, fairy tales |
+| **Cartoon**       | Fun, exaggerated with bold colors | Comedy, adventure               |
+| **Comic**         | Western comic book style          | Action, superhero               |
+| **Webtoon**       | Korean webtoon style              | Romance, drama                  |
+| **Manga**         | Japanese manga style              | Drama, fantasy                  |
+| **Graphic Novel** | Sophisticated, mature artwork     | Literary, noir                  |
+| **Caricature**    | Exaggerated features              | Comedy, satire                  |
+| **Anime**         | Japanese anime aesthetic          | Fantasy, magical                |
+| **Concept Art**   | Professional concept art          | Sci-fi, world-building          |
+| **Chibi**         | Cute, super-deformed              | Kawaii content                  |
+| **Storyboard**    | Cinematic style                   | Action, dramatic                |
 
 ## Installation
 
@@ -46,10 +46,25 @@ npm run mobile:install
 ```
 
 Create a `.env` file with your configuration:
+
 ```env
 # OpenAI API Configuration
 OPENAI_API_KEY=your_key_here
 LOG_LEVEL=info  # Options: debug, info, warn, error, silent
+
+# Choose provider: "openai" or "gemini"
+AI_PROVIDER=gemini
+# Gemini configuration
+GEMINI_API_KEY=gemini api key here
+GEMINI_MODEL=gemini-2.0-flash
+GEMINI_IMAGE_MODEL=imagen-3.0-generate-002
+
+# Login with google
+WEB_GOOGLE_CLIENT_ID=google client id
+WEB_GOOGLE_PROJECT_ID=google project id
+WEB_GOOGLE_AUTH_URI=https://accounts.google.com/o/oauth2/auth
+WEB_GOOGLE_TOKEN_URI=https://oauth2.googleapis.com/token
+WEB_GOOGLE_CLIENT_SECRET=client secret here
 
 # MySQL Database Configuration
 DB_HOST=localhost
@@ -63,11 +78,13 @@ DB_NAME=story_agents
 
 1. **Install MySQL** if not already installed
 2. **Create the database**:
+
 ```bash
 mysql -u root -p < database/schema.sql
 ```
 
 Or manually create the database:
+
 ```sql
 CREATE DATABASE story_agents CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
@@ -75,11 +92,13 @@ CREATE DATABASE story_agents CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 The application will automatically create tables on first start.
 
 Create a `web/.env` file for Google OAuth:
+
 ```env
 VITE_GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
 ```
 
 **To get a Google Client ID:**
+
 1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 2. Create a new project or select existing one
 3. Go to Credentials > Create Credentials > OAuth 2.0 Client ID
@@ -106,6 +125,7 @@ npm run web
 Then open http://localhost:3000 in your browser.
 
 **Web App Features:**
+
 1. Write your story or use a sample
 2. AI analyzes and recommends art style
 3. Choose from 11 styles or let AI decide
@@ -148,17 +168,17 @@ npm run generate -- --styles
 ### Programmatic Usage
 
 ```javascript
-import { createStoryGenerator, generateStory } from './src/index.js';
+import { createStoryGenerator, generateStory } from "./src/index.js";
 
 // Auto-detect best style
 const result = await generateStory(myStory);
 
 // Use specific style
-const result = await generateStory(myStory, { artStyleKey: 'manga' });
+const result = await generateStory(myStory, { artStyleKey: "manga" });
 
 // Custom style
-const result = await generateStory(myStory, { 
-  artStyle: 'watercolor, dreamy, soft colors' 
+const result = await generateStory(myStory, {
+  artStyle: "watercolor, dreamy, soft colors",
 });
 ```
 
@@ -209,26 +229,30 @@ story-agents/
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/styles` | GET | Get all available art styles |
-| `/api/analyze-style` | POST | Analyze story and get style recommendation |
-| `/api/generate` | POST | Start story generation job |
-| `/api/job/:jobId` | GET | Get job status and result |
-| `/api/health` | GET | Health check |
+| Endpoint             | Method | Description                                |
+| -------------------- | ------ | ------------------------------------------ |
+| `/api/styles`        | GET    | Get all available art styles               |
+| `/api/analyze-style` | POST   | Analyze story and get style recommendation |
+| `/api/generate`      | POST   | Start story generation job                 |
+| `/api/job/:jobId`    | GET    | Get job status and result                  |
+| `/api/health`        | GET    | Health check                               |
 
 ## Screenshots
 
 ### Story Input
+
 Write your story or choose from samples. Set number of pages.
 
 ### Style Selection
+
 AI recommendation with confidence score. 11 art styles to choose from.
 
 ### Generation Progress
+
 Real-time progress tracking with phase indicators.
 
 ### Story Viewer
+
 Browse illustrated pages, view character avatars, download story data.
 
 ## Logging
@@ -237,17 +261,18 @@ The application includes a comprehensive logging system with support for differe
 
 ### Log Levels
 
-| Level | Description |
-|-------|-------------|
-| `debug` | Detailed debugging info (API calls, token counts) |
-| `info` | General operational info (default) |
-| `warn` | Warning messages |
-| `error` | Error messages only |
-| `silent` | No logging |
+| Level    | Description                                       |
+| -------- | ------------------------------------------------- |
+| `debug`  | Detailed debugging info (API calls, token counts) |
+| `info`   | General operational info (default)                |
+| `warn`   | Warning messages                                  |
+| `error`  | Error messages only                               |
+| `silent` | No logging                                        |
 
 ### Configuration
 
 Set the log level via environment variable:
+
 ```bash
 # In .env file
 LOG_LEVEL=debug
@@ -259,19 +284,19 @@ LOG_LEVEL=debug npm run server
 ### Programmatic Usage
 
 ```javascript
-import { createLogger } from './src/utils/logger.js';
+import { createLogger } from "./src/utils/logger.js";
 
-const logger = createLogger('MyModule');
+const logger = createLogger("MyModule");
 
-logger.debug('Detailed info');
-logger.info('General info');
-logger.warn('Warning message');
-logger.error('Error occurred');
-logger.success('Operation completed');
-logger.step(1, 5, 'Processing step 1');
-logger.section('New Section');
-logger.json('Data object:', { key: 'value' });
-logger.prompt('API Call', messages, { model: 'gpt-4o' });
+logger.debug("Detailed info");
+logger.info("General info");
+logger.warn("Warning message");
+logger.error("Error occurred");
+logger.success("Operation completed");
+logger.step(1, 5, "Processing step 1");
+logger.section("New Section");
+logger.json("Data object:", { key: "value" });
+logger.prompt("API Call", messages, { model: "gpt-4o" });
 ```
 
 ## API Costs
