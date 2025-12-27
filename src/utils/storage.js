@@ -66,6 +66,17 @@ export async function ensureStorageDirectories() {
 }
 
 /**
+ * Gets the storage path for a given type
+ * @param {string} type - Type of storage ('avatar' or 'page')
+ * @returns {string} - Storage directory path
+ */
+export function getStoragePath(type) {
+  return type === "avatar"
+    ? config.storage.avatarsPath
+    : config.storage.pagesPath;
+}
+
+/**
  * Saves an image from base64 data to storage
  * @param {string} base64Data - Base64 encoded image data
  * @param {string} type - Type of image ('avatar' or 'page')
@@ -207,6 +218,7 @@ export async function deleteStory(storyIdOrFilename) {
 
 export default {
   ensureStorageDirectories,
+  getStoragePath,
   saveImage,
   saveImageFromUrl,
   deleteImage,

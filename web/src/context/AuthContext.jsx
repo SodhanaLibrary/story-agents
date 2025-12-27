@@ -52,6 +52,7 @@ export function AuthProvider({ children }) {
         };
         setUser(userData);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+        console.log("User logged in, ID saved in context:", data.user.id);
         return userData;
       } else {
         // Fallback to just JWT data if backend auth fails

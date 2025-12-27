@@ -63,7 +63,17 @@ export async function logPrompt(logData) {
     status = "success",
     errorMessage,
     metadata,
+    // Allow direct passing of context values (overrides global context)
+    jobId,
+    storyId,
+    userId,
   } = logData;
+
+  // Use passed values if provided, otherwise fall back to global context
+  const effectiveJobId = jobId !== undefined ? jobId : currentContext.jobId;
+  const effectiveStoryId =
+    storyId !== undefined ? storyId : currentContext.storyId;
+  const effectiveUserId = userId !== undefined ? userId : currentContext.userId;
 
   try {
     const result = await query(
@@ -85,9 +95,9 @@ export async function logPrompt(logData) {
         toNull(durationMs),
         status,
         toNull(errorMessage),
-        toNull(currentContext.jobId),
-        toNull(currentContext.storyId),
-        toNull(currentContext.userId),
+        toNull(effectiveJobId),
+        toNull(effectiveStoryId),
+        toNull(effectiveUserId),
         metadata ? JSON.stringify(metadata) : null,
       ]
     );
@@ -119,6 +129,10 @@ export async function getPromptLogs(filters = {}) {
     offset = 0,
   } = filters;
 
+  // Ensure limit and offset are integers for MySQL prepared statements
+  const limitInt = parseInt(limit, 10) || 100;
+  const offsetInt = parseInt(offset, 10) || 0;
+
   let sql = "SELECT * FROM prompt_logs WHERE 1=1";
   const params = [];
 
@@ -138,46 +152,65 @@ export async function getPromptLogs(filters = {}) {
     sql += " AND job_id = ?";
     params.push(jobId);
   }
-  if (storyId) {
+  if (storyId && !isNaN(parseInt(storyId, 10))) {
     sql += " AND story_id = ?";
-    params.push(storyId);
+    params.push(parseInt(storyId, 10));
   }
-  if (userId) {
+  if (userId && !isNaN(parseInt(userId, 10))) {
     sql += " AND user_id = ?";
-    params.push(userId);
+    params.push(parseInt(userId, 10));
   }
   if (status) {
     sql += " AND status = ?";
     params.push(status);
   }
 
-  sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
-  params.push(limit, offset);
+  sql += " ORDER BY created_at DESC LIMIT " + limitInt + " OFFSET " + offsetInt;
+
+  logger.debug(`Executing query: ${sql}`);
+  logger.debug(`With params: ${JSON.stringify(params)}`);
 
   const logs = await query(sql, params);
 
-  return logs.map((log) => ({
-    id: log.id,
-    provider: log.provider,
-    model: log.model,
-    requestType: log.request_type,
-    promptMessages: log.prompt_messages
-      ? JSON.parse(log.prompt_messages)
-      : null,
-    promptText: log.prompt_text,
-    responseText: log.response_text,
-    tokensInput: log.tokens_input,
-    tokensOutput: log.tokens_output,
-    tokensTotal: log.tokens_total,
-    durationMs: log.duration_ms,
-    status: log.status,
-    errorMessage: log.error_message,
-    jobId: log.job_id,
-    storyId: log.story_id,
-    userId: log.user_id,
-    metadata: log.metadata ? JSON.parse(log.metadata) : null,
-    createdAt: log.created_at,
-  }));
+  return logs.map((log) => {
+    // Handle JSON fields - MySQL2 may auto-parse JSON columns
+    let promptMessages = null;
+    if (log.prompt_messages) {
+      promptMessages =
+        typeof log.prompt_messages === "string"
+          ? JSON.parse(log.prompt_messages)
+          : log.prompt_messages;
+    }
+
+    let metadata = null;
+    if (log.metadata) {
+      metadata =
+        typeof log.metadata === "string"
+          ? JSON.parse(log.metadata)
+          : log.metadata;
+    }
+
+    return {
+      id: log.id,
+      provider: log.provider,
+      model: log.model,
+      requestType: log.request_type,
+      promptMessages,
+      promptText: log.prompt_text,
+      responseText: log.response_text,
+      tokensInput: log.tokens_input,
+      tokensOutput: log.tokens_output,
+      tokensTotal: log.tokens_total,
+      durationMs: log.duration_ms,
+      status: log.status,
+      errorMessage: log.error_message,
+      jobId: log.job_id,
+      storyId: log.story_id,
+      userId: log.user_id,
+      metadata,
+      createdAt: log.created_at,
+    };
+  });
 }
 
 /**
@@ -193,9 +226,9 @@ export async function getPromptStats(filters = {}) {
       provider,
       model,
       request_type,
-      COUNT(*) as count,
-      SUM(tokens_total) as total_tokens,
-      AVG(duration_ms) as avg_duration,
+      COUNT(*) as total_requests,
+      SUM(COALESCE(tokens_total, 0)) as total_tokens_total,
+      AVG(COALESCE(duration_ms, 0)) as avg_duration_ms,
       SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) as error_count
     FROM prompt_logs
     WHERE 1=1

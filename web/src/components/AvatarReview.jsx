@@ -62,6 +62,7 @@ function AvatarReview({ jobId, onApprove, onBack }) {
           data.status === "characters_ready" ||
           data.status === "avatars_ready" ||
           data.status === "pages_ready" ||
+          data.status === "pages_text_ready" ||
           data.status === "error"
         ) {
           setLoading(false);
@@ -82,7 +83,8 @@ function AvatarReview({ jobId, onApprove, onBack }) {
     if (
       job?.status === "characters_ready" ||
       job?.status === "avatars_ready" ||
-      job?.status === "pages_ready"
+      job?.status === "pages_ready" ||
+      job?.status === "pages_text_ready"
     ) {
       // Only initialize if not already set (to preserve user changes)
       if (Object.keys(approvedAvatars).length === 0) {

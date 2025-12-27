@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import config from "../config.js";
 import { createLogger } from "../utils/logger.js";
-import { logPrompt } from "./promptLogger.js";
+import { logPrompt, getContext } from "./promptLogger.js";
 
 const logger = createLogger("Gemini");
 
@@ -31,6 +31,8 @@ export async function generateCompletion(messages, options = {}) {
   const client = getGeminiClient();
   const modelName = options.model || config.gemini.model;
   const startTime = Date.now();
+  // Capture context at the start of the request
+  const context = getContext();
 
   logger.debug(`Gemini chat completion request (model: ${modelName})`);
 
@@ -53,7 +55,7 @@ export async function generateCompletion(messages, options = {}) {
 
     logger.debug("Gemini chat completion done");
 
-    // Log to database
+    // Log to database with captured context
     logPrompt({
       provider: "gemini",
       model: modelName,
@@ -62,6 +64,7 @@ export async function generateCompletion(messages, options = {}) {
       responseText,
       durationMs,
       status: "success",
+      ...context,
     });
 
     return responseText;
@@ -75,6 +78,7 @@ export async function generateCompletion(messages, options = {}) {
       durationMs,
       status: "error",
       errorMessage: error.message,
+      ...context,
     });
     throw error;
   }
@@ -89,6 +93,8 @@ export async function generateJsonResponse(messages) {
   const client = getGeminiClient();
   const modelName = config.gemini.model;
   const startTime = Date.now();
+  // Capture context at the start of the request
+  const context = getContext();
 
   logger.debug(`Gemini JSON completion request (model: ${modelName})`);
 
@@ -123,6 +129,7 @@ export async function generateJsonResponse(messages) {
       responseText,
       durationMs,
       status: "success",
+      ...context,
     });
 
     return JSON.parse(responseText);
@@ -136,6 +143,7 @@ export async function generateJsonResponse(messages) {
       durationMs,
       status: "error",
       errorMessage: error.message,
+      ...context,
     });
     throw error;
   }
@@ -151,6 +159,8 @@ export async function generateTextResponse(messages, options = {}) {
   const client = getGeminiClient();
   const modelName = options.model || config.gemini.model;
   const startTime = Date.now();
+  // Capture context at the start of the request
+  const context = getContext();
 
   logger.debug(`Gemini text/vision completion request (model: ${modelName})`);
 
@@ -218,6 +228,7 @@ export async function generateTextResponse(messages, options = {}) {
       responseText,
       durationMs,
       status: "success",
+      ...context,
     });
 
     return responseText;
@@ -230,6 +241,7 @@ export async function generateTextResponse(messages, options = {}) {
       durationMs,
       status: "error",
       errorMessage: error.message,
+      ...context,
     });
     throw error;
   }
@@ -245,6 +257,8 @@ export async function generateImage(prompt, options = {}) {
   const client = getGeminiClient();
   const modelName = config.gemini.imageModel;
   const startTime = Date.now();
+  // Capture context at the start of the request
+  const context = getContext();
 
   logger.debug(`Gemini image generation request`);
 
@@ -278,6 +292,7 @@ export async function generateImage(prompt, options = {}) {
           durationMs,
           status: "success",
           metadata: { size: options.size },
+          ...context,
         });
 
         return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
@@ -297,6 +312,7 @@ export async function generateImage(prompt, options = {}) {
       durationMs,
       status: "error",
       errorMessage: error.message,
+      ...context,
     });
 
     throw error;

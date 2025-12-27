@@ -63,17 +63,17 @@ export async function createStory(storyData, userId = null) {
       art_style_reasoning, cover_url, cover_path, page_count, target_audience, status) 
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
     [
-      userId,
-      title,
-      summary,
-      originalStory,
-      artStyleKey,
-      artStylePrompt,
-      artStyleReasoning,
-      coverUrl,
-      coverPath,
-      pageCount,
-      targetAudience || "children",
+      userId ?? null,
+      title ?? null,
+      summary ?? null,
+      originalStory ?? null,
+      artStyleKey ?? null,
+      artStylePrompt ?? null,
+      artStyleReasoning ?? null,
+      coverUrl ?? null,
+      coverPath ?? null,
+      pageCount ?? 0,
+      targetAudience ?? "children",
     ]
   );
 
@@ -206,14 +206,14 @@ export async function createCharacter(storyId, characterData) {
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       storyId,
-      name,
-      role || "supporting",
-      description,
-      avatarPrompt,
-      avatarUrl,
-      avatarPath,
-      customDescription,
-      hasReferenceImage || false,
+      name ?? null,
+      role ?? "supporting",
+      description ?? null,
+      avatarPrompt ?? null,
+      avatarUrl ?? null,
+      avatarPath ?? null,
+      customDescription ?? null,
+      hasReferenceImage ?? false,
     ]
   );
 
@@ -271,12 +271,12 @@ export async function createPage(storyId, pageData) {
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       storyId,
-      pageNumber,
-      text,
-      imageDescription,
-      JSON.stringify(charactersInScene || []),
-      illustrationUrl,
-      illustrationPath,
+      pageNumber ?? 0,
+      text ?? null,
+      imageDescription ?? null,
+      JSON.stringify(charactersInScene ?? []),
+      illustrationUrl ?? null,
+      illustrationPath ?? null,
     ]
   );
 
@@ -342,8 +342,11 @@ export async function saveDraft(jobId, draftData, userId = null) {
   let currentStep = 0;
   if (
     status === "pages_ready" ||
+    status === "pages_text_ready" ||
     phase === "awaiting_page_review" ||
-    phase === "page_generation"
+    phase === "awaiting_prompt_review" ||
+    phase === "page_generation" ||
+    phase === "illustration_generation"
   ) {
     currentStep = 3;
   } else if (
@@ -1087,6 +1090,7 @@ function formatStoryOutput(story, characters, pages) {
 }
 
 function formatDraftOutput(draft) {
+  console.log(draft);
   const currentStep = draft.current_step || 0;
   const phase = draft.phase;
 
@@ -1108,7 +1112,7 @@ function formatDraftOutput(draft) {
 
   // Extract title from story (first line or first 50 chars)
   const storyText = draft.story_text || "";
-  const storyPages = safeJsonParse(draft.story_pages, null);
+  const storyPages = draft.story_pages;
   let title = storyPages?.title;
   if (!title && storyText) {
     const firstLine = storyText.split("\n")[0];
@@ -1128,9 +1132,9 @@ function formatDraftOutput(draft) {
     artStyleKey: draft.art_style_key,
     artStylePrompt: draft.art_style_prompt,
     artStyleDecision: safeJsonParse(draft.art_style_decision, null),
-    characters: safeJsonParse(draft.characters, []),
+    characters: draft.characters,
     storyPages,
-    cover: safeJsonParse(draft.cover, null),
+    cover: draft.cover,
     pageCount: draft.page_count,
     targetAudience: draft.target_audience,
     currentStep,

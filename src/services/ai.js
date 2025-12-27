@@ -87,6 +87,40 @@ export async function generateImage(prompt, options = {}) {
 }
 
 /**
+ * Generates an image using reference images (avatars) for consistency
+ * Uses GPT Image model's images.edit API
+ * @param {string} prompt - Image generation prompt
+ * @param {Array<string>} referenceImagePaths - Array of paths to reference images (avatars)
+ * @param {object} options - Generation options
+ * @returns {Promise<{url: string, base64: string}>} - Generated image data
+ */
+export async function generateImageWithReferences(
+  prompt,
+  referenceImagePaths = [],
+  options = {}
+) {
+  // Always use OpenAI for image editing with references
+  logger.debug(
+    `Using OpenAI for image generation with ${referenceImagePaths.length} references`
+  );
+  return openaiService.generateImageWithReferences(
+    prompt,
+    referenceImagePaths,
+    options
+  );
+}
+
+/**
+ * Saves a base64 image to file
+ * @param {string} base64Data - Base64 encoded image data
+ * @param {string} outputPath - Path to save the image
+ * @returns {string} - Saved file path
+ */
+export function saveBase64Image(base64Data, outputPath) {
+  return openaiService.saveBase64Image(base64Data, outputPath);
+}
+
+/**
  * Checks which providers are available based on API keys
  * @returns {object} - Object with available providers
  */
@@ -105,4 +139,6 @@ export default {
   generateJsonResponse,
   generateTextResponse,
   generateImage,
+  generateImageWithReferences,
+  saveBase64Image,
 };

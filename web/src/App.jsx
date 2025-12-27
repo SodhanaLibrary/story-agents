@@ -7,6 +7,7 @@ import DraftsPage from "./pages/DraftsPage";
 import CreateStoryPage from "./pages/CreateStoryPage";
 import StoryViewPage from "./pages/StoryViewPage";
 import UserProfilePage from "./pages/UserProfilePage";
+import PromptLogsPage from "./pages/PromptLogsPage";
 import { useAuth } from "./context/AuthContext";
 
 function AppContent() {
@@ -44,19 +45,41 @@ function AppContent() {
           {/* Protected routes */}
           <Route
             path="/favorites"
-            element={isAuthenticated ? <FavoritesPage /> : <Navigate to="/" replace />}
+            element={
+              isAuthenticated ? <FavoritesPage /> : <Navigate to="/" replace />
+            }
           />
           <Route
             path="/drafts"
-            element={isAuthenticated ? <DraftsPage /> : <Navigate to="/" replace />}
+            element={
+              isAuthenticated ? <DraftsPage /> : <Navigate to="/" replace />
+            }
           />
           <Route
             path="/create"
-            element={isAuthenticated ? <CreateStoryPage /> : <Navigate to="/" replace />}
+            element={
+              isAuthenticated ? (
+                <CreateStoryPage />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
           />
           <Route
             path="/story/:storyId/edit"
-            element={isAuthenticated ? <CreateStoryPage isEditing /> : <Navigate to="/" replace />}
+            element={
+              isAuthenticated ? (
+                <CreateStoryPage isEditing />
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/prompt-logs"
+            element={
+              isAuthenticated ? <PromptLogsPage /> : <Navigate to="/" replace />
+            }
           />
 
           {/* Fallback */}

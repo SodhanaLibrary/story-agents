@@ -1,11 +1,21 @@
 import { GoogleLogin } from "@react-oauth/google";
-import { Box, Typography, Avatar, Button, Menu, MenuItem, Divider } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Avatar,
+  Button,
+  Menu,
+  MenuItem,
+  Divider,
+} from "@mui/material";
 import { useState } from "react";
-import { Logout } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import { Logout, Timeline } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
 export default function GoogleLoginButton() {
   const { user, isAuthenticated, login, logout } = useAuth();
+  const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
@@ -32,6 +42,11 @@ export default function GoogleLoginButton() {
 
   const handleLogout = () => {
     logout();
+    handleMenuClose();
+  };
+
+  const handlePromptLogs = () => {
+    navigate("/prompt-logs");
     handleMenuClose();
   };
 
@@ -101,7 +116,15 @@ export default function GoogleLoginButton() {
             </Typography>
           </Box>
           <Divider />
-          <MenuItem onClick={handleLogout} sx={{ gap: 1.5, color: "error.main" }}>
+          <MenuItem onClick={handlePromptLogs} sx={{ gap: 1.5 }}>
+            <Timeline fontSize="small" />
+            AI Prompt Logs
+          </MenuItem>
+          <Divider />
+          <MenuItem
+            onClick={handleLogout}
+            sx={{ gap: 1.5, color: "error.main" }}
+          >
             <Logout fontSize="small" />
             Sign out
           </MenuItem>
@@ -125,4 +148,3 @@ export default function GoogleLoginButton() {
     </Box>
   );
 }
-

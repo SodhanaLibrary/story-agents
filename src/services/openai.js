@@ -1,7 +1,9 @@
-import OpenAI from "openai";
+import OpenAI, { toFile } from "openai";
+import fs from "fs";
+import path from "path";
 import config from "../config.js";
 import { createLogger } from "../utils/logger.js";
-import { logPrompt } from "./promptLogger.js";
+import { logPrompt, getContext } from "./promptLogger.js";
 
 const logger = createLogger("OpenAI");
 
@@ -33,6 +35,8 @@ export async function generateCompletion(messages, options = {}) {
   const client = getOpenAIClient();
   const model = options.model || config.openai.model;
   const startTime = Date.now();
+  // Capture context at the start of the request
+  const context = getContext();
 
   logger.debug(`Chat completion request (model: ${model})`);
   logger.prompt("Chat Completion", messages, {
@@ -56,7 +60,7 @@ export async function generateCompletion(messages, options = {}) {
       `Chat completion done (tokens: ${response.usage?.total_tokens || "N/A"})`
     );
 
-    // Log to database
+    // Log to database with captured context
     logPrompt({
       provider: "openai",
       model,
@@ -68,6 +72,7 @@ export async function generateCompletion(messages, options = {}) {
       tokensTotal: response.usage?.total_tokens,
       durationMs,
       status: "success",
+      ...context,
     });
 
     return responseText;
@@ -81,6 +86,7 @@ export async function generateCompletion(messages, options = {}) {
       durationMs,
       status: "error",
       errorMessage: error.message,
+      ...context,
     });
     throw error;
   }
@@ -96,6 +102,8 @@ export async function generateJsonResponse(messages, schema) {
   const client = getOpenAIClient();
   const model = config.openai.model;
   const startTime = Date.now();
+  // Capture context at the start of the request
+  const context = getContext();
 
   logger.debug(`JSON completion request (model: ${model})`);
   logger.prompt("JSON Completion", messages, {
@@ -119,7 +127,7 @@ export async function generateJsonResponse(messages, schema) {
       `JSON completion done (tokens: ${response.usage?.total_tokens || "N/A"})`
     );
 
-    // Log to database
+    // Log to database with captured context
     logPrompt({
       provider: "openai",
       model,
@@ -131,6 +139,7 @@ export async function generateJsonResponse(messages, schema) {
       tokensTotal: response.usage?.total_tokens,
       durationMs,
       status: "success",
+      ...context,
     });
 
     return JSON.parse(responseText);
@@ -144,6 +153,7 @@ export async function generateJsonResponse(messages, schema) {
       durationMs,
       status: "error",
       errorMessage: error.message,
+      ...context,
     });
     throw error;
   }
@@ -159,6 +169,8 @@ export async function generateTextResponse(messages, options = {}) {
   const client = getOpenAIClient();
   const model = options.model || "gpt-4o";
   const startTime = Date.now();
+  // Capture context at the start of the request
+  const context = getContext();
 
   logger.debug(`Text/Vision completion request (model: ${model})`);
   logger.prompt("Text/Vision Completion", messages, {
@@ -206,6 +218,7 @@ export async function generateTextResponse(messages, options = {}) {
       tokensTotal: response.usage?.total_tokens,
       durationMs,
       status: "success",
+      ...context,
     });
 
     return responseText;
@@ -218,6 +231,7 @@ export async function generateTextResponse(messages, options = {}) {
       durationMs,
       status: "error",
       errorMessage: error.message,
+      ...context,
     });
     throw error;
   }
@@ -234,6 +248,8 @@ export async function generateImage(prompt, options = {}) {
   const model = config.openai.imageModel;
   const size = options.size || config.image.size;
   const startTime = Date.now();
+  // Capture context at the start of the request
+  const context = getContext();
 
   logger.debug(`Image generation request (size: ${size})`);
   logger.prompt("DALL-E Image Generation", prompt, {
@@ -259,7 +275,7 @@ export async function generateImage(prompt, options = {}) {
 
     logger.debug("Image generated successfully");
 
-    // Log to database
+    // Log to database with captured context
     logPrompt({
       provider: "openai",
       model,
@@ -269,6 +285,7 @@ export async function generateImage(prompt, options = {}) {
       durationMs,
       status: "success",
       metadata: { size, quality: options.quality, style: options.style },
+      ...context,
     });
 
     return imageUrl;
@@ -282,9 +299,177 @@ export async function generateImage(prompt, options = {}) {
       durationMs,
       status: "error",
       errorMessage: error.message,
+      ...context,
     });
     throw error;
   }
+}
+
+/**
+ * Generates an image using GPT Image model with reference images (avatars)
+ * Uses images.generate API with image references for character consistency
+ * @param {string} prompt - Image generation prompt
+ * @param {Array<string>} referenceImagePaths - Array of paths to reference images (avatars)
+ * @param {object} options - Generation options
+ * @returns {Promise<{url: string, base64: string, model: string}>} - Generated image data
+ */
+export async function generateImageWithReferences(
+  prompt,
+  referenceImagePaths = [],
+  options = {}
+) {
+  const client = getOpenAIClient();
+  const model = options.model || "gpt-image-1";
+  const size = options.size || config.image.size || "1024x1024";
+  const weight = options.weight || 1; // Strong influence by default
+  const startTime = Date.now();
+  // Capture context at the start of the request
+  const context = getContext();
+
+  logger.debug(
+    `Image generation with ${referenceImagePaths.length} reference images (model: ${model})`
+  );
+  logger.prompt("GPT Image Generate with References", prompt, {
+    model,
+    size,
+    referenceCount: referenceImagePaths.length,
+    weight,
+  });
+
+  try {
+    // Load reference images as base64
+    // const images = [];
+    // for (const imgPath of referenceImagePaths) {
+    //   if (fs.existsSync(imgPath)) {
+    //     try {
+    //       console.log("reading reference image:", imgPath);
+    //       const imageData = fs.createReadStream(imgPath);
+    //       images.push(imageData);
+    //       logger.debug(`Loaded reference image: ${path.basename(imgPath)}`);
+    //     } catch (err) {
+    //       logger.warn(
+    //         `Failed to load reference image ${imgPath}: ${err.message}`
+    //       );
+    //     }
+    //   } else {
+    //     logger.warn(`Reference image not found: ${imgPath}`);
+    //   }
+    // }
+
+    const images = await Promise.all(
+      referenceImagePaths.map(
+        async (file) =>
+          await toFile(fs.createReadStream(file), null, {
+            type: "image/png",
+          })
+      )
+    );
+
+    if (images.length === 0) {
+      logger.warn(
+        "No valid reference images found, falling back to standard generation"
+      );
+      return await generateImage(prompt, options);
+    }
+
+    logger.debug(`Loaded ${images.length} reference images for generation`);
+
+    // Log use of reference images before calling OpenAI API
+    await logPrompt({
+      provider: "openai",
+      model,
+      requestType: "image_generate_ref_pre",
+      promptText: prompt,
+      responseText: null,
+      durationMs: Date.now() - startTime,
+      status: "initiated",
+      metadata: {
+        size,
+        referenceCount: images.length,
+        referencePaths: referenceImagePaths,
+        weight,
+      },
+      ...context,
+    });
+
+    // Use images.generate API with reference images
+    const response = await client.images.edit({
+      model,
+      prompt,
+      image: images,
+      n: 1,
+      size,
+    });
+
+    const durationMs = Date.now() - startTime;
+
+    // Get the base64 image data
+    const imageBase64 = response.data[0].b64_json;
+    const imageUrl = response.data[0].url;
+
+    logger.debug("Image with references generated successfully");
+
+    // Log to database with captured context
+    logPrompt({
+      provider: "openai",
+      model,
+      requestType: "image_generate_ref",
+      promptText: prompt,
+      responseText: "[GPT_IMAGE_WITH_REFERENCES]",
+      durationMs,
+      status: "success",
+      metadata: {
+        size,
+        referenceCount: images.length,
+        referencePaths: referenceImagePaths,
+        weight,
+      },
+      ...context,
+    });
+
+    return {
+      url: imageUrl,
+      base64: imageBase64,
+      model,
+    };
+  } catch (error) {
+    console.error(error);
+    const durationMs = Date.now() - startTime;
+    logger.error(`Image generation with references failed: ${error.message}`);
+
+    logPrompt({
+      provider: "openai",
+      model,
+      requestType: "image_generate_ref",
+      promptText: prompt,
+      durationMs,
+      status: "error",
+      errorMessage: error.message,
+      metadata: { referenceCount: referenceImagePaths.length },
+      ...context,
+    });
+
+    // Fallback to standard image generation if reference generation fails
+    logger.warn("Falling back to standard image generation");
+    // return await generateImage(
+    //   options.enhancedPromptWithoutAvatarImage,
+    //   options
+    // );
+    return null;
+  }
+}
+
+/**
+ * Saves a base64 image to file
+ * @param {string} base64Data - Base64 encoded image data
+ * @param {string} outputPath - Path to save the image
+ * @returns {string} - Saved file path
+ */
+export function saveBase64Image(base64Data, outputPath) {
+  const imageBytes = Buffer.from(base64Data, "base64");
+  fs.writeFileSync(outputPath, imageBytes);
+  logger.debug(`Image saved to: ${outputPath}`);
+  return outputPath;
 }
 
 export default {
@@ -293,4 +478,6 @@ export default {
   generateJsonResponse,
   generateTextResponse,
   generateImage,
+  generateImageWithReferences,
+  saveBase64Image,
 };

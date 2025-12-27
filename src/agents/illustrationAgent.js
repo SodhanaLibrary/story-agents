@@ -1,26 +1,80 @@
-import { generateImage } from "../services/ai.js";
-import { saveImageFromUrl } from "../utils/storage.js";
+import {
+  generateImage,
+  generateImageWithReferences,
+  saveBase64Image,
+} from "../services/ai.js";
+import { saveImageFromUrl, getStoragePath } from "../utils/storage.js";
+import { createLogger } from "../utils/logger.js";
+import path from "path";
+
+const logger = createLogger("IllustrationAgent");
 
 /**
  * Illustration Agent - Generates page illustrations based on descriptions
- * with enhanced character consistency across all pages
+ * with enhanced character consistency using avatar reference images
  */
 export class IllustrationAgent {
   constructor() {
     this.name = "IllustrationAgent";
     this.description =
-      "Generates page illustrations with consistent character appearances across all pages";
+      "Generates page illustrations with consistent character appearances using avatar references";
 
     // Store character reference for consistency across pages
     this.characterReference = null;
+
+    // Enable/disable avatar reference mode (uses GPT Image model)
+    this.useAvatarReferences = true;
   }
 
   /**
    * Sets the character reference for consistent illustration generation
-   * @param {Array} characters - Array of character objects with visual details
+   * @param {Array} characters - Array of character objects with visual details and avatar paths
    */
   setCharacterReference(characters) {
     this.characterReference = characters;
+
+    // Log available avatar paths
+    const avatarPaths = characters
+      .filter((c) => c.avatarPath)
+      .map((c) => `${c.name}: ${c.avatarPath}`);
+
+    if (avatarPaths.length > 0) {
+      logger.debug(`Avatar references set: ${avatarPaths.join(", ")}`);
+    }
+  }
+
+  /**
+   * Gets avatar file paths for characters in the scene
+   * @param {Array} charactersInScene - Names of characters appearing in this scene
+   * @returns {Array<string>} - Array of avatar file paths
+   */
+  getAvatarPaths(charactersInScene = []) {
+    if (!this.characterReference || this.characterReference.length === 0) {
+      return [];
+    }
+
+    // Find characters in the scene that have avatar paths
+    const avatarPaths = [];
+
+    for (const charName of charactersInScene) {
+      const character = this.characterReference.find(
+        (c) => c.name.toLowerCase() === charName.toLowerCase()
+      );
+
+      if (character?.avatarPath) {
+        avatarPaths.push(character.avatarPath);
+      }
+    }
+
+    // If no specific characters found, use main character avatars
+    if (avatarPaths.length === 0) {
+      const mainChars = this.characterReference.filter(
+        (c) => c.role === "main" && c.avatarPath
+      );
+      avatarPaths.push(...mainChars.map((c) => c.avatarPath));
+    }
+
+    return avatarPaths;
   }
 
   /**
@@ -86,6 +140,7 @@ ${charDescriptions.join("\n")}]
 
   /**
    * Generates illustration for a single page with character consistency and action focus
+   * Uses avatar reference images when available for better character consistency
    * @param {object} page - Page object with imageDescription, action, emotion
    * @param {string} storyTitle - Title of the story (for naming)
    * @param {object} options - Generation options
@@ -96,13 +151,27 @@ ${charDescriptions.join("\n")}]
       options.artStyle ||
       "children's book illustration style, colorful, warm, friendly";
 
-    // Build character consistency block
-    const characterBlock = this.buildCharacterConsistencyBlock(
-      page.charactersInScene || page.characters || []
-    );
+    const charactersInScene = page.charactersInScene || page.characters || [];
 
+    // Build character consistency block
+    const characterBlock =
+      this.buildCharacterConsistencyBlock(charactersInScene);
+
+    // Get avatar paths for characters in this scene
+    const avatarPaths = this.getAvatarPaths(charactersInScene);
     // Pass page data including action and emotion
-    const enhancedPrompt = this.buildIllustrationPrompt(
+    const enhancedPrompt = this.buildIllustrationPromptWithAvatarImage(
+      page.imageDescription,
+      artStyle,
+      characterBlock,
+      {
+        action: page.action,
+        emotion: page.emotion || page.mood,
+        scene: page.scene,
+      }
+    );
+    // Pass page data including action and emotion
+    const enhancedPromptWithoutAvatarImage = this.buildIllustrationPrompt(
       page.imageDescription,
       artStyle,
       characterBlock,
@@ -113,23 +182,77 @@ ${charDescriptions.join("\n")}]
       }
     );
 
-    const imageUrl = await generateImage(enhancedPrompt, {
-      size: options.size || "1024x1024",
-      quality: options.quality || "standard",
-      style: options.style || "vivid",
-    });
+    let imageUrl;
+    let savedPath;
+    let usedAvatarReferences = false;
 
-    const savedPath = await saveImageFromUrl(
-      imageUrl,
-      "page",
-      `${storyTitle}_page_${page.pageNumber}`
-    );
+    // Use avatar references if available and enabled
+    if (this.useAvatarReferences && avatarPaths.length > 0) {
+      logger.debug(
+        `Using ${avatarPaths.length} avatar references for page ${page.pageNumber}`
+      );
+      try {
+        const result = await generateImageWithReferences(
+          enhancedPrompt,
+          avatarPaths,
+          {
+            size: options.size || "1024x1024",
+            model: "gpt-image-1.5",
+            enhancedPromptWithoutAvatarImage: enhancedPromptWithoutAvatarImage,
+          }
+        );
+
+        usedAvatarReferences = true;
+
+        // Handle base64 response from GPT Image model
+        if (result.base64) {
+          const outputFileName = `${storyTitle}_page_${page.pageNumber}.png`;
+          const storagePath = getStoragePath("page");
+          savedPath = path.join(storagePath, outputFileName);
+          saveBase64Image(result.base64, savedPath);
+          imageUrl = `data:image/png;base64,${result.base64.substring(0, 50)}...`; // Truncated for logging
+        } else if (result.url) {
+          imageUrl = result.url;
+          savedPath = await saveImageFromUrl(
+            imageUrl,
+            "page",
+            `${storyTitle}_page_${page.pageNumber}`
+          );
+        }
+
+        logger.debug(
+          `Page ${page.pageNumber} generated with avatar references`
+        );
+      } catch (error) {
+        logger.warn(
+          `Avatar reference generation failed for page ${page.pageNumber}, falling back: ${error.message}`
+        );
+        // Fall through to standard generation
+      }
+    }
+
+    // Standard generation (fallback or when no avatars available)
+    if (!savedPath) {
+      imageUrl = await generateImage(enhancedPromptWithoutAvatarImage, {
+        size: options.size || "1024x1024",
+        quality: options.quality || "standard",
+        style: options.style || "vivid",
+      });
+
+      savedPath = await saveImageFromUrl(
+        imageUrl,
+        "page",
+        `${storyTitle}_page_${page.pageNumber}`
+      );
+    }
 
     return {
       ...page,
       illustrationUrl: imageUrl,
       illustrationPath: savedPath,
-      generatedPrompt: enhancedPrompt, // Store for debugging
+      generatedPrompt: enhancedPrompt,
+      usedAvatarReferences,
+      avatarReferencesUsed: usedAvatarReferences ? avatarPaths.length : 0,
     };
   }
 
@@ -269,7 +392,79 @@ ${charDescriptions.join("\n")}]
   }
 
   /**
+   * Builds an illustration prompt that explicitly references the provided avatar images
+   * @param {string} description - Scene description
+   * @param {string} artStyle - Art style string
+   * @param {string} characterBlock - Character consistency instructions
+   * @param {object} pageData - Additional data: action, emotion
+   * @param {Array<string>} avatarPaths - File paths to avatar reference images
+   * @returns {string} - The constructed prompt
+   */
+  buildIllustrationPromptWithAvatarImage(
+    description,
+    artStyle,
+    characterBlock,
+    pageData = {},
+    avatarPaths = []
+  ) {
+    const action = pageData.action || "";
+    const emotion = pageData.emotion || "";
+
+    // Concise character consistency note
+    const consistencyNote = `[Maintain exact character appearances across all illustrations]`;
+
+    // Avatar reference guideline
+    let avatarInstruction = "";
+    if (avatarPaths && avatarPaths.length > 0 && this.characterReference) {
+      // Map avatarPaths to character names if possible
+      const avatarCharNames = this.characterReference
+        .filter((c) => avatarPaths.includes(c.avatarPath))
+        .map((c) => c.name);
+
+      if (avatarCharNames.length > 0) {
+        avatarInstruction = `Use the provided reference image${avatarCharNames.length > 1 ? "s" : ""} to keep `;
+        avatarInstruction +=
+          avatarCharNames.join(", ") + " consistent in appearance.";
+      } else {
+        // Generic fallback if names not matched
+        avatarInstruction = `Use the provided reference image${avatarPaths.length > 1 ? "s" : ""} to maintain character consistency.`;
+      }
+    }
+
+    // Composition and quality
+    const compositionGuidelines = `DYNAMIC ILLUSTRATION: Show characters IN ACTION - moving, expressing emotion, interacting. Characters in foreground (25% of frame), expressive poses and clear emotions. Background soft, supportive and blurred.`;
+    const qualityEnhancements = `High quality children's book illustration. Capture the story moment with energy and emotion.`;
+
+    // Truncate description if necessary
+    let truncatedDescription = description;
+    if (description.length > 550) {
+      truncatedDescription = description.substring(0, 550) + "...";
+    }
+
+    const promptParts = [];
+    promptParts.push(`Art style: ${artStyle}.`);
+    if (characterBlock) {
+      promptParts.push(consistencyNote);
+    }
+    if (avatarInstruction) {
+      promptParts.push(avatarInstruction);
+    }
+    promptParts.push(compositionGuidelines);
+    if (action && emotion) {
+      promptParts.push(`ACTION: ${action}. EMOTION: ${emotion}.`);
+    }
+    promptParts.push(`Scene: ${truncatedDescription}`);
+    promptParts.push(qualityEnhancements);
+    if (characterBlock) {
+      promptParts.push(characterBlock);
+    }
+
+    return promptParts.join(" ");
+  }
+
+  /**
    * Generates a cover illustration for the story with character consistency
+   * Uses avatar reference images for main characters
    * @param {object} storyPages - Story pages object
    * @param {Array} characters - Main characters
    * @param {object} options - Generation options
@@ -289,20 +484,7 @@ ${charDescriptions.join("\n")}]
 
     const characterVisuals = mainChars
       .map((char) => {
-        if (char.visualIdentity) {
-          const vi = char.visualIdentity;
-          const parts = [];
-          if (vi.species) parts.push(`species: ${vi.species}`);
-          if (vi.ageAppearance) parts.push(`age: ${vi.ageAppearance}`);
-          if (vi.gender) parts.push(`gender: ${vi.gender}`);
-          if (vi.bodyType) parts.push(`body: ${vi.bodyType}`);
-          if (vi.skinTone) parts.push(`skin: ${vi.skinTone}`);
-          if (vi.hairStyle) parts.push(`hair style: ${vi.hairStyle}`);
-          if (vi.hairColor) parts.push(`hair color: ${vi.hairColor}`);
-
-          return `${char.name}: ${parts.join(", ")}`;
-        }
-        return char.consistencyTag || char.avatarPrompt?.substring(0, 60);
+        return char.consistencyTag || char.avatarPrompt;
       })
       .filter(Boolean)
       .join("; ");
@@ -310,25 +492,79 @@ ${charDescriptions.join("\n")}]
     const artStyle =
       options.artStyle || "colorful children's book cover, magical, inviting";
 
-    const coverPrompt = `CRITICAL: Maintain exact character appearances. Don't add characters in the top
+    const coverPrompt = `Create a beautiful children's book cover illustration.
 [CHARACTER REFERENCE: ${characterVisuals}]
 FOCUS: Main characters (${mainCharacterDescriptions}) prominently displayed in the foreground, detailed and taking center stage, occupying 25% of the frame.
-Background: Soft, atmospheric, hints at the story setting but not overpowering.
+Background: Soft, atmospheric, blurred, hints at the story setting but not overpowering.
 Scene context: ${storyPages.summary}
 Art style: ${artStyle}.
-Characters are the stars with consistent appearances, background supports the mood.`;
+Characters are the stars, maintain their exact appearances from the reference images. Background supports the mood.
+Don't add any characters at the top of the image.`;
 
-    const imageUrl = await generateImage(coverPrompt, {
-      size: "1024x1024",
-      quality: "standard",
-      style: "vivid",
-    });
+    // Get avatar paths for main characters
+    const avatarPaths = mainChars
+      .filter((c) => c.avatarPath)
+      .map((c) => c.avatarPath);
 
-    const savedPath = await saveImageFromUrl(
-      imageUrl,
-      "page",
-      `${storyPages.title}_cover`
-    );
+    let imageUrl;
+    let savedPath;
+    let usedAvatarReferences = false;
+
+    // Use avatar references if available and enabled
+    if (this.useAvatarReferences && avatarPaths.length > 0) {
+      logger.debug(`Using ${avatarPaths.length} avatar references for cover`);
+
+      try {
+        const result = await generateImageWithReferences(
+          coverPrompt,
+          avatarPaths,
+          {
+            size: "1024x1024",
+            model: "gpt-image-1.5",
+          }
+        );
+
+        usedAvatarReferences = true;
+
+        // Handle base64 response from GPT Image model
+        if (result.base64) {
+          const outputFileName = `${storyPages.title.replace(" ", "_")}_cover.png`;
+          const storagePath = getStoragePath("page");
+          savedPath = path.join(storagePath, outputFileName);
+          saveBase64Image(result.base64, savedPath);
+          imageUrl = `data:image/png;base64,${result.base64.substring(0, 50)}...`;
+        } else if (result.url) {
+          imageUrl = result.url;
+          savedPath = await saveImageFromUrl(
+            imageUrl,
+            "page",
+            `${storyPages.title}_cover`
+          );
+        }
+
+        logger.debug("Cover generated with avatar references");
+      } catch (error) {
+        logger.warn(
+          `Avatar reference generation failed for cover, falling back: ${error.message}`
+        );
+        // Fall through to standard generation
+      }
+    }
+
+    // Standard generation (fallback or when no avatars available)
+    // if (!savedPath) {
+    //   imageUrl = await generateImage(coverPrompt, {
+    //     size: "1024x1024",
+    //     quality: "standard",
+    //     style: "vivid",
+    //   });
+
+    //   savedPath = await saveImageFromUrl(
+    //     imageUrl,
+    //     "page",
+    //     `${storyPages.title}_cover`
+    //   );
+    // }
 
     return {
       type: "cover",
@@ -336,6 +572,8 @@ Characters are the stars with consistent appearances, background supports the mo
       illustrationUrl: imageUrl,
       illustrationPath: savedPath,
       generatedPrompt: coverPrompt,
+      usedAvatarReferences,
+      avatarReferencesUsed: usedAvatarReferences ? avatarPaths.length : 0,
     };
   }
 

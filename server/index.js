@@ -115,6 +115,22 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(requestLogger);
 
+// Auth middleware - extract user ID from request and set in prompt context
+app.use((req, res, next) => {
+  // Check for user ID in headers, body, or query params
+  const userId =
+    req.headers["x-user-id"] || req.body?.userId || req.query?.userId || null;
+
+  if (userId) {
+    const parsedUserId = parseInt(userId, 10);
+    if (!isNaN(parsedUserId)) {
+      req.userId = parsedUserId;
+      setPromptContext({ userId: parsedUserId });
+    }
+  }
+  next();
+});
+
 // Serve static files from storage
 app.use("/storage", express.static(path.join(__dirname, "..", "storage")));
 
@@ -378,6 +394,13 @@ app.post("/api/generate-avatar", async (req, res) => {
     job.characters[characterIndex] = updatedCharacter;
     activeJobs.set(jobId, job);
 
+    // Auto-save draft to persist avatar data
+    try {
+      await saveDraft(jobId, job);
+    } catch (err) {
+      logger.warn("Failed to save draft after avatar generation:", err.message);
+    }
+
     res.json({
       success: true,
       character: updatedCharacter,
@@ -479,6 +502,16 @@ app.post("/api/regenerate-avatar", async (req, res) => {
     job.characters[characterIndex] = updatedCharacter;
     activeJobs.set(jobId, job);
 
+    // Auto-save draft to persist avatar data
+    try {
+      await saveDraft(jobId, job);
+    } catch (err) {
+      logger.warn(
+        "Failed to save draft after avatar regeneration:",
+        err.message
+      );
+    }
+
     res.json({
       success: true,
       character: updatedCharacter,
@@ -518,12 +551,352 @@ app.post("/api/generate/pages", async (req, res) => {
     job.generateCover = generateCover !== false;
     activeJobs.set(jobId, job);
 
+    // Save draft to persist characters/avatars before starting page generation
+    try {
+      await saveDraft(jobId, job);
+    } catch (err) {
+      logger.warn("Failed to save draft before page generation:", err.message);
+    }
+
     // Start page generation in background
     generatePagesAsync(jobId);
 
     res.json({ jobId, message: "Page generation started" });
   } catch (error) {
     logger.error("Error starting page generation:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/generate/illustrations - Generate all page illustrations and cover (Phase 3)
+ * Called after user reviews and approves page text/prompts
+ */
+app.post("/api/generate/illustrations", async (req, res) => {
+  try {
+    const { jobId, generateCover } = req.body;
+
+    const job = activeJobs.get(jobId);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    if (!job.storyPages || !job.storyPages.pages) {
+      return res
+        .status(400)
+        .json({ error: "No pages found. Generate pages first." });
+    }
+
+    // Update job for illustration phase
+    job.status = "running";
+    job.phase = "illustration_generation";
+    job.progress = 75;
+    job.message = "Starting illustration generation...";
+    job.generateCover = generateCover !== false;
+    activeJobs.set(jobId, job);
+
+    // Set prompt context for tracing
+    setPromptContext({ jobId, userId: req.userId || null });
+
+    // Start illustration generation in background
+    generateIllustrationsAsync(jobId);
+
+    res.json({ jobId, message: "Illustration generation started" });
+  } catch (error) {
+    logger.error("Error starting illustration generation:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/generate/page/:pageNumber/illustration - Generate a single page illustration
+ * Called when user wants to generate illustration for a specific page
+ */
+app.post("/api/generate/page/:pageNumber/illustration", async (req, res) => {
+  try {
+    const { jobId } = req.body;
+    const pageNumber = parseInt(req.params.pageNumber);
+
+    const job = activeJobs.get(jobId);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    if (!job.storyPages || !job.storyPages.pages) {
+      return res
+        .status(400)
+        .json({ error: "No pages found. Generate pages first." });
+    }
+
+    const pageIndex = job.storyPages.pages.findIndex(
+      (p) => p.pageNumber === pageNumber
+    );
+    if (pageIndex === -1) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+
+    const page = job.storyPages.pages[pageIndex];
+
+    // Set prompt context for tracing
+    setPromptContext({ jobId, userId: req.userId || null });
+
+    // Generate illustration for this page
+    const artStyleAgent = new ArtStyleAgent();
+    const illustrationAgent = new IllustrationAgent();
+    illustrationAgent.setCharacterReference(job.characters);
+
+    const artStylePrompt =
+      job.artStylePrompt || artStyleAgent.getStylePrompt("illustration");
+    const storyTitle = job.storyPages?.title || "story";
+
+    job.message = `Generating illustration for page ${pageNumber}...`;
+    activeJobs.set(jobId, { ...job });
+
+    const updatedPage = await illustrationAgent.generatePageIllustration(
+      page,
+      storyTitle,
+      { artStyle: artStylePrompt }
+    );
+
+    // Convert path to URL
+    const baseUrl = `/storage`;
+    updatedPage.illustrationUrl = updatedPage.illustrationPath
+      ? `${baseUrl}/pages/${path.basename(updatedPage.illustrationPath)}`
+      : null;
+
+    updatedPage.illustrationGenerated = true;
+    updatedPage.approved = false;
+    updatedPage.regenerated = false;
+
+    // Update job
+    job.storyPages.pages[pageIndex] = updatedPage;
+    activeJobs.set(jobId, job);
+
+    // Auto-save draft
+    try {
+      await saveDraft(jobId, job);
+    } catch (err) {
+      logger.warn("Failed to save draft:", err.message);
+    }
+
+    res.json({
+      success: true,
+      page: updatedPage,
+    });
+  } catch (error) {
+    logger.error("Error generating page illustration:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/generate/cover/illustration - Generate cover illustration only
+ * Called when user wants to generate only the cover illustration
+ */
+app.post("/api/generate/cover/illustration", async (req, res) => {
+  try {
+    const { jobId } = req.body;
+
+    const job = activeJobs.get(jobId);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    if (!job.storyPages || !job.storyPages.pages) {
+      return res
+        .status(400)
+        .json({ error: "No pages found. Generate pages first." });
+    }
+
+    // Set prompt context for tracing
+    setPromptContext({ jobId, userId: req.userId || null });
+
+    // Generate cover illustration
+    const artStyleAgent = new ArtStyleAgent();
+    const illustrationAgent = new IllustrationAgent();
+    illustrationAgent.setCharacterReference(job.characters);
+
+    const artStylePrompt =
+      job.artStylePrompt || artStyleAgent.getStylePrompt("illustration");
+
+    job.message = "Generating cover illustration...";
+    activeJobs.set(jobId, { ...job });
+
+    const cover = await illustrationAgent.generateCoverIllustration(
+      job.storyPages,
+      job.characters,
+      { artStyle: artStylePrompt }
+    );
+
+    // Convert path to URL
+    const baseUrl = `/storage`;
+    cover.illustrationUrl = cover.illustrationPath
+      ? `${baseUrl}/pages/${path.basename(cover.illustrationPath)}`
+      : null;
+
+    cover.approved = false;
+
+    // Update job with cover
+    job.cover = cover;
+    job.message = "Cover generated successfully";
+    activeJobs.set(jobId, job);
+
+    // Auto-save draft
+    try {
+      await saveDraft(jobId, job);
+    } catch (err) {
+      logger.warn("Failed to save draft:", err.message);
+    }
+
+    res.json({
+      success: true,
+      cover,
+    });
+  } catch (error) {
+    console.error(error);
+    logger.error("Error generating cover illustration:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/pages/update - Update page text and description
+ */
+app.post("/api/pages/update", async (req, res) => {
+  try {
+    const { jobId, pageNumber, text, imageDescription } = req.body;
+
+    const job = activeJobs.get(jobId);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    if (!job.storyPages?.pages) {
+      return res.status(400).json({ error: "No pages found" });
+    }
+
+    const pageIndex = job.storyPages.pages.findIndex(
+      (p) => p.pageNumber === pageNumber
+    );
+    if (pageIndex === -1) {
+      return res.status(404).json({ error: "Page not found" });
+    }
+
+    // Update page
+    const updatedPage = {
+      ...job.storyPages.pages[pageIndex],
+      text: text || job.storyPages.pages[pageIndex].text,
+      imageDescription:
+        imageDescription || job.storyPages.pages[pageIndex].imageDescription,
+      illustrationGenerated: false, // Reset illustration status since text changed
+      illustrationUrl: null,
+      illustrationPath: null,
+      approved: false,
+      regenerated: true,
+    };
+
+    job.storyPages.pages[pageIndex] = updatedPage;
+    activeJobs.set(jobId, job);
+
+    // Auto-save draft
+    try {
+      await saveDraft(jobId, job);
+    } catch (err) {
+      logger.warn("Failed to save draft:", err.message);
+    }
+
+    res.json({ success: true, page: updatedPage });
+  } catch (error) {
+    logger.error("Error updating page:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/pages/add - Add a new page
+ */
+app.post("/api/pages/add", async (req, res) => {
+  try {
+    const { jobId, text, imageDescription } = req.body;
+
+    const job = activeJobs.get(jobId);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    if (!job.storyPages) {
+      job.storyPages = { pages: [] };
+    }
+
+    // Create new page with next page number
+    const newPageNumber = (job.storyPages.pages?.length || 0) + 1;
+    const newPage = {
+      pageNumber: newPageNumber,
+      text: text || "",
+      imageDescription: imageDescription || "",
+      charactersInScene: [],
+      illustrationGenerated: false,
+      illustrationUrl: null,
+      illustrationPath: null,
+      approved: false,
+      regenerated: false,
+    };
+
+    job.storyPages.pages = [...(job.storyPages.pages || []), newPage];
+    activeJobs.set(jobId, job);
+
+    // Auto-save draft
+    try {
+      await saveDraft(jobId, job);
+    } catch (err) {
+      logger.warn("Failed to save draft:", err.message);
+    }
+
+    res.json({ success: true, page: newPage });
+  } catch (error) {
+    logger.error("Error adding page:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/pages/delete - Delete a page and renumber remaining pages
+ */
+app.post("/api/pages/delete", async (req, res) => {
+  try {
+    const { jobId, pageNumber } = req.body;
+
+    const job = activeJobs.get(jobId);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    if (!job.storyPages?.pages) {
+      return res.status(400).json({ error: "No pages found" });
+    }
+
+    // Filter out the deleted page
+    let pages = job.storyPages.pages.filter((p) => p.pageNumber !== pageNumber);
+
+    // Renumber remaining pages
+    pages = pages.map((page, index) => ({
+      ...page,
+      pageNumber: index + 1,
+    }));
+
+    job.storyPages.pages = pages;
+    activeJobs.set(jobId, job);
+
+    // Auto-save draft
+    try {
+      await saveDraft(jobId, job);
+    } catch (err) {
+      logger.warn("Failed to save draft:", err.message);
+    }
+
+    res.json({ success: true, pages });
+  } catch (error) {
+    logger.error("Error deleting page:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -956,6 +1329,8 @@ async function generateAvatarsAsync(jobId, options) {
 
 /**
  * Background page generation function (Phase 2)
+ * Generates page text and prompts only - does NOT generate illustrations
+ * User must review prompts and click generate for illustrations
  */
 async function generatePagesAsync(jobId) {
   const job = activeJobs.get(jobId);
@@ -963,12 +1338,11 @@ async function generatePagesAsync(jobId) {
   try {
     const artStyleAgent = new ArtStyleAgent();
     const pageAgent = new PageAgent();
-    const illustrationAgent = new IllustrationAgent();
 
     const artStylePrompt =
       job.artStylePrompt || artStyleAgent.getStylePrompt("illustration");
 
-    // Generate story pages
+    // Generate story pages (text and image descriptions only)
     job.phase = "page_generation";
     job.message = "Creating story pages...";
     job.progress = 50;
@@ -981,20 +1355,85 @@ async function generatePagesAsync(jobId) {
 
     storyPages = pageAgent.enhanceImageDescriptions(storyPages, job.characters);
     job.storyPages = storyPages;
-    job.progress = 60;
+    job.progress = 70;
     activeJobs.set(jobId, { ...job });
+
+    // Mark pages with review status (no illustrations yet)
+    job.storyPages.pages = job.storyPages.pages.map((page) => ({
+      ...page,
+      approved: false,
+      regenerated: false,
+      illustrationGenerated: false,
+      illustrationUrl: null,
+      illustrationPath: null,
+    }));
+
+    // Save current result
+    const result = {
+      originalStory: job.story,
+      artStyleDecision: job.artStyleDecision,
+      characters: job.characters,
+      storyPages: job.storyPages,
+      cover: null,
+      metadata: {
+        timestamp: new Date().toISOString(),
+        pageCount: job.pageCount,
+        targetAudience: job.targetAudience,
+      },
+    };
+
+    // Stop here - wait for user to review and trigger illustration generation
+    job.status = "pages_text_ready";
+    job.phase = "awaiting_prompt_review";
+    job.progress = 75;
+    job.message =
+      "Page text and prompts ready for review. Click Generate to create illustrations.";
+    job.result = result;
+    activeJobs.set(jobId, { ...job });
+
+    // Auto-save draft at this milestone
+    try {
+      await saveDraft(jobId, job);
+    } catch (err) {
+      logger.warn("Failed to save draft:", err.message);
+    }
+  } catch (error) {
+    logger.error("Page generation error:", error.message);
+    job.status = "error";
+    job.error = error.message;
+    activeJobs.set(jobId, { ...job });
+  }
+}
+
+/**
+ * Background illustration generation function (Phase 3)
+ * Generates all page illustrations and cover
+ */
+async function generateIllustrationsAsync(jobId) {
+  const job = activeJobs.get(jobId);
+
+  try {
+    const artStyleAgent = new ArtStyleAgent();
+    const illustrationAgent = new IllustrationAgent();
+
+    const artStylePrompt =
+      job.artStylePrompt || artStyleAgent.getStylePrompt("illustration");
+
+    // Set character reference for consistency
+    illustrationAgent.setCharacterReference(job.characters);
 
     // Generate page illustrations
     job.phase = "illustration_generation";
     job.message = "Creating page illustrations...";
+    job.progress = 75;
     activeJobs.set(jobId, { ...job });
 
     const illustratedPages = await illustrationAgent.generateAllIllustrations(
-      storyPages,
+      job.storyPages,
       { artStyle: artStylePrompt },
       (pageNum, current, total) => {
         job.message = `Illustrating page ${pageNum}...`;
-        job.progress = 60 + Math.round((current / total) * 30);
+        job.progress = 75 + Math.round((current / total) * 15);
         activeJobs.set(jobId, { ...job });
       }
     );
@@ -1024,6 +1463,7 @@ async function generatePagesAsync(jobId) {
       illustrationUrl: page.illustrationPath
         ? `${baseUrl}/pages/${path.basename(page.illustrationPath)}`
         : null,
+      illustrationGenerated: true,
     }));
 
     if (job.cover) {
@@ -1072,7 +1512,7 @@ async function generatePagesAsync(jobId) {
       logger.warn("Failed to save draft:", err.message);
     }
   } catch (error) {
-    logger.error("Page generation error:", error.message);
+    logger.error("Illustration generation error:", error.message);
     job.status = "error";
     job.error = error.message;
     activeJobs.set(jobId, { ...job });
@@ -1331,6 +1771,10 @@ app.post("/api/auth/google", async (req, res) => {
       name: payload.name,
       picture: payload.picture,
     });
+
+    // Save user ID in prompt context for tracing
+    setPromptContext({ userId: user.id });
+    logger.info(`User logged in: ${user.email} (ID: ${user.id})`);
 
     res.json({ user, token: credential });
   } catch (error) {
