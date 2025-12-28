@@ -2303,6 +2303,7 @@ app.post("/api/stories/:storyId/edit", async (req, res) => {
     res.json({
       success: true,
       jobId,
+      job,
       message: "Story loaded for editing",
       editMode: true,
     });

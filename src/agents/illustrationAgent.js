@@ -498,6 +498,7 @@ FOCUS: Main characters (${mainCharacterDescriptions}) prominently displayed in t
 Background: Soft, atmospheric, blurred, hints at the story setting but not overpowering.
 Scene context: ${storyPages.summary}
 Art style: ${artStyle}.
+Add title of the story "${storyPages.title}" to the cover.
 Characters are the stars, maintain their exact appearances from the reference images. Background supports the mood.
 Don't add any characters at the top of the image.`;
 

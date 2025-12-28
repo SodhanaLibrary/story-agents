@@ -20,19 +20,18 @@ import {
   Person,
   ArrowBack,
   ArrowForward,
-  Refresh,
   ZoomIn,
-  Download,
   Close,
   Edit,
+  Delete,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import TagManager from "./TagManager";
 
-function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
+function StoryViewer({ story, onReset, onEdit, onDelete, isEditable = true }) {
   const { isAuthenticated, userId } = useAuth();
   const [activeTab, setActiveTab] = useState(0);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(-1);
   const [zoomImage, setZoomImage] = useState(null);
 
   const pages = story?.storyPages?.pages || [];
@@ -42,22 +41,25 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
   const totalPages = pages.length;
 
   // Track reading progress for authenticated users
-  const updateProgress = useCallback(async (page) => {
-    if (!isAuthenticated || !userId || !storyId) return;
-    
-    try {
-      await fetch(`/api/users/${userId}/reading/${storyId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPage: page + 1, // 1-indexed for display
-          totalPages,
-        }),
-      });
-    } catch (err) {
-      console.error("Failed to update reading progress:", err);
-    }
-  }, [isAuthenticated, userId, storyId, totalPages]);
+  const updateProgress = useCallback(
+    async (page) => {
+      if (!isAuthenticated || !userId || !storyId) return;
+
+      try {
+        await fetch(`/api/users/${userId}/reading/${storyId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            currentPage: page + 1, // 1-indexed for display
+            totalPages,
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to update reading progress:", err);
+      }
+    },
+    [isAuthenticated, userId, storyId, totalPages]
+  );
 
   // Update reading progress when page changes
   useEffect(() => {
@@ -66,36 +68,8 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
     }
   }, [currentPage, activeTab, updateProgress]);
 
-  const handleDownload = (url, filename) => {
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-  };
-
   return (
     <Box className="fade-in">
-      {/* Header */}
-      <Box sx={{ textAlign: "center", mb: 4 }}>
-        <Typography variant="h2" sx={{ mb: 1, color: "primary.main" }}>
-          {story?.storyPages?.title || "Your Story"}
-        </Typography>
-        <Typography variant="body1" sx={{ color: "text.secondary", mb: 2 }}>
-          {story?.storyPages?.summary}
-        </Typography>
-        <Stack direction="row" spacing={2} justifyContent="center" alignItems="center" flexWrap="wrap">
-          {story?.artStyleDecision && (
-            <Chip
-              label={`Art Style: ${story.artStyleDecision.styleDetails?.name || story.artStyleDecision.selectedStyle}`}
-              sx={{ bgcolor: "rgba(123, 104, 238, 0.2)" }}
-            />
-          )}
-          {storyId && (
-            <TagManager storyId={storyId} isEditable={isAuthenticated && isEditable} />
-          )}
-        </Stack>
-      </Box>
-
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
         <Tabs
@@ -109,7 +83,11 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
             "& .MuiTabs-indicator": { bgcolor: "primary.main" },
           }}
         >
-          <Tab icon={<AutoStories />} label="Story Pages" iconPosition="start" />
+          <Tab
+            icon={<AutoStories />}
+            label="Story Pages"
+            iconPosition="start"
+          />
           <Tab icon={<Person />} label="Characters" iconPosition="start" />
         </Tabs>
       </Box>
@@ -129,7 +107,11 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
                 <img
                   src={cover.illustrationUrl}
                   alt="Book Cover"
-                  style={{ width: "100%", display: "block", borderRadius: "12px 12px 0 0" }}
+                  style={{
+                    width: "100%",
+                    display: "block",
+                    borderRadius: "12px 12px 0 0",
+                  }}
                 />
                 <IconButton
                   className="zoom-btn"
@@ -147,15 +129,48 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
                   <ZoomIn />
                 </IconButton>
               </Box>
-              <CardContent sx={{ textAlign: "center" }}>
-                <Typography variant="h5">Book Cover</Typography>
-              </CardContent>
             </Card>
           )}
 
-          {/* Current Page */}
+          {/* Current Page - Book Style */}
           {pages[currentPage] && (
-            <Card sx={{ maxWidth: 800, mx: "auto", mb: 3 }}>
+            <Card
+              sx={{
+                maxWidth: 700,
+                mx: "auto",
+                mb: 3,
+                bgcolor: "rgba(255, 253, 245, 0.03)",
+                border: "1px solid rgba(232, 184, 109, 0.15)",
+                borderRadius: 2,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+              }}
+            >
+              {/* Page Text - Top */}
+              <CardContent
+                sx={{
+                  pt: 4,
+                  pb: 3,
+                  px: { xs: 3, sm: 5 },
+                  borderBottom: "1px solid rgba(232, 184, 109, 0.1)",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontFamily:
+                      '"Crimson Pro", Georgia, "Times New Roman", serif',
+                    fontSize: { xs: "1.3rem", sm: "1.5rem", md: "1.7rem" },
+                    lineHeight: 1.9,
+                    color: "rgba(255, 255, 255, 0.9)",
+                    textAlign: "justify",
+                    textIndent: "2em",
+                    letterSpacing: "0.02em",
+                  }}
+                >
+                  {pages[currentPage].text}
+                </Typography>
+              </CardContent>
+
+              {/* Illustration - Bottom */}
               <Box
                 sx={{
                   position: "relative",
@@ -165,11 +180,17 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
                 <img
                   src={pages[currentPage].illustrationUrl}
                   alt={`Page ${currentPage + 1}`}
-                  style={{ width: "100%", display: "block", borderRadius: "12px 12px 0 0" }}
+                  style={{
+                    width: "100%",
+                    display: "block",
+                    borderRadius: "0 0 8px 8px",
+                  }}
                 />
                 <IconButton
                   className="zoom-btn"
-                  onClick={() => setZoomImage(pages[currentPage].illustrationUrl)}
+                  onClick={() =>
+                    setZoomImage(pages[currentPage].illustrationUrl)
+                  }
                   sx={{
                     position: "absolute",
                     top: 8,
@@ -182,40 +203,28 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
                 >
                   <ZoomIn />
                 </IconButton>
-              </Box>
-              <CardContent>
+
+                {/* Page Number Badge */}
                 <Chip
-                  label={`Page ${currentPage + 1} of ${pages.length}`}
+                  label={`${currentPage + 1} / ${pages.length}`}
                   size="small"
-                  sx={{ mb: 2, bgcolor: "rgba(232, 184, 109, 0.2)" }}
-                />
-                <Typography
-                  variant="body1"
                   sx={{
-                    fontFamily: '"Crimson Pro", serif',
-                    fontSize: "1.2rem",
-                    lineHeight: 1.8,
-                    mb: 2,
+                    position: "absolute",
+                    bottom: 12,
+                    right: 12,
+                    bgcolor: "rgba(0,0,0,0.6)",
+                    color: "white",
+                    fontWeight: 500,
                   }}
-                >
-                  {pages[currentPage].text}
-                </Typography>
-                {pages[currentPage].characters?.length > 0 && (
-                  <Stack direction="row" spacing={1}>
-                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                      Characters:
-                    </Typography>
-                    {pages[currentPage].characters.map((char, i) => (
-                      <Chip key={i} label={char} size="small" variant="outlined" />
-                    ))}
-                  </Stack>
-                )}
-              </CardContent>
+                />
+              </Box>
             </Card>
           )}
 
           {/* Page Navigation */}
-          <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mb: 4 }}>
+          <Box
+            sx={{ display: "flex", justifyContent: "center", gap: 2, mb: 4 }}
+          >
             <Button
               variant="outlined"
               startIcon={<ArrowBack />}
@@ -227,7 +236,9 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
             <Button
               variant="contained"
               endIcon={<ArrowForward />}
-              onClick={() => setCurrentPage((p) => Math.min(pages.length - 1, p + 1))}
+              onClick={() =>
+                setCurrentPage((p) => Math.min(pages.length - 1, p + 1))
+              }
               disabled={currentPage >= pages.length - 1}
             >
               Next Page
@@ -244,7 +255,10 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
                     flexShrink: 0,
                     width: 100,
                     cursor: "pointer",
-                    border: currentPage === -1 ? "2px solid" : "2px solid transparent",
+                    border:
+                      currentPage === -1
+                        ? "2px solid"
+                        : "2px solid transparent",
                     borderColor: "primary.main",
                     borderRadius: 1,
                     overflow: "hidden",
@@ -253,8 +267,15 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
                     "&:hover": { opacity: 1 },
                   }}
                 >
-                  <img src={cover.illustrationUrl} alt="Cover" style={{ width: "100%", display: "block" }} />
-                  <Typography variant="caption" sx={{ display: "block", textAlign: "center", py: 0.5 }}>
+                  <img
+                    src={cover.illustrationUrl}
+                    alt="Cover"
+                    style={{ width: "100%", display: "block" }}
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{ display: "block", textAlign: "center", py: 0.5 }}
+                  >
                     Cover
                   </Typography>
                 </Box>
@@ -267,7 +288,10 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
                     flexShrink: 0,
                     width: 100,
                     cursor: "pointer",
-                    border: currentPage === index ? "2px solid" : "2px solid transparent",
+                    border:
+                      currentPage === index
+                        ? "2px solid"
+                        : "2px solid transparent",
                     borderColor: "primary.main",
                     borderRadius: 1,
                     overflow: "hidden",
@@ -276,8 +300,15 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
                     "&:hover": { opacity: 1 },
                   }}
                 >
-                  <img src={page.illustrationUrl} alt={`Page ${index + 1}`} style={{ width: "100%", display: "block" }} />
-                  <Typography variant="caption" sx={{ display: "block", textAlign: "center", py: 0.5 }}>
+                  <img
+                    src={page.illustrationUrl}
+                    alt={`Page ${index + 1}`}
+                    style={{ width: "100%", display: "block" }}
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{ display: "block", textAlign: "center", py: 0.5 }}
+                  >
                     Page {index + 1}
                   </Typography>
                 </Box>
@@ -334,33 +365,74 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
         </Grid>
       )}
 
+      {/* Minimal Header with Tags */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          {story?.artStyleDecision && (
+            <Chip
+              label={
+                story.artStyleDecision.styleDetails?.name ||
+                story.artStyleDecision.selectedStyle
+              }
+              size="small"
+              sx={{ bgcolor: "rgba(123, 104, 238, 0.2)" }}
+            />
+          )}
+          {storyId && (
+            <TagManager
+              storyId={storyId}
+              isEditable={isAuthenticated && isEditable}
+            />
+          )}
+        </Stack>
+        <Typography variant="caption" sx={{ color: "text.secondary" }}>
+          {pages.length} pages
+        </Typography>
+      </Box>
+
       {/* Action Buttons */}
-      <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mt: 4 }}>
-        <Button variant="outlined" startIcon={<Refresh />} onClick={onReset}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 2,
+          mt: 4,
+          flexWrap: "wrap",
+        }}
+      >
+        <Button variant="outlined" startIcon={<ArrowBack />} onClick={onReset}>
           {onEdit ? "Back to Library" : "Create New Story"}
         </Button>
-        {isEditable && onEdit && (
+        {isAuthenticated && isEditable && onEdit && (
           <Button
             variant="contained"
             startIcon={<Edit />}
             onClick={() => onEdit(story)}
-            sx={{ bgcolor: "secondary.main", "&:hover": { bgcolor: "secondary.dark" } }}
+            sx={{
+              bgcolor: "secondary.main",
+              "&:hover": { bgcolor: "secondary.dark" },
+            }}
           >
             Edit Story
           </Button>
         )}
-        <Button
-          variant="outlined"
-          startIcon={<Download />}
-          onClick={() => {
-            const dataStr = JSON.stringify(story, null, 2);
-            const blob = new Blob([dataStr], { type: "application/json" });
-            const url = URL.createObjectURL(blob);
-            handleDownload(url, `${story?.storyPages?.title || "story"}.json`);
-          }}
-        >
-          Download Story Data
-        </Button>
+        {isAuthenticated && isEditable && onDelete && (
+          <Button
+            variant="outlined"
+            color="error"
+            startIcon={<Delete />}
+            onClick={() => onDelete(story)}
+          >
+            Delete
+          </Button>
+        )}
       </Box>
 
       {/* Zoom Dialog */}
@@ -371,7 +443,12 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
       >
         <IconButton
           onClick={() => setZoomImage(null)}
-          sx={{ position: "absolute", top: 8, right: 8, bgcolor: "rgba(0,0,0,0.5)" }}
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            bgcolor: "rgba(0,0,0,0.5)",
+          }}
         >
           <Close />
         </IconButton>
@@ -390,4 +467,3 @@ function StoryViewer({ story, onReset, onEdit, isEditable = true }) {
 }
 
 export default StoryViewer;
-

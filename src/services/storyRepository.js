@@ -548,8 +548,8 @@ export async function searchStories(searchQuery, options = {}) {
     params.push(searchPattern, searchPattern, searchPattern);
   }
 
-  sql += ` GROUP BY s.id ORDER BY s.created_at DESC LIMIT ?`;
-  params.push(limit);
+  const limitInt = parseInt(limit, 10) || 50;
+  sql += ` GROUP BY s.id ORDER BY s.created_at DESC LIMIT ${limitInt}`;
 
   const stories = await query(sql, params);
 
@@ -752,6 +752,7 @@ export async function getReadingProgress(userId, storyId) {
 }
 
 export async function getCurrentlyReading(userId, limit = 10) {
+  const limitInt = parseInt(limit, 10) || 10;
   const sql = `
     SELECT s.*, 
            urh.current_page, urh.total_pages, urh.completed, urh.last_read_at,
@@ -760,10 +761,10 @@ export async function getCurrentlyReading(userId, limit = 10) {
     JOIN user_reading_history urh ON s.id = urh.story_id
     WHERE urh.user_id = ? AND urh.completed = FALSE AND s.status = 'completed'
     ORDER BY urh.last_read_at DESC
-    LIMIT ?
+    LIMIT ${limitInt}
   `;
 
-  const stories = await query(sql, [userId, limit]);
+  const stories = await query(sql, [userId]);
 
   return stories.map((s) => ({
     id: s.id,
@@ -780,6 +781,7 @@ export async function getCurrentlyReading(userId, limit = 10) {
 }
 
 export async function getReadingHistory(userId, limit = 20) {
+  const limitInt = parseInt(limit, 10) || 20;
   const sql = `
     SELECT s.*, 
            urh.current_page, urh.total_pages, urh.completed, urh.last_read_at
@@ -787,10 +789,10 @@ export async function getReadingHistory(userId, limit = 20) {
     JOIN user_reading_history urh ON s.id = urh.story_id
     WHERE urh.user_id = ? AND s.status = 'completed'
     ORDER BY urh.last_read_at DESC
-    LIMIT ?
+    LIMIT ${limitInt}
   `;
 
-  const stories = await query(sql, [userId, limit]);
+  const stories = await query(sql, [userId]);
 
   return stories.map((s) => ({
     id: s.id,
@@ -930,27 +932,29 @@ export async function isFollowing(followerId, followingId) {
 }
 
 export async function getFollowers(userId, limit = 50) {
+  const limitInt = parseInt(limit, 10) || 50;
   const sql = `
     SELECT u.id, u.name, u.username, u.picture, u.bio, uf.created_at as followed_at
     FROM users u
     JOIN user_followers uf ON u.id = uf.follower_id
     WHERE uf.following_id = ?
     ORDER BY uf.created_at DESC
-    LIMIT ?
+    LIMIT ${limitInt}
   `;
-  return await query(sql, [userId, limit]);
+  return await query(sql, [userId]);
 }
 
 export async function getFollowing(userId, limit = 50) {
+  const limitInt = parseInt(limit, 10) || 50;
   const sql = `
     SELECT u.id, u.name, u.username, u.picture, u.bio, uf.created_at as followed_at
     FROM users u
     JOIN user_followers uf ON u.id = uf.following_id
     WHERE uf.follower_id = ?
     ORDER BY uf.created_at DESC
-    LIMIT ?
+    LIMIT ${limitInt}
   `;
-  return await query(sql, [userId, limit]);
+  return await query(sql, [userId]);
 }
 
 export async function getFollowingIds(userId) {
@@ -967,31 +971,103 @@ export async function getPersonalizedFeed(userId, limit = 50) {
   // Get IDs of users the current user follows
   const followingIds = await getFollowingIds(userId);
 
-  if (followingIds.length === 0) {
-    // No follows - return regular story list
+  // Get IDs of stories the user is currently reading (not completed)
+  const readingRows = await query(
+    "SELECT story_id FROM user_reading_history WHERE user_id = ? AND completed = FALSE",
+    [userId]
+  );
+  const readingStoryIds = readingRows.map((r) => r.story_id);
+
+  if (followingIds.length === 0 && readingStoryIds.length === 0) {
+    // No follows and no reading history - return regular story list
     return await listStories();
+  }
+
+  // If no follows but has reading stories, we still need to exclude them
+  if (followingIds.length === 0) {
+    const limitInt = parseInt(limit, 10) || 50;
+    const readingExclusion = `AND s.id NOT IN (${readingStoryIds.map(() => "?").join(",")})`;
+
+    const sql = `
+      SELECT s.*, 
+             u.name as author_name, u.username as author_username, u.picture as author_picture,
+             (SELECT COUNT(*) FROM characters WHERE story_id = s.id) as character_count,
+             (SELECT COUNT(*) FROM pages WHERE story_id = s.id) as actual_page_count,
+             0 as is_followed,
+             GROUP_CONCAT(DISTINCT t.name) as tag_names
+      FROM stories s
+      LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN story_tags st ON s.id = st.story_id
+      LEFT JOIN tags t ON st.tag_id = t.id
+      WHERE s.status = 'completed' AND s.is_public = TRUE ${readingExclusion}
+      GROUP BY s.id
+      ORDER BY s.created_at DESC
+      LIMIT ${limitInt}
+    `;
+
+    const stories = await query(sql, readingStoryIds);
+
+    return stories.map((s) => ({
+      id: s.id,
+      filename: `story_${s.id}`,
+      title: s.title,
+      summary: s.summary,
+      characterCount: s.character_count,
+      pageCount: s.actual_page_count || s.page_count,
+      coverUrl: s.cover_url,
+      artStyle: s.art_style_key,
+      createdAt: s.created_at,
+      updatedAt: s.updated_at,
+      isPublic: s.is_public,
+      userId: s.user_id,
+      author: s.author_name
+        ? {
+            id: s.user_id,
+            name: s.author_name,
+            username: s.author_username,
+            picture: s.author_picture,
+          }
+        : null,
+      isFromFollowed: false,
+      tags: s.tag_names ? s.tag_names.split(",") : [],
+    }));
   }
 
   // Query stories with boost for followed users
   // Stories from followed users get priority (ordered first), then others
+  // Exclude stories the user is already reading
+  const limitInt = parseInt(limit, 10) || 50;
+
+  // Build the exclusion clause for reading stories
+  const readingExclusion =
+    readingStoryIds.length > 0
+      ? `AND s.id NOT IN (${readingStoryIds.map(() => "?").join(",")})`
+      : "";
+
+  // Build the is_followed case statement
+  const isFollowedCase =
+    followingIds.length > 0
+      ? `CASE WHEN s.user_id IN (${followingIds.map(() => "?").join(",")}) THEN 1 ELSE 0 END`
+      : "0";
+
   const sql = `
     SELECT s.*, 
            u.name as author_name, u.username as author_username, u.picture as author_picture,
            (SELECT COUNT(*) FROM characters WHERE story_id = s.id) as character_count,
            (SELECT COUNT(*) FROM pages WHERE story_id = s.id) as actual_page_count,
-           CASE WHEN s.user_id IN (${followingIds.map(() => "?").join(",")}) THEN 1 ELSE 0 END as is_followed,
+           ${isFollowedCase} as is_followed,
            GROUP_CONCAT(DISTINCT t.name) as tag_names
     FROM stories s
     LEFT JOIN users u ON s.user_id = u.id
     LEFT JOIN story_tags st ON s.id = st.story_id
     LEFT JOIN tags t ON st.tag_id = t.id
-    WHERE s.status = 'completed' AND s.is_public = TRUE
+    WHERE s.status = 'completed' AND s.is_public = TRUE ${readingExclusion}
     GROUP BY s.id
     ORDER BY is_followed DESC, s.created_at DESC
-    LIMIT ?
+    LIMIT ${limitInt}
   `;
 
-  const params = [...followingIds, limit];
+  const params = [...followingIds, ...readingStoryIds];
   const stories = await query(sql, params);
 
   return stories.map((s) => ({

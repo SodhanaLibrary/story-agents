@@ -93,6 +93,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
         setError(data.error || "Failed to load story for editing");
       }
     } catch (err) {
+      console.error(err);
       console.error("Failed to load story for editing:", err);
       setError("Failed to load story for editing");
     }

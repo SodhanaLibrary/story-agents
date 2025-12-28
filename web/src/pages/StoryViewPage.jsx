@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -6,6 +6,10 @@ import {
   Typography,
   Alert,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { ArrowBack } from "@mui/icons-material";
 import StoryViewer from "../components/StoryViewer";
@@ -16,6 +20,8 @@ function StoryViewPage() {
   const [story, setStory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchStory = async () => {
@@ -42,6 +48,28 @@ function StoryViewPage() {
 
   const handleEdit = () => {
     navigate(`/story/${storyId}/edit`);
+  };
+
+  const handleDelete = () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/stories/${storyId}`, { method: "DELETE" });
+      if (res.ok) {
+        navigate("/");
+      } else {
+        setError("Failed to delete story");
+      }
+    } catch (err) {
+      console.error("Failed to delete story:", err);
+      setError("Failed to delete story");
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
   };
 
   if (loading) {
@@ -71,7 +99,11 @@ function StoryViewPage() {
         <Typography variant="h6" sx={{ color: "text.secondary" }}>
           Story not found
         </Typography>
-        <Button variant="contained" onClick={() => navigate("/")} sx={{ mt: 2 }}>
+        <Button
+          variant="contained"
+          onClick={() => navigate("/")}
+          sx={{ mt: 2 }}
+        >
           Back to Library
         </Button>
       </Box>
@@ -92,11 +124,38 @@ function StoryViewPage() {
         story={story}
         onReset={() => navigate("/")}
         onEdit={handleEdit}
+        onDelete={handleDelete}
         isEditable={true}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Delete Story?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ color: "text.secondary" }}>
+            Are you sure you want to delete "{story?.storyPages?.title}"? This
+            action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={confirmDelete}
+            disabled={deleting}
+          >
+            {deleting ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
 
 export default StoryViewPage;
-
