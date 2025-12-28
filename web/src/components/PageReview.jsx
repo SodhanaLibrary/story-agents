@@ -38,9 +38,9 @@ import {
   TextFields,
 } from "@mui/icons-material";
 
-function PageReview({ jobId, onComplete, onBack }) {
+function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
   const [job, setJob] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [regenerating, setRegenerating] = useState({});
   const [editDialog, setEditDialog] = useState({
     open: false,
@@ -83,6 +83,7 @@ function PageReview({ jobId, onComplete, onBack }) {
         const response = await fetch(`/api/job/${jobId}`);
         const data = await response.json();
         setJob(data);
+        setStoryPages(data.storyPages);
 
         if (
           data.status === "pages_ready" ||
@@ -603,24 +604,6 @@ function PageReview({ jobId, onComplete, onBack }) {
               mx: "auto",
             }}
           />
-        </Box>
-      )}
-
-      {/* Generate All Illustrations Button - only in prompt review mode */}
-      {isPromptReviewMode && (
-        <Box sx={{ mb: 4, textAlign: "center" }}>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<AutoAwesome />}
-            onClick={handleGenerateAllIllustrations}
-            sx={{ px: 4, py: 1.5 }}
-          >
-            Generate All Illustrations
-          </Button>
-          <Typography variant="body2" sx={{ color: "text.secondary", mt: 1 }}>
-            Or generate illustrations one at a time below
-          </Typography>
         </Box>
       )}
 

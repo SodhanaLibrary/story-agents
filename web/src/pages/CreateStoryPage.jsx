@@ -17,19 +17,27 @@ import PageReview from "../components/PageReview";
 import StoryViewer from "../components/StoryViewer";
 import { useAuth } from "../context/AuthContext";
 
-const steps = ["Write Story", "Art Style", "Review Avatars", "Review Pages", "View Story"];
+const steps = [
+  "Write Story",
+  "Art Style",
+  "Review Avatars",
+  "Review Pages",
+  "View Story",
+];
 
 function CreateStoryPage({ isEditing: isEditingProp = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { storyId } = useParams();
   const { userId } = useAuth();
-  
+
   const [activeStep, setActiveStep] = useState(0);
   const [story, setStory] = useState("");
+  const [characters, setCharacters] = useState(null);
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [customStyle, setCustomStyle] = useState("");
   const [pageCount, setPageCount] = useState(6);
+  const [storyPages, setStoryPages] = useState(null);
   const [jobId, setJobId] = useState(null);
   const [generatedStory, setGeneratedStory] = useState(null);
   const [isEditing, setIsEditing] = useState(isEditingProp);
@@ -43,8 +51,13 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
       const { draft, jobId: resumeJobId } = draftState;
       setJobId(resumeJobId);
       setStory(draft.story || "");
-      if (draft.artStyleDecision) {
+      setCharacters(draft.characters || []);
+      setStoryPages(draft.storyPages || []);
+      if (draft.artStyleKey) {
         setSelectedStyle(draft.artStyleKey);
+      }
+      if (draft.artStylePrompt) {
+        setCustomStyle(draft.artStylePrompt);
       }
       if (draft.pageCount) {
         setPageCount(draft.pageCount);
@@ -67,7 +80,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
         headers: { "Content-Type": "application/json" },
       });
       const data = await response.json();
-      
+
       if (data.success && data.jobId) {
         setJobId(data.jobId);
         setStory(data.job.story || "");
@@ -158,24 +171,27 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
 
       setActiveStep(2);
 
-      // Start character extraction with the existing jobId
-      const response = await fetch("/api/extract-characters", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          story,
-          artStyleKey: styleKey === "auto" ? null : styleKey,
-          customArtStyle: styleKey === "custom" ? custom : null,
-          jobId, // Pass existing jobId to continue the same draft
-        }),
-      });
+      if (!characters || characters.length === 0) {
+        // Start character extraction with the existing jobId
+        const response = await fetch("/api/extract-characters", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            story,
+            artStyleKey: styleKey === "auto" ? null : styleKey,
+            customArtStyle: styleKey === "custom" ? custom : null,
+            jobId, // Pass existing jobId to continue the same draft
+          }),
+        });
 
-      const data = await response.json();
-      if (data.jobId && data.jobId !== jobId) {
-        // Update jobId if server created a new one
-        setJobId(data.jobId);
+        const data = await response.json();
+        if (data.jobId && data.jobId !== jobId) {
+          // Update jobId if server created a new one
+          setJobId(data.jobId);
+        }
       }
     } catch (err) {
+      console.error(err);
       console.error("Failed to start character extraction:", err);
       setError("Failed to start character extraction");
     } finally {
@@ -186,7 +202,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
   const handleAvatarsApproved = async () => {
     setActiveStep(3);
 
-    if (!isEditing) {
+    if (!isEditing && (!storyPages || storyPages.length === 0)) {
       try {
         await fetch("/api/generate/pages", {
           method: "POST",
@@ -245,12 +261,16 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           "& .MuiStepLabel-label": {
             color: "text.secondary",
             fontSize: "0.85rem",
-            "&.Mui-active": { color: isEditing ? "secondary.main" : "primary.main" },
+            "&.Mui-active": {
+              color: isEditing ? "secondary.main" : "primary.main",
+            },
             "&.Mui-completed": { color: "success.main" },
           },
           "& .MuiStepIcon-root": {
             color: "rgba(232, 184, 109, 0.3)",
-            "&.Mui-active": { color: isEditing ? "secondary.main" : "primary.main" },
+            "&.Mui-active": {
+              color: isEditing ? "secondary.main" : "primary.main",
+            },
             "&.Mui-completed": { color: "success.main" },
           },
         }}
@@ -278,6 +298,8 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           story={story}
           onSelect={handleStyleSelect}
           onBack={() => setActiveStep(0)}
+          initialStyle={selectedStyle}
+          initialCustomStyle={customStyle}
         />
       )}
 
@@ -286,6 +308,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           jobId={jobId}
           onApprove={handleAvatarsApproved}
           onBack={isEditing ? () => navigate("/") : () => setActiveStep(1)}
+          setCharacters={setCharacters}
         />
       )}
 
@@ -294,6 +317,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           jobId={jobId}
           onComplete={handlePagesApproved}
           onBack={() => setActiveStep(2)}
+          setStoryPages={setStoryPages}
         />
       )}
 
@@ -309,4 +333,3 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
 }
 
 export default CreateStoryPage;
-

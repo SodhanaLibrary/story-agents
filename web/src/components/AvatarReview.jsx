@@ -33,9 +33,9 @@ import {
   Delete,
 } from "@mui/icons-material";
 
-function AvatarReview({ jobId, onApprove, onBack }) {
+function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
   const [job, setJob] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState({});
   const [editDialog, setEditDialog] = useState({
     open: false,
@@ -56,6 +56,7 @@ function AvatarReview({ jobId, onApprove, onBack }) {
         const response = await fetch(`/api/job/${jobId}`);
         const data = await response.json();
         setJob(data);
+        setCharacters(data.characters);
 
         // Stop loading when characters are ready (or when editing a completed story)
         if (

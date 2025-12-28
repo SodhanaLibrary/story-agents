@@ -34,17 +34,26 @@ const styleIcons = {
   storyboard: "🎬",
 };
 
-function StyleSelector({ story, onSelect, onBack }) {
+function StyleSelector({
+  story,
+  onSelect,
+  onBack,
+  initialStyle = null,
+  initialCustomStyle = "",
+}) {
   const [styles, setStyles] = useState([]);
-  const [selectedStyle, setSelectedStyle] = useState(null);
-  const [customStyle, setCustomStyle] = useState("");
+  const [selectedStyle, setSelectedStyle] = useState(initialStyle);
+  const [customStyle, setCustomStyle] = useState(initialCustomStyle);
   const [recommendation, setRecommendation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
 
   useEffect(() => {
     fetchStyles();
-    analyzeStory();
+    // Only analyze if no style is pre-selected
+    if (!initialStyle) {
+      analyzeStory();
+    }
   }, []);
 
   const fetchStyles = async () => {
@@ -99,44 +108,78 @@ function StyleSelector({ story, onSelect, onBack }) {
         <Typography variant="h2" sx={{ mb: 2, color: "primary.main" }}>
           Choose Art Style
         </Typography>
-        <Typography variant="body1" sx={{ color: "text.secondary", maxWidth: 600, mx: "auto" }}>
-          Select an art style for your illustrated story. Our AI has analyzed your story and
-          made a recommendation.
+        <Typography
+          variant="body1"
+          sx={{ color: "text.secondary", maxWidth: 600, mx: "auto" }}
+        >
+          Select an art style for your illustrated story. Our AI has analyzed
+          your story and made a recommendation.
         </Typography>
       </Box>
 
       {/* AI Recommendation */}
       {analyzing ? (
-        <Card sx={{ mb: 4, bgcolor: "rgba(123, 104, 238, 0.1)", border: "1px solid rgba(123, 104, 238, 0.3)" }}>
+        <Card
+          sx={{
+            mb: 4,
+            bgcolor: "rgba(123, 104, 238, 0.1)",
+            border: "1px solid rgba(123, 104, 238, 0.3)",
+          }}
+        >
           <CardContent sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <CircularProgress size={24} sx={{ color: "secondary.main" }} />
-            <Typography>Analyzing your story to recommend the best art style...</Typography>
-          </CardContent>
-        </Card>
-      ) : recommendation && (
-        <Card sx={{ mb: 4, bgcolor: "rgba(123, 104, 238, 0.1)", border: "1px solid rgba(123, 104, 238, 0.3)" }}>
-          <CardContent>
-            <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-              <Recommend sx={{ color: "secondary.main" }} />
-              <Typography variant="h6">AI Recommendation</Typography>
-              <Chip
-                label={`${Math.round(recommendation.confidence * 100)}% confidence`}
-                size="small"
-                sx={{ bgcolor: "rgba(123, 104, 238, 0.2)" }}
-              />
-            </Stack>
-            <Typography variant="body2" sx={{ color: "text.secondary", mb: 2 }}>
-              {recommendation.reasoning}
+            <Typography>
+              Analyzing your story to recommend the best art style...
             </Typography>
-            {recommendation.storyAnalysis && (
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                <Chip label={`Genre: ${recommendation.storyAnalysis.genre}`} size="small" variant="outlined" />
-                <Chip label={`Tone: ${recommendation.storyAnalysis.tone}`} size="small" variant="outlined" />
-                <Chip label={`Audience: ${recommendation.storyAnalysis.targetAudience}`} size="small" variant="outlined" />
-              </Stack>
-            )}
           </CardContent>
         </Card>
+      ) : (
+        recommendation && (
+          <Card
+            sx={{
+              mb: 4,
+              bgcolor: "rgba(123, 104, 238, 0.1)",
+              border: "1px solid rgba(123, 104, 238, 0.3)",
+            }}
+          >
+            <CardContent>
+              <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+                <Recommend sx={{ color: "secondary.main" }} />
+                <Typography variant="h6">AI Recommendation</Typography>
+                <Chip
+                  label={`${Math.round(recommendation.confidence * 100)}% confidence`}
+                  size="small"
+                  sx={{ bgcolor: "rgba(123, 104, 238, 0.2)" }}
+                />
+              </Stack>
+              <Typography
+                variant="body2"
+                sx={{ color: "text.secondary", mb: 2 }}
+              >
+                {recommendation.reasoning}
+              </Typography>
+              {recommendation.storyAnalysis && (
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Chip
+                    label={`Genre: ${recommendation.storyAnalysis.genre}`}
+                    size="small"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={`Tone: ${recommendation.storyAnalysis.tone}`}
+                    size="small"
+                    variant="outlined"
+                  />
+                  <Chip
+                    label={`Audience: ${recommendation.storyAnalysis.targetAudience}`}
+                    size="small"
+                    variant="outlined"
+                  />
+                </Stack>
+              )}
+            </CardContent>
+          </Card>
+        )
       )}
 
       {/* Auto-detect Option */}
@@ -146,7 +189,10 @@ function StyleSelector({ story, onSelect, onBack }) {
           mb: 3,
           cursor: "pointer",
           border: selectedStyle === "auto" ? "2px solid" : "1px solid",
-          borderColor: selectedStyle === "auto" ? "primary.main" : "rgba(232, 184, 109, 0.15)",
+          borderColor:
+            selectedStyle === "auto"
+              ? "primary.main"
+              : "rgba(232, 184, 109, 0.15)",
           transition: "all 0.2s ease",
           "&:hover": { borderColor: "primary.main" },
         }}
@@ -156,10 +202,13 @@ function StyleSelector({ story, onSelect, onBack }) {
           <Box flex={1}>
             <Typography variant="h6">🤖 Let AI Decide</Typography>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              Automatically choose the best style based on your story's genre, tone, and themes
+              Automatically choose the best style based on your story's genre,
+              tone, and themes
             </Typography>
           </Box>
-          {selectedStyle === "auto" && <Chip label="Selected" color="primary" />}
+          {selectedStyle === "auto" && (
+            <Chip label="Selected" color="primary" />
+          )}
         </CardContent>
       </Card>
 
@@ -176,10 +225,16 @@ function StyleSelector({ story, onSelect, onBack }) {
                 height: "100%",
                 cursor: "pointer",
                 border: selectedStyle === style.key ? "2px solid" : "1px solid",
-                borderColor: selectedStyle === style.key ? "primary.main" : "rgba(232, 184, 109, 0.15)",
+                borderColor:
+                  selectedStyle === style.key
+                    ? "primary.main"
+                    : "rgba(232, 184, 109, 0.15)",
                 transition: "all 0.2s ease",
                 position: "relative",
-                "&:hover": { borderColor: "primary.main", transform: "translateY(-2px)" },
+                "&:hover": {
+                  borderColor: "primary.main",
+                  transform: "translateY(-2px)",
+                },
               }}
             >
               {recommendation?.recommendedStyle === style.key && (
@@ -195,7 +250,10 @@ function StyleSelector({ story, onSelect, onBack }) {
                   {styleIcons[style.key] || "🎨"}
                 </Typography>
                 <Typography variant="h6">{style.name}</Typography>
-                <Typography variant="body2" sx={{ color: "text.secondary", mb: 1 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "text.secondary", mb: 1 }}
+                >
                   {style.description}
                 </Typography>
                 <Typography variant="caption" sx={{ color: "text.secondary" }}>
@@ -214,13 +272,18 @@ function StyleSelector({ story, onSelect, onBack }) {
               height: "100%",
               cursor: "pointer",
               border: selectedStyle === "custom" ? "2px solid" : "1px solid",
-              borderColor: selectedStyle === "custom" ? "primary.main" : "rgba(232, 184, 109, 0.15)",
+              borderColor:
+                selectedStyle === "custom"
+                  ? "primary.main"
+                  : "rgba(232, 184, 109, 0.15)",
               transition: "all 0.2s ease",
               "&:hover": { borderColor: "primary.main" },
             }}
           >
             <CardContent>
-              <Typography variant="h4" sx={{ mb: 1 }}>✏️</Typography>
+              <Typography variant="h4" sx={{ mb: 1 }}>
+                ✏️
+              </Typography>
               <Typography variant="h6">Custom Style</Typography>
               <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 Enter your own art style description
@@ -260,7 +323,10 @@ function StyleSelector({ story, onSelect, onBack }) {
           size="large"
           endIcon={<ArrowForward />}
           onClick={handleSubmit}
-          disabled={!selectedStyle || (selectedStyle === "custom" && !customStyle.trim())}
+          disabled={
+            !selectedStyle ||
+            (selectedStyle === "custom" && !customStyle.trim())
+          }
         >
           Generate Story
         </Button>
@@ -270,4 +336,3 @@ function StyleSelector({ story, onSelect, onBack }) {
 }
 
 export default StyleSelector;
-
