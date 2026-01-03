@@ -11,7 +11,8 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { ArrowBack } from "@mui/icons-material";
+import { Close, Menu } from "@mui/icons-material";
+import IconButton from "@mui/material/IconButton";
 import StoryViewer from "../components/StoryViewer";
 
 function StoryViewPage() {
@@ -22,6 +23,7 @@ function StoryViewPage() {
   const [error, setError] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showPageList, setShowPageList] = useState(false);
 
   useEffect(() => {
     const fetchStory = async () => {
@@ -111,16 +113,43 @@ function StoryViewPage() {
   }
 
   return (
-    <Box className="fade-in">
-      <Button
-        startIcon={<ArrowBack />}
-        onClick={() => navigate("/")}
-        sx={{ mb: 2, color: "text.secondary" }}
+    <Dialog fullScreen open={true} onClose={() => {}}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        p={2}
+        pt={1}
       >
-        Back to Library
-      </Button>
+        <Box display="flex" alignItems="center" gap={0}>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="menu"
+            sx={{ mr: 2 }}
+            onClick={() => setShowPageList(!showPageList)}
+          >
+            <Menu />
+          </IconButton>
+          <Typography
+            variant="h4"
+            sx={{ fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}
+          >
+            {story?.storyPages?.title}
+          </Typography>
+        </Box>
+        <Box>
+          <IconButton
+            onClick={() => navigate("/")}
+            sx={{ bgcolor: "rgba(0,0,0,0.5)" }}
+          >
+            <Close />
+          </IconButton>
+        </Box>
+      </Box>
 
       <StoryViewer
+        showPageList={showPageList}
         story={story}
         onReset={() => navigate("/")}
         onEdit={handleEdit}
@@ -154,7 +183,7 @@ function StoryViewPage() {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </Dialog>
   );
 }
 

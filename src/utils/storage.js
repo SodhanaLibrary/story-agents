@@ -111,7 +111,10 @@ export async function saveImage(base64Data, type, name) {
  */
 export async function saveImageFromUrl(url, type, name) {
   await ensureStorageDirectories();
-
+  console.log("Saving image from URL:", url, type, name);
+  if (url?.base64) {
+    return saveImage(url.base64, type, name);
+  }
   const response = await fetch(url);
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);

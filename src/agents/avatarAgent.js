@@ -1,4 +1,8 @@
-import { generateImage } from "../services/ai.js";
+// Save referenceImageBase64 to a temp file and get path
+const fs = await import("fs/promises");
+const path = await import("path");
+const os = await import("os");
+import { generateImage, generateImageWithReferences } from "../services/ai.js";
 import { saveImageFromUrl } from "../utils/storage.js";
 
 /**
@@ -20,11 +24,42 @@ export class AvatarAgent {
       character.avatarPrompt
     );
 
-    const imageUrl = await generateImage(enhancedPrompt, {
-      size: "1024x1024",
-      quality: "standard",
-      style: "vivid",
-    });
+    let imageUrl = null;
+
+    if (character.hasReferenceImage) {
+      // Create temp file for reference image
+      const tmpDir = os.tmpdir();
+      // Generate a random file name for the temp reference image
+      const safeName = character.name
+        ? character.name.replace(/[^a-z0-9]/gi, "_").toLowerCase()
+        : "avatar_ref";
+      const tmpFilePath = path.join(
+        tmpDir,
+        `${safeName}_ref_${Date.now()}.png`
+      );
+
+      // Strip data URI if present
+      let imgData = character.referenceImageBase64;
+      if (imgData.startsWith("data:image")) {
+        imgData = imgData.split(",")[1];
+      }
+      await fs.writeFile(tmpFilePath, imgData, "base64");
+      imageUrl = await generateImageWithReferences(
+        enhancedPrompt,
+        [tmpFilePath],
+        {
+          size: "1024x1024",
+          quality: "standard",
+          style: "vivid",
+        }
+      );
+    } else {
+      imageUrl = await generateImage(enhancedPrompt, {
+        size: "1024x1024",
+        quality: "standard",
+        style: "vivid",
+      });
+    }
 
     const savedPath = await saveImageFromUrl(
       imageUrl,

@@ -319,7 +319,7 @@ export async function generateImageWithReferences(
   options = {}
 ) {
   const client = getOpenAIClient();
-  const model = options.model || "gpt-image-1";
+  const model = options.model || "gpt-image-1.5";
   const size = options.size || config.image.size || "1024x1024";
   const weight = options.weight || 1; // Strong influence by default
   const startTime = Date.now();

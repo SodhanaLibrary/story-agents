@@ -92,6 +92,8 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           data.status === "error"
         ) {
           setLoading(false);
+          // Reset generating state when illustrations are done
+          setGeneratingIllustrations(false);
         }
       } catch (err) {
         console.error("Failed to poll job:", err);
@@ -1051,15 +1053,6 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
                   <Typography variant="body1" sx={{ color: "text.secondary" }}>
                     Cover will be generated with illustrations
                   </Typography>
-                  {!isPromptReviewMode && (
-                    <Button
-                      variant="contained"
-                      startIcon={<AutoAwesome />}
-                      onClick={handleGenerateAllIllustrations}
-                    >
-                      Generate All Illustrations
-                    </Button>
-                  )}
                 </Box>
               )}
 
@@ -1165,17 +1158,15 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
                       ? "Generate cover illustration or use 'Generate All Illustrations' to create everything at once."
                       : "Cover illustration pending..."}
                   </Typography>
-                  {isPromptReviewMode && (
-                    <Button
-                      variant="contained"
-                      startIcon={<AutoAwesome />}
-                      onClick={handleGenerateCoverIllustration}
-                      disabled={regenerating.cover}
-                      fullWidth
-                    >
-                      Generate Cover
-                    </Button>
-                  )}
+                  <Button
+                    variant="contained"
+                    startIcon={<AutoAwesome />}
+                    onClick={handleGenerateCoverIllustration}
+                    disabled={regenerating.cover}
+                    fullWidth
+                  >
+                    Generate Cover
+                  </Button>
                 </Stack>
               )}
             </CardContent>

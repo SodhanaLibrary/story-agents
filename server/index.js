@@ -352,17 +352,6 @@ app.post("/api/generate-avatar", async (req, res) => {
     // Build avatar prompt from user description or character's original prompt
     let avatarPrompt = customDescription || character.avatarPrompt;
 
-    // If reference image is provided, analyze it and incorporate into prompt
-    if (referenceImageBase64) {
-      try {
-        const imageAnalysis = await analyzeReferenceImage(referenceImageBase64);
-        avatarPrompt = `Based on reference image characteristics: ${imageAnalysis}. ${avatarPrompt}`;
-        character.hasReferenceImage = true;
-      } catch (err) {
-        logger.warn("Error analyzing reference image:", err.message);
-      }
-    }
-
     // Store original prompt for user editing
     character.customDescription = customDescription || null;
     character.avatarPrompt = avatarPrompt;
@@ -377,6 +366,8 @@ app.post("/api/generate-avatar", async (req, res) => {
     const updatedCharacter = await avatarAgent.generateAvatar({
       ...character,
       avatarPrompt: enhancedPrompt,
+      referenceImageBase64: referenceImageBase64,
+      hasReferenceImage: referenceImageBase64 ? true : false,
     });
 
     // Convert path to URL
@@ -406,6 +397,7 @@ app.post("/api/generate-avatar", async (req, res) => {
       character: updatedCharacter,
     });
   } catch (error) {
+    console.error("Error generating avatar:", error);
     logger.error("Error generating avatar:", error.message);
     res.status(500).json({ error: error.message });
   }
