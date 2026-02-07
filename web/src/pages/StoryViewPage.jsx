@@ -14,8 +14,10 @@ import {
 import { Close, Menu } from "@mui/icons-material";
 import IconButton from "@mui/material/IconButton";
 import StoryViewer from "../components/StoryViewer";
+import { useAuth } from "../context/AuthContext";
 
 function StoryViewPage() {
+  const { userId } = useAuth();
   const { storyId } = useParams();
   const navigate = useNavigate();
   const [story, setStory] = useState(null);
@@ -59,11 +61,19 @@ function StoryViewPage() {
   const confirmDelete = async () => {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/stories/${storyId}`, { method: "DELETE" });
+      const headers = { "Content-Type": "application/json" };
+      if (userId) {
+        headers["X-User-Id"] = userId;
+      }
+      const res = await fetch(`/api/stories/${storyId}`, {
+        method: "DELETE",
+        headers,
+      });
       if (res.ok) {
         navigate("/");
       } else {
-        setError("Failed to delete story");
+        const data = await res.json();
+        setError(data.error || "Failed to delete story");
       }
     } catch (err) {
       console.error("Failed to delete story:", err);
@@ -154,7 +164,7 @@ function StoryViewPage() {
         onReset={() => navigate("/")}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        isEditable={true}
+        isEditable={userId && story?.user_id === userId}
       />
 
       {/* Delete Confirmation Dialog */}

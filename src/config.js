@@ -31,6 +31,8 @@ export const config = {
     name: process.env.DB_NAME || "story_agents",
   },
   storage: {
+    // Storage type: "local" or "s3"
+    type: process.env.STORAGE_TYPE || "local",
     basePath: process.env.STORAGE_PATH || path.join(__dirname, "..", "storage"),
     avatarsPath: path.join(
       process.env.STORAGE_PATH || path.join(__dirname, "..", "storage"),
@@ -40,6 +42,18 @@ export const config = {
       process.env.STORAGE_PATH || path.join(__dirname, "..", "storage"),
       "pages"
     ),
+    // S3 configuration
+    s3: {
+      bucket: process.env.S3_BUCKET || "",
+      region: process.env.S3_REGION || "us-east-1",
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+      // Optional: CloudFront distribution URL for serving images
+      cdnUrl: process.env.S3_CDN_URL || "",
+      // S3 key prefixes
+      avatarsPrefix: process.env.S3_AVATARS_PREFIX || "avatars",
+      pagesPrefix: process.env.S3_PAGES_PREFIX || "pages",
+    },
   },
   image: {
     size: process.env.IMAGE_SIZE || "1024x1024",

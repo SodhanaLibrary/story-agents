@@ -1,0 +1,52 @@
+# docker-compose.yml
+version: "3.8"
+
+services:
+  backend:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AI_PROVIDER=${AI_PROVIDER}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=3306
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - WEB_GOOGLE_CLIENT_ID=${WEB_GOOGLE_CLIENT_ID}
+      - WEB_GOOGLE_CLIENT_SECRET=${WEB_GOOGLE_CLIENT_SECRET}
+      # S3 Storage Configuration (set STORAGE_TYPE=s3 to enable)
+      - STORAGE_TYPE=${STORAGE_TYPE:-local}
+      - S3_BUCKET=${S3_BUCKET}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - S3_CDN_URL=${S3_CDN_URL}
+    volumes:
+      - story-storage:/app/storage
+    restart: unless-stopped
+
+  frontend:
+    build: ./web
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: unless-stopped
+
+volumes:
+  story-storage:
+  mysql-data:

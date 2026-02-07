@@ -288,6 +288,29 @@ export async function initializeDatabase() {
     )
   `);
 
+  // Batch requests table for illustration generation
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS batch_requests (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      job_id VARCHAR(100) NOT NULL,
+      story_title VARCHAR(500),
+      total_pages INT DEFAULT 0,
+      completed_pages INT DEFAULT 0,
+      status ENUM('pending', 'processing', 'completed', 'failed', 'cancelled') DEFAULT 'pending',
+      error_message TEXT,
+      started_at TIMESTAMP NULL,
+      completed_at TIMESTAMP NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_user_id (user_id),
+      INDEX idx_job_id (job_id),
+      INDEX idx_status (status),
+      INDEX idx_created_at (created_at)
+    )
+  `);
+
   logger.success("Database schema initialized");
 }
 

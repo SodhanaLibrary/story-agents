@@ -9,6 +9,45 @@ export class PageAgent {
     this.name = "PageAgent";
     this.description =
       "Generates story pages with text, image descriptions, and consistent character references";
+    this.minPages = 4;
+    this.maxPages = 20;
+  }
+
+  /**
+   * Estimates optimal page count based on story length
+   * @param {string} story - The story text
+   * @returns {number} - Recommended page count
+   */
+  estimatePageCount(story) {
+    const wordCount = story.trim().split(/\s+/).length;
+    const paragraphCount = story.trim().split(/\n\n+/).length;
+
+    let recommendedPages;
+
+    if (wordCount < 150) {
+      recommendedPages = 4;
+    } else if (wordCount < 300) {
+      recommendedPages = 5;
+    } else if (wordCount < 500) {
+      recommendedPages = 6;
+    } else if (wordCount < 700) {
+      recommendedPages = 8;
+    } else if (wordCount < 1000) {
+      recommendedPages = 10;
+    } else if (wordCount < 1500) {
+      recommendedPages = 12;
+    } else if (wordCount < 2000) {
+      recommendedPages = 14;
+    } else {
+      recommendedPages = Math.min(this.maxPages, Math.ceil(wordCount / 150));
+    }
+
+    // Adjust based on paragraph count (more paragraphs = more natural breaks)
+    if (paragraphCount > recommendedPages * 1.5) {
+      recommendedPages = Math.min(this.maxPages, recommendedPages + 2);
+    }
+
+    return Math.max(this.minPages, Math.min(this.maxPages, recommendedPages));
   }
 
   /**
@@ -19,7 +58,8 @@ export class PageAgent {
    * @returns {Promise<object>} - Story structure with pages
    */
   async generatePages(story, characters, options = {}) {
-    const pageCount = options.pageCount || 8;
+    // Auto-determine page count if not explicitly provided
+    const pageCount = options.pageCount || this.estimatePageCount(story);
     const targetAudience = options.targetAudience || "children";
 
     // Build detailed character reference with consistency tags

@@ -36,7 +36,6 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
   const [characters, setCharacters] = useState(null);
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [customStyle, setCustomStyle] = useState("");
-  const [pageCount, setPageCount] = useState(6);
   const [storyPages, setStoryPages] = useState(null);
   const [jobId, setJobId] = useState(null);
   const [generatedStory, setGeneratedStory] = useState(null);
@@ -58,9 +57,6 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
       }
       if (draft.artStylePrompt) {
         setCustomStyle(draft.artStylePrompt);
-      }
-      if (draft.pageCount) {
-        setPageCount(draft.pageCount);
       }
       setActiveStep(draft.currentStep || 0);
     }
@@ -85,7 +81,6 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
         setJobId(data.jobId);
         setStory(data.job.story || "");
         setSelectedStyle(data.job.artStyleDecision?.selectedStyle);
-        setPageCount(data.job.pageCount || 6);
         setGeneratedStory(data.job);
         setIsEditing(true);
         setActiveStep(2); // Start at avatar review
@@ -113,7 +108,6 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             story: storyText,
-            pageCount,
             phase: "art_style_selection",
             status: "draft",
             userId,
@@ -126,7 +120,6 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             story: storyText,
-            pageCount,
             targetAudience: "children",
             userId,
           }),
@@ -210,7 +203,6 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             jobId,
-            pageCount,
             targetAudience: "children",
             generateCover: true,
           }),
@@ -287,8 +279,6 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
       {activeStep === 0 && (
         <StoryInput
           onSubmit={handleStorySubmit}
-          pageCount={pageCount}
-          onPageCountChange={setPageCount}
           saving={saving}
           initialStory={story}
         />

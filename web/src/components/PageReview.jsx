@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   Box,
   Card,
   CardContent,
   Typography,
   Button,
+  ButtonGroup,
   Grid,
   TextField,
   CircularProgress,
@@ -19,6 +21,10 @@ import {
   LinearProgress,
   Tabs,
   Tab,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   Check,
@@ -36,9 +42,13 @@ import {
   PhotoLibrary,
   Add,
   TextFields,
+  ArrowDropDown,
+  Speed,
+  Schedule,
 } from "@mui/icons-material";
 
 function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
+  const { userId } = useAuth();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(false);
   const [regenerating, setRegenerating] = useState({});
@@ -75,6 +85,13 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
   });
   const [deleting, setDeleting] = useState(false);
 
+  // Page count regeneration state
+  const [desiredPageCount, setDesiredPageCount] = useState("");
+  const [regeneratingPages, setRegeneratingPages] = useState(false);
+
+  // Generation mode dropdown state
+  const [generateMenuAnchor, setGenerateMenuAnchor] = useState(null);
+
   useEffect(() => {
     if (!jobId) return;
 
@@ -92,8 +109,9 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           data.status === "error"
         ) {
           setLoading(false);
-          // Reset generating state when illustrations are done
+          // Reset generating states when done
           setGeneratingIllustrations(false);
+          setRegeneratingPages(false);
         }
       } catch (err) {
         console.error("Failed to poll job:", err);
@@ -122,18 +140,80 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
     }
   }, [job?.status, job?.storyPages?.pages?.length]);
 
-  // Generate all illustrations at once
-  const handleGenerateAllIllustrations = async () => {
-    setGeneratingIllustrations(true);
+  // Regenerate pages with custom page count
+  const handleRegenerateWithPageCount = async () => {
+    const pageCount = parseInt(desiredPageCount, 10);
+    if (isNaN(pageCount) || pageCount < 4 || pageCount > 20) {
+      return;
+    }
+
+    setRegeneratingPages(true);
     try {
-      await fetch("/api/generate/illustrations", {
+      await fetch("/api/generate/pages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           jobId,
+          pageCount,
+          targetAudience: "children",
           generateCover: true,
         }),
       });
+      // Reset approved pages since we're regenerating
+      setApprovedPages({});
+      // Polling will pick up the new pages
+    } catch (error) {
+      console.error("Failed to regenerate pages:", error);
+    } finally {
+      setRegeneratingPages(false);
+      setDesiredPageCount("");
+    }
+  };
+
+  // Generate all illustrations - supports immediate or batch mode
+  const handleGenerateAllIllustrations = async (mode = "immediate") => {
+    setGenerateMenuAnchor(null);
+    setGeneratingIllustrations(true);
+
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (userId) {
+        headers["X-User-Id"] = userId;
+      }
+
+      if (mode === "batch") {
+        // Create a batch request for tracking
+        const response = await fetch("/api/batch/create", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ jobId }),
+        });
+
+        if (!response.ok) {
+          // Fallback to direct generation if batch creation fails
+          console.warn(
+            "Batch creation failed, falling back to immediate generation"
+          );
+          await fetch("/api/generate/illustrations", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({
+              jobId,
+              generateCover: true,
+            }),
+          });
+        }
+      } else {
+        // Immediate generation
+        await fetch("/api/generate/illustrations", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            jobId,
+            generateCover: true,
+          }),
+        });
+      }
       // Polling will pick up the status change
     } catch (error) {
       console.error("Failed to start illustration generation:", error);
@@ -414,9 +494,14 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
 
   const handleFinalize = async () => {
     try {
+      const headers = { "Content-Type": "application/json" };
+      if (userId) {
+        headers["X-User-Id"] = userId;
+      }
+
       const response = await fetch("/api/finalize-story", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({ jobId }),
       });
 
@@ -463,9 +548,10 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
     generatingIllustrations ||
     (job?.status === "running" && job?.phase === "illustration_generation");
 
-  // Loading state - only show when actually loading or generating illustrations
+  // Loading state - only show when actually loading, generating illustrations, or regenerating pages
   if (
     loading ||
+    regeneratingPages ||
     !job ||
     (job.status === "running" &&
       !job.storyPages?.pages?.length &&
@@ -475,10 +561,12 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
       <Box className="fade-in">
         <Box sx={{ textAlign: "center", mb: 4 }}>
           <Typography variant="h2" sx={{ mb: 2, color: "primary.main" }}>
-            Creating Pages
+            {regeneratingPages ? "Regenerating Pages" : "Creating Pages"}
           </Typography>
           <Typography variant="body1" sx={{ color: "text.secondary" }}>
-            Generating story pages...
+            {regeneratingPages
+              ? `Creating ${desiredPageCount || "new"} pages...`
+              : "Generating story pages..."}
           </Typography>
         </Box>
 
@@ -486,16 +574,20 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           <CardContent sx={{ p: 4, textAlign: "center" }}>
             <CircularProgress sx={{ color: "primary.main", mb: 3 }} size={60} />
             <Typography variant="h6" sx={{ mb: 1 }}>
-              {job?.phase === "page_generation"
-                ? "Creating Story Pages"
-                : job?.phase === "illustration_generation"
-                  ? "Generating Illustrations"
-                  : job?.phase === "cover_generation"
-                    ? "Creating Book Cover"
-                    : "Processing..."}
+              {regeneratingPages
+                ? "Regenerating Story Pages"
+                : job?.phase === "page_generation"
+                  ? "Creating Story Pages"
+                  : job?.phase === "illustration_generation"
+                    ? "Generating Illustrations"
+                    : job?.phase === "cover_generation"
+                      ? "Creating Book Cover"
+                      : "Processing..."}
             </Typography>
             <Typography variant="body2" sx={{ color: "text.secondary" }}>
-              {job?.message || "Please wait..."}
+              {regeneratingPages
+                ? `Creating ${desiredPageCount || "new"} pages for your story...`
+                : job?.message || "Please wait..."}
             </Typography>
             {job?.progress > 0 && (
               <Box sx={{ mt: 2 }}>
@@ -634,8 +726,53 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
       {/* Pages Tab */}
       {tabValue === 0 && (
         <>
-          {/* Add Page Button */}
-          <Box sx={{ mb: 3, display: "flex", justifyContent: "flex-end" }}>
+          {/* Page Count Regeneration & Add Page */}
+          <Box
+            sx={{
+              mb: 3,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 2,
+            }}
+          >
+            {/* Page Count Input - only show in prompt review mode */}
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                Current: {totalPages} pages
+              </Typography>
+              <TextField
+                size="small"
+                type="number"
+                value={desiredPageCount}
+                onChange={(e) => setDesiredPageCount(e.target.value)}
+                placeholder="4-20"
+                inputProps={{ min: 4, max: 20, style: { width: 60 } }}
+                sx={{ width: 100 }}
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleRegenerateWithPageCount}
+                disabled={
+                  regeneratingPages ||
+                  !desiredPageCount ||
+                  parseInt(desiredPageCount) < 4 ||
+                  parseInt(desiredPageCount) > 20
+                }
+                startIcon={
+                  regeneratingPages ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <Refresh />
+                  )
+                }
+              >
+                {regeneratingPages ? "Regenerating..." : "Regenerate Pages"}
+              </Button>
+            </Stack>
+
             <Button
               variant="outlined"
               startIcon={<Add />}
@@ -1180,14 +1317,44 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           Back to Avatars
         </Button>
         {isPromptReviewMode ? (
-          <Button
-            variant="contained"
-            size="large"
-            endIcon={<AutoAwesome />}
-            onClick={handleGenerateAllIllustrations}
-          >
-            Generate All Illustrations
-          </Button>
+          <>
+            <ButtonGroup variant="contained" size="large">
+              <Button
+                size="small"
+                onClick={(e) => setGenerateMenuAnchor(e.currentTarget)}
+              >
+                Generate All Illustrations <ArrowDropDown />
+              </Button>
+            </ButtonGroup>
+            <Menu
+              anchorEl={generateMenuAnchor}
+              open={Boolean(generateMenuAnchor)}
+              onClose={() => setGenerateMenuAnchor(null)}
+              anchorOrigin={{ vertical: "top", horizontal: "right" }}
+              transformOrigin={{ vertical: "bottom", horizontal: "right" }}
+            >
+              <MenuItem
+                onClick={() => handleGenerateAllIllustrations("immediate")}
+              >
+                <ListItemIcon>
+                  <Speed fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Immediate"
+                  secondary="Generate now, wait here"
+                />
+              </MenuItem>
+              <MenuItem onClick={() => handleGenerateAllIllustrations("batch")}>
+                <ListItemIcon>
+                  <Schedule fontSize="small" />
+                </ListItemIcon>
+                <ListItemText
+                  primary="Batch Request"
+                  secondary="Track progress in Batch Requests"
+                />
+              </MenuItem>
+            </Menu>
+          </>
         ) : (
           <Button
             variant="contained"

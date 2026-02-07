@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Logout, Timeline } from "@mui/icons-material";
+import { Logout, Timeline, BatchPrediction } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
 export default function GoogleLoginButton() {
@@ -47,6 +47,11 @@ export default function GoogleLoginButton() {
 
   const handlePromptLogs = () => {
     navigate("/prompt-logs");
+    handleMenuClose();
+  };
+
+  const handleBatchRequests = () => {
+    navigate("/batch-requests");
     handleMenuClose();
   };
 
@@ -116,6 +121,10 @@ export default function GoogleLoginButton() {
             </Typography>
           </Box>
           <Divider />
+          <MenuItem onClick={handleBatchRequests} sx={{ gap: 1.5 }}>
+            <BatchPrediction fontSize="small" />
+            Batch Requests
+          </MenuItem>
           <MenuItem onClick={handlePromptLogs} sx={{ gap: 1.5 }}>
             <Timeline fontSize="small" />
             AI Prompt Logs

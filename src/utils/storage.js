@@ -3,6 +3,7 @@ import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import config from "../config.js";
 import * as storyRepo from "../services/storyRepository.js";
+import { uploadToS3, deleteFromS3, extractS3Key, isS3Enabled } from "../services/s3.js";
 
 // Re-export repository functions for backward compatibility
 export const {
@@ -58,11 +59,13 @@ export const {
 } = storyRepo;
 
 /**
- * Ensures storage directories exist (for images only)
+ * Ensures storage directories exist (for local images only)
  */
 export async function ensureStorageDirectories() {
-  await fs.mkdir(config.storage.avatarsPath, { recursive: true });
-  await fs.mkdir(config.storage.pagesPath, { recursive: true });
+  if (!isS3Enabled()) {
+    await fs.mkdir(config.storage.avatarsPath, { recursive: true });
+    await fs.mkdir(config.storage.pagesPath, { recursive: true });
+  }
 }
 
 /**
@@ -77,44 +80,62 @@ export function getStoragePath(type) {
 }
 
 /**
- * Saves an image from base64 data to storage
+ * Gets the S3 prefix for a given type
+ * @param {string} type - Type of storage ('avatar' or 'page')
+ * @returns {string} - S3 key prefix
+ */
+function getS3Prefix(type) {
+  return type === "avatar"
+    ? config.storage.s3.avatarsPrefix
+    : config.storage.s3.pagesPrefix;
+}
+
+/**
+ * Saves an image from base64 data to storage (local or S3)
  * @param {string} base64Data - Base64 encoded image data
  * @param {string} type - Type of image ('avatar' or 'page')
  * @param {string} name - Name for the file (will be sanitized)
- * @returns {Promise<string>} - Path to saved file
+ * @returns {Promise<string>} - Path/URL to saved file
  */
 export async function saveImage(base64Data, type, name) {
-  await ensureStorageDirectories();
-
   const sanitizedName = name.replace(/[^a-z0-9]/gi, "_").toLowerCase();
   const filename = `${sanitizedName}_${uuidv4().slice(0, 8)}.png`;
-
-  const storagePath =
-    type === "avatar" ? config.storage.avatarsPath : config.storage.pagesPath;
-  const filePath = path.join(storagePath, filename);
 
   // Remove data URL prefix if present
   const base64Clean = base64Data.replace(/^data:image\/\w+;base64,/, "");
   const buffer = Buffer.from(base64Clean, "base64");
 
-  await fs.writeFile(filePath, buffer);
+  // Use S3 if enabled
+  if (isS3Enabled()) {
+    const s3Key = `${getS3Prefix(type)}/${filename}`;
+    const s3Url = await uploadToS3(buffer, s3Key, "image/png");
+    return s3Url;
+  }
 
+  // Otherwise use local storage
+  await ensureStorageDirectories();
+  const storagePath =
+    type === "avatar" ? config.storage.avatarsPath : config.storage.pagesPath;
+  const filePath = path.join(storagePath, filename);
+
+  await fs.writeFile(filePath, buffer);
   return filePath;
 }
 
 /**
- * Saves image from URL to storage
+ * Saves image from URL to storage (local or S3)
  * @param {string} url - Image URL
  * @param {string} type - Type of image ('avatar' or 'page')
  * @param {string} name - Name for the file
- * @returns {Promise<string>} - Path to saved file
+ * @returns {Promise<string>} - Path/URL to saved file
  */
 export async function saveImageFromUrl(url, type, name) {
-  await ensureStorageDirectories();
   console.log("Saving image from URL:", url, type, name);
+  
   if (url?.base64) {
     return saveImage(url.base64, type, name);
   }
+  
   const response = await fetch(url);
   const arrayBuffer = await response.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
@@ -122,30 +143,55 @@ export async function saveImageFromUrl(url, type, name) {
   const sanitizedName = name.replace(/[^a-z0-9]/gi, "_").toLowerCase();
   const filename = `${sanitizedName}_${uuidv4().slice(0, 8)}.png`;
 
+  // Use S3 if enabled
+  if (isS3Enabled()) {
+    const s3Key = `${getS3Prefix(type)}/${filename}`;
+    const s3Url = await uploadToS3(buffer, s3Key, "image/png");
+    return s3Url;
+  }
+
+  // Otherwise use local storage
+  await ensureStorageDirectories();
   const storagePath =
     type === "avatar" ? config.storage.avatarsPath : config.storage.pagesPath;
   const filePath = path.join(storagePath, filename);
 
   await fs.writeFile(filePath, buffer);
-
   return filePath;
 }
 
 /**
- * Deletes an image file
- * @param {string} filePath - Path to the image file
+ * Deletes an image file (local or S3)
+ * @param {string} filePathOrUrl - Path to the image file or S3 URL
  * @returns {Promise<boolean>} - Success status
  */
-export async function deleteImage(filePath) {
+export async function deleteImage(filePathOrUrl) {
   try {
-    if (filePath) {
-      await fs.unlink(filePath);
-      return true;
+    if (!filePathOrUrl) return false;
+
+    // Check if it's an S3 URL
+    if (isS3Enabled()) {
+      const s3Key = extractS3Key(filePathOrUrl);
+      if (s3Key) {
+        return await deleteFromS3(s3Key);
+      }
     }
+
+    // Try to delete as local file
+    await fs.unlink(filePathOrUrl);
+    return true;
   } catch (err) {
     // Ignore if file doesn't exist
   }
   return false;
+}
+
+/**
+ * Check if S3 storage is being used
+ * @returns {boolean}
+ */
+export function isUsingS3() {
+  return isS3Enabled();
 }
 
 /**
@@ -194,7 +240,7 @@ export async function loadJson(storyIdOrFilename) {
  * @param {number} userId - Optional user ID
  * @returns {Promise<number>} - Story ID
  */
-export async function saveJson(data, filename, userId = null) {
+export async function saveJson(data, userId = null) {
   const storyId = await storyRepo.saveCompleteStory(data, userId);
   return storyId;
 }
@@ -233,4 +279,5 @@ export default {
   loadDraft,
   listDrafts,
   deleteDraft,
+  isUsingS3,
 };

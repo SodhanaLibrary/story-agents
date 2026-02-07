@@ -6,14 +6,11 @@ import {
   Typography,
   TextField,
   Button,
-  Slider,
   Stack,
   Chip,
   CircularProgress,
-  Alert,
-  Tooltip,
 } from "@mui/material";
-import { AutoStories, ArrowForward, AutoAwesome, Info } from "@mui/icons-material";
+import { AutoStories, ArrowForward } from "@mui/icons-material";
 
 const sampleStories = [
   {
@@ -53,12 +50,9 @@ When they finally found Sage's family in the Valley of Dragons, they celebrated 
   },
 ];
 
-function StoryInput({ onSubmit, pageCount, onPageCountChange, saving = false, initialStory = "" }) {
+function StoryInput({ onSubmit, saving = false, initialStory = "" }) {
   const [story, setStory] = useState(initialStory);
   const [error, setError] = useState("");
-  const [pageCountRecommendation, setPageCountRecommendation] = useState(null);
-  const [analyzingPageCount, setAnalyzingPageCount] = useState(false);
-  const [useRecommendedPages, setUseRecommendedPages] = useState(true);
 
   // Sync with initial story
   useEffect(() => {
@@ -66,62 +60,6 @@ function StoryInput({ onSubmit, pageCount, onPageCountChange, saving = false, in
       setStory(initialStory);
     }
   }, [initialStory]);
-
-  // Analyze page count when story changes (debounced)
-  useEffect(() => {
-    if (story.trim().length < 100) {
-      setPageCountRecommendation(null);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setAnalyzingPageCount(true);
-      try {
-        // Quick estimate first
-        const response = await fetch("/api/analyze-page-count", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ story, detailed: false }),
-        });
-        const data = await response.json();
-        setPageCountRecommendation(data);
-
-        // Auto-set recommended page count
-        if (useRecommendedPages && data.recommendedPageCount) {
-          onPageCountChange(data.recommendedPageCount);
-        }
-      } catch (err) {
-        console.error("Failed to analyze page count:", err);
-      } finally {
-        setAnalyzingPageCount(false);
-      }
-    }, 1000); // 1 second debounce
-
-    return () => clearTimeout(timer);
-  }, [story]);
-
-  const handleGetDetailedAnalysis = async () => {
-    if (story.trim().length < 100) return;
-
-    setAnalyzingPageCount(true);
-    try {
-      const response = await fetch("/api/analyze-page-count/detailed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ story, targetAudience: "children" }),
-      });
-      const data = await response.json();
-      setPageCountRecommendation(data);
-
-      if (useRecommendedPages && data.recommendedPageCount) {
-        onPageCountChange(data.recommendedPageCount);
-      }
-    } catch (err) {
-      console.error("Failed to get detailed analysis:", err);
-    } finally {
-      setAnalyzingPageCount(false);
-    }
-  };
 
   const handleSubmit = () => {
     if (story.trim().length < 100) {
@@ -137,17 +75,7 @@ function StoryInput({ onSubmit, pageCount, onPageCountChange, saving = false, in
     setError("");
   };
 
-  const handlePageCountChange = (value) => {
-    setUseRecommendedPages(false);
-    onPageCountChange(value);
-  };
-
-  const handleUseRecommended = () => {
-    if (pageCountRecommendation?.recommendedPageCount) {
-      setUseRecommendedPages(true);
-      onPageCountChange(pageCountRecommendation.recommendedPageCount);
-    }
-  };
+  const wordCount = story.trim().split(/\s+/).filter(w => w.length > 0).length;
 
   return (
     <Box className="fade-in">
@@ -157,7 +85,7 @@ function StoryInput({ onSubmit, pageCount, onPageCountChange, saving = false, in
         </Typography>
         <Typography variant="body1" sx={{ color: "text.secondary", maxWidth: 600, mx: "auto" }}>
           Enter your story below, and our AI will transform it into a beautifully illustrated book
-          with unique characters and artwork.
+          with unique characters and artwork. The number of pages will be automatically determined based on your story.
         </Typography>
       </Box>
 
@@ -174,7 +102,7 @@ function StoryInput({ onSubmit, pageCount, onPageCountChange, saving = false, in
               setError("");
             }}
             error={!!error}
-            helperText={error || `${story.length} characters`}
+            helperText={error || `${story.length} characters · ${wordCount} words`}
             sx={{
               "& .MuiOutlinedInput-root": {
                 fontFamily: '"Crimson Pro", serif',
@@ -183,117 +111,6 @@ function StoryInput({ onSubmit, pageCount, onPageCountChange, saving = false, in
               },
             }}
           />
-
-          {/* Page Count Section */}
-          <Box sx={{ mt: 3 }}>
-            <Stack direction="row" alignItems="center" spacing={2} mb={2}>
-              <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                Number of pages: <strong>{pageCount}</strong>
-              </Typography>
-
-              {analyzingPageCount && (
-                <CircularProgress size={16} sx={{ color: "primary.main" }} />
-              )}
-
-              {pageCountRecommendation && !analyzingPageCount && (
-                <Tooltip
-                  title={
-                    pageCountRecommendation.reasoning ||
-                    `Based on ${pageCountRecommendation.storyAnalysis?.wordCount || 0} words`
-                  }
-                >
-                  <Chip
-                    icon={<AutoAwesome sx={{ fontSize: 16 }} />}
-                    label={`AI suggests ${pageCountRecommendation.recommendedPageCount} pages`}
-                    size="small"
-                    onClick={handleUseRecommended}
-                    sx={{
-                      bgcolor:
-                        pageCount === pageCountRecommendation.recommendedPageCount
-                          ? "rgba(76, 175, 80, 0.2)"
-                          : "rgba(232, 184, 109, 0.2)",
-                      cursor: "pointer",
-                      "&:hover": { bgcolor: "rgba(232, 184, 109, 0.3)" },
-                    }}
-                  />
-                </Tooltip>
-              )}
-
-              {pageCountRecommendation && pageCountRecommendation.confidence < 0.8 && (
-                <Button
-                  size="small"
-                  variant="text"
-                  onClick={handleGetDetailedAnalysis}
-                  disabled={analyzingPageCount}
-                  sx={{ fontSize: "0.75rem" }}
-                >
-                  Get AI Analysis
-                </Button>
-              )}
-            </Stack>
-
-            <Slider
-              value={pageCount}
-              onChange={(e, value) => handlePageCountChange(value)}
-              min={4}
-              max={20}
-              marks={[
-                { value: 4, label: "4" },
-                { value: 8, label: "8" },
-                { value: 12, label: "12" },
-                { value: 16, label: "16" },
-                { value: 20, label: "20" },
-              ]}
-              sx={{
-                color: "primary.main",
-                "& .MuiSlider-mark": {
-                  backgroundColor: "rgba(232, 184, 109, 0.3)",
-                },
-                "& .MuiSlider-markLabel": {
-                  color: "text.secondary",
-                  fontSize: "0.75rem",
-                },
-              }}
-            />
-
-            {/* Page Count Recommendation Details */}
-            {pageCountRecommendation?.storyAnalysis && (
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  bgcolor: "rgba(123, 104, 238, 0.1)",
-                  borderRadius: 1,
-                  border: "1px solid rgba(123, 104, 238, 0.2)",
-                }}
-              >
-                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-                  <Info sx={{ fontSize: 16, color: "secondary.main" }} />
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                    Story Analysis
-                  </Typography>
-                </Stack>
-                <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                    Words: {pageCountRecommendation.storyAnalysis.wordCount || "—"}
-                  </Typography>
-                  {pageCountRecommendation.storyAnalysis.estimatedSceneCount && (
-                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                      Scenes: ~{pageCountRecommendation.storyAnalysis.estimatedSceneCount}
-                    </Typography>
-                  )}
-                  {pageCountRecommendation.storyAnalysis.complexity && (
-                    <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                      Complexity: {pageCountRecommendation.storyAnalysis.complexity}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                    Suggested range: {pageCountRecommendation.minPageCount}-{pageCountRecommendation.maxPageCount} pages
-                  </Typography>
-                </Stack>
-              </Box>
-            )}
-          </Box>
 
           <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
             <Button

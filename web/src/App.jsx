@@ -8,6 +8,7 @@ import CreateStoryPage from "./pages/CreateStoryPage";
 import StoryViewPage from "./pages/StoryViewPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import PromptLogsPage from "./pages/PromptLogsPage";
+import BatchRequestsPage from "./pages/BatchRequestsPage";
 import { useAuth } from "./context/AuthContext";
 
 function AppContent() {
@@ -79,6 +80,12 @@ function AppContent() {
             path="/prompt-logs"
             element={
               isAuthenticated ? <PromptLogsPage /> : <Navigate to="/" replace />
+            }
+          />
+          <Route
+            path="/batch-requests"
+            element={
+              isAuthenticated ? <BatchRequestsPage /> : <Navigate to="/" replace />
             }
           />
 

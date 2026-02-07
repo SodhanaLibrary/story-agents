@@ -10,7 +10,6 @@ import {
   AvatarAgent,
   PageAgent,
   IllustrationAgent,
-  PageCountAgent,
 } from "../src/agents/index.js";
 import {
   saveJson,
@@ -55,9 +54,11 @@ import {
   getFollowing,
   // Personalized Feed
   getPersonalizedFeed,
+  // Storage type check
+  isUsingS3,
 } from "../src/utils/storage.js";
 import { generateTextResponse } from "../src/services/openai.js";
-import { initializeDatabase } from "../src/services/database.js";
+import { initializeDatabase, query, insert } from "../src/services/database.js";
 import config from "../src/config.js";
 import { createLogger, requestLogger } from "../src/utils/logger.js";
 import {
@@ -67,6 +68,27 @@ import {
 } from "../src/services/promptLogger.js";
 
 const logger = createLogger("Server");
+
+/**
+ * Convert image path to URL
+ * If using S3, the path is already a full URL, so return it as-is
+ * For local storage, construct the /storage URL
+ * @param {string} imagePath - Path or URL to image
+ * @param {string} type - Type of image ('avatar' or 'page')
+ * @returns {string|null} - URL to image
+ */
+function getImageUrl(imagePath, type = "page") {
+  if (!imagePath) return null;
+
+  // If using S3, the path is already a full URL
+  if (isUsingS3() || imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+    return imagePath;
+  }
+
+  // For local storage, construct the URL
+  const folder = type === "avatar" ? "avatars" : "pages";
+  return `/storage/${folder}/${path.basename(imagePath)}`;
+}
 
 // Initialize database on startup
 initializeDatabase().catch((err) => {
@@ -203,60 +225,6 @@ app.post("/api/analyze-style", async (req, res) => {
 });
 
 /**
- * POST /api/analyze-page-count - Analyze story and recommend page count
- */
-app.post("/api/analyze-page-count", async (req, res) => {
-  try {
-    const { story, targetAudience, detailed } = req.body;
-
-    if (!story || story.trim().length === 0) {
-      return res.status(400).json({ error: "Story text is required" });
-    }
-
-    const pageCountAgent = new PageCountAgent();
-
-    // Use quick estimate for fast response, or detailed analysis
-    let recommendation;
-    if (detailed) {
-      recommendation = await pageCountAgent.analyzeAndRecommend(story, {
-        targetAudience: targetAudience || "children",
-      });
-    } else {
-      // Quick estimate first, then async detailed analysis
-      recommendation = pageCountAgent.quickEstimate(story);
-    }
-
-    res.json(recommendation);
-  } catch (error) {
-    logger.error("Error analyzing page count:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
- * POST /api/analyze-page-count/detailed - Detailed page count analysis with AI
- */
-app.post("/api/analyze-page-count/detailed", async (req, res) => {
-  try {
-    const { story, targetAudience } = req.body;
-
-    if (!story || story.trim().length === 0) {
-      return res.status(400).json({ error: "Story text is required" });
-    }
-
-    const pageCountAgent = new PageCountAgent();
-    const recommendation = await pageCountAgent.analyzeAndRecommend(story, {
-      targetAudience: targetAudience || "children",
-    });
-
-    res.json(recommendation);
-  } catch (error) {
-    logger.error("Error analyzing page count:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-/**
  * POST /api/extract-characters - Extract characters from story (no avatar generation)
  */
 app.post("/api/extract-characters", async (req, res) => {
@@ -371,10 +339,7 @@ app.post("/api/generate-avatar", async (req, res) => {
     });
 
     // Convert path to URL
-    const baseUrl = `/storage`;
-    updatedCharacter.avatarUrl = updatedCharacter.avatarPath
-      ? `${baseUrl}/avatars/${path.basename(updatedCharacter.avatarPath)}`
-      : null;
+    updatedCharacter.avatarUrl = getImageUrl(updatedCharacter.avatarPath, "avatar");
 
     // Preserve user's description
     updatedCharacter.avatarPrompt = avatarPrompt;
@@ -482,10 +447,7 @@ app.post("/api/regenerate-avatar", async (req, res) => {
       await avatarAgent.generateAvatar(enhancedCharacter);
 
     // Convert path to URL
-    const baseUrl = `/storage`;
-    updatedCharacter.avatarUrl = updatedCharacter.avatarPath
-      ? `${baseUrl}/avatars/${path.basename(updatedCharacter.avatarPath)}`
-      : null;
+    updatedCharacter.avatarUrl = getImageUrl(updatedCharacter.avatarPath, "avatar");
 
     // Preserve the original prompt (not the enhanced one)
     updatedCharacter.avatarPrompt = customPrompt || character.avatarPrompt;
@@ -538,7 +500,8 @@ app.post("/api/generate/pages", async (req, res) => {
     job.phase = "page_generation";
     job.progress = 50;
     job.message = "Creating story pages...";
-    job.pageCount = pageCount || 6;
+    // pageCount will be auto-determined by PageAgent based on story length
+    job.pageCount = pageCount || null;
     job.targetAudience = targetAudience || "children";
     job.generateCover = generateCover !== false;
     activeJobs.set(jobId, job);
@@ -651,10 +614,7 @@ app.post("/api/generate/page/:pageNumber/illustration", async (req, res) => {
     );
 
     // Convert path to URL
-    const baseUrl = `/storage`;
-    updatedPage.illustrationUrl = updatedPage.illustrationPath
-      ? `${baseUrl}/pages/${path.basename(updatedPage.illustrationPath)}`
-      : null;
+    updatedPage.illustrationUrl = getImageUrl(updatedPage.illustrationPath, "page");
 
     updatedPage.illustrationGenerated = true;
     updatedPage.approved = false;
@@ -721,10 +681,7 @@ app.post("/api/generate/cover/illustration", async (req, res) => {
     );
 
     // Convert path to URL
-    const baseUrl = `/storage`;
-    cover.illustrationUrl = cover.illustrationPath
-      ? `${baseUrl}/pages/${path.basename(cover.illustrationPath)}`
-      : null;
+    cover.illustrationUrl = getImageUrl(cover.illustrationPath, "page");
 
     cover.approved = false;
 
@@ -949,10 +906,7 @@ app.post("/api/regenerate-page", async (req, res) => {
     );
 
     // Convert path to URL
-    const baseUrl = `/storage`;
-    updatedPage.illustrationUrl = updatedPage.illustrationPath
-      ? `${baseUrl}/pages/${path.basename(updatedPage.illustrationPath)}`
-      : null;
+    updatedPage.illustrationUrl = getImageUrl(updatedPage.illustrationPath, "page");
 
     // Preserve metadata
     updatedPage.customDescription = page.customDescription;
@@ -1023,10 +977,7 @@ app.post("/api/regenerate-cover", async (req, res) => {
     );
 
     // Convert path to URL
-    const baseUrl = `/storage`;
-    cover.illustrationUrl = cover.illustrationPath
-      ? `${baseUrl}/pages/${path.basename(cover.illustrationPath)}`
-      : null;
+    cover.illustrationUrl = getImageUrl(cover.illustrationPath, "page");
 
     cover.customDescription = customDescription || null;
     cover.regenerated = true;
@@ -1072,7 +1023,7 @@ app.post("/api/finalize-story", async (req, res) => {
     };
 
     // Save to MySQL and get story ID
-    const storyId = await saveJson(result);
+    const storyId = await saveJson(result, req.userId);
     job.storyId = storyId;
     job.outputPath = `story_${storyId}`; // For backward compatibility
 
@@ -1296,13 +1247,10 @@ async function generateAvatarsAsync(jobId, options) {
     );
 
     // Convert paths to URLs
-    const baseUrl = `/storage`;
     const finalCharacters = charactersWithAvatars.map((char) => ({
       ...char,
       avatarPrompt: char.originalPrompt, // Return original prompt for user editing
-      avatarUrl: char.avatarPath
-        ? `${baseUrl}/avatars/${path.basename(char.avatarPath)}`
-        : null,
+      avatarUrl: getImageUrl(char.avatarPath, "avatar"),
     }));
 
     job.characters = finalCharacters;
@@ -1341,12 +1289,14 @@ async function generatePagesAsync(jobId) {
     activeJobs.set(jobId, { ...job });
 
     let storyPages = await pageAgent.generatePages(job.story, job.characters, {
-      pageCount: job.pageCount,
+      pageCount: job.pageCount || undefined, // Let PageAgent auto-determine if not set
       targetAudience: job.targetAudience,
     });
 
     storyPages = pageAgent.enhanceImageDescriptions(storyPages, job.characters);
     job.storyPages = storyPages;
+    // Update pageCount with actual number of pages generated
+    job.pageCount = storyPages.pages?.length || job.pageCount;
     job.progress = 70;
     activeJobs.set(jobId, { ...job });
 
@@ -1448,20 +1398,14 @@ async function generateIllustrationsAsync(jobId) {
     }
 
     // Convert paths to URLs
-    const baseUrl = `/storage`;
-
     job.storyPages.pages = job.storyPages.pages.map((page) => ({
       ...page,
-      illustrationUrl: page.illustrationPath
-        ? `${baseUrl}/pages/${path.basename(page.illustrationPath)}`
-        : null,
+      illustrationUrl: getImageUrl(page.illustrationPath, "page"),
       illustrationGenerated: true,
     }));
 
     if (job.cover) {
-      job.cover.illustrationUrl = job.cover.illustrationPath
-        ? `${baseUrl}/pages/${path.basename(job.cover.illustrationPath)}`
-        : null;
+      job.cover.illustrationUrl = getImageUrl(job.cover.illustrationPath, "page");
     }
 
     // Save final output
@@ -1983,7 +1927,7 @@ app.get("/api/drafts/:jobId", async (req, res) => {
  */
 app.post("/api/drafts", async (req, res) => {
   try {
-    const { story, pageCount, targetAudience, userId } = req.body;
+    const { story, targetAudience, userId } = req.body;
 
     if (!story) {
       return res.status(400).json({ error: "Story text is required" });
@@ -2006,14 +1950,14 @@ app.post("/api/drafts", async (req, res) => {
     // Generate a job ID for this draft
     const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Create initial draft data
+    // Create initial draft data (pageCount will be auto-determined by PageAgent)
     const draftData = {
       story,
       status: "draft",
       phase: "story_input",
       progress: 0,
       message: "Story saved as draft",
-      pageCount: pageCount || 6,
+      pageCount: null, // Auto-determined later by PageAgent
       targetAudience: targetAudience || "children",
       artStyleDecision: null,
       characters: [],
@@ -2219,6 +2163,24 @@ app.delete("/api/stories/:storyId", async (req, res) => {
       id = storyId.replace("story_", "");
     }
 
+    // Get the story to verify ownership
+    const story = await getStoryById(id);
+    if (!story) {
+      return res.status(404).json({ error: "Story not found" });
+    }
+
+    // Verify the user owns this story
+    const requestUserId = req.userId;
+    if (!requestUserId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    if (story.user_id !== requestUserId) {
+      return res
+        .status(403)
+        .json({ error: "You can only delete your own stories" });
+    }
+
     const success = await deleteStory(id);
     if (success) {
       res.json({ success: true, message: "Story deleted" });
@@ -2346,7 +2308,8 @@ app.post("/api/stories/:storyId/save", async (req, res) => {
 
     // Delete old story and save new version (or update in place)
     await deleteStory(originalId);
-    const newStoryId = await saveJson(updatedStory);
+
+    const newStoryId = await saveJson(updatedStory, req.userId);
 
     // Update job status
     job.status = "completed";
@@ -2489,6 +2452,293 @@ app.get("/api/stories/:storyId/prompts", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ==================== BATCH REQUESTS API ====================
+
+// Store active batch processing jobs
+const activeBatchJobs = new Map();
+
+/**
+ * POST /api/batch/create - Create a new batch request for illustration generation
+ */
+app.post("/api/batch/create", async (req, res) => {
+  try {
+    const { jobId } = req.body;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    if (!jobId) {
+      return res.status(400).json({ error: "Job ID is required" });
+    }
+
+    const job = activeJobs.get(jobId);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    const totalPages = job.storyPages?.pages?.length || 0;
+    const storyTitle = job.storyPages?.title || "Untitled Story";
+
+    // Create batch request in database
+    const batchId = await insert(
+      `INSERT INTO batch_requests (user_id, job_id, story_title, total_pages, status)
+       VALUES (?, ?, ?, ?, 'pending')`,
+      [userId, jobId, storyTitle, totalPages]
+    );
+
+    // Start batch processing
+    processBatchRequest(batchId, jobId, userId);
+
+    res.json({
+      success: true,
+      batchId,
+      message: "Batch request created",
+      totalPages,
+    });
+  } catch (error) {
+    logger.error("Error creating batch request:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/batch/list - List batch requests for current user
+ */
+app.get("/api/batch/list", async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const batches = await query(
+      `SELECT * FROM batch_requests 
+       WHERE user_id = ? 
+       ORDER BY created_at DESC 
+       LIMIT 50`,
+      [userId]
+    );
+
+    res.json({ batches });
+  } catch (error) {
+    logger.error("Error listing batch requests:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/batch/:batchId - Get batch request status
+ */
+app.get("/api/batch/:batchId", async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const userId = req.userId;
+
+    const batches = await query(`SELECT * FROM batch_requests WHERE id = ?`, [
+      parseInt(batchId),
+    ]);
+
+    if (batches.length === 0) {
+      return res.status(404).json({ error: "Batch request not found" });
+    }
+
+    const batch = batches[0];
+
+    // Verify ownership
+    if (batch.user_id !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    res.json({ batch });
+  } catch (error) {
+    logger.error("Error fetching batch request:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/batch/:batchId/cancel - Cancel a pending batch request
+ */
+app.post("/api/batch/:batchId/cancel", async (req, res) => {
+  try {
+    const { batchId } = req.params;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const batches = await query(`SELECT * FROM batch_requests WHERE id = ?`, [
+      parseInt(batchId),
+    ]);
+
+    if (batches.length === 0) {
+      return res.status(404).json({ error: "Batch request not found" });
+    }
+
+    const batch = batches[0];
+
+    if (batch.user_id !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    if (batch.status === "completed" || batch.status === "cancelled") {
+      return res.status(400).json({ error: "Batch already " + batch.status });
+    }
+
+    // Mark as cancelled
+    await query(
+      `UPDATE batch_requests SET status = 'cancelled', completed_at = NOW() WHERE id = ?`,
+      [parseInt(batchId)]
+    );
+
+    // Remove from active processing
+    activeBatchJobs.delete(parseInt(batchId));
+
+    res.json({ success: true, message: "Batch request cancelled" });
+  } catch (error) {
+    logger.error("Error cancelling batch request:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Process batch request asynchronously
+ */
+async function processBatchRequest(batchId, jobId, userId) {
+  try {
+    // Mark as processing
+    await query(
+      `UPDATE batch_requests SET status = 'processing', started_at = NOW() WHERE id = ?`,
+      [batchId]
+    );
+
+    activeBatchJobs.set(batchId, { jobId, status: "processing" });
+
+    const job = activeJobs.get(jobId);
+    if (!job) {
+      throw new Error("Job not found");
+    }
+
+    setPromptContext({ jobId, userId });
+
+    const artStyleAgent = new ArtStyleAgent();
+    const illustrationAgent = new IllustrationAgent();
+    illustrationAgent.setCharacterReference(job.characters);
+
+    const artStylePrompt =
+      job.artStylePrompt || artStyleAgent.getStylePrompt("illustration");
+
+    const pages = job.storyPages?.pages || [];
+    let completedCount = 0;
+
+    // Generate illustrations for each page
+    for (let i = 0; i < pages.length; i++) {
+      // Check if cancelled
+      if (!activeBatchJobs.has(batchId)) {
+        logger.info(`Batch ${batchId} was cancelled, stopping processing`);
+        return;
+      }
+
+      const page = pages[i];
+
+      // Skip if already has illustration
+      if (page.illustrationGenerated || page.illustrationUrl) {
+        completedCount++;
+        continue;
+      }
+
+      try {
+        logger.info(
+          `Batch ${batchId}: Generating illustration for page ${page.pageNumber}`
+        );
+
+        const illustratedPage =
+          await illustrationAgent.generatePageIllustration(page, {
+            artStyle: artStylePrompt,
+          });
+
+        // Update page in job
+        illustratedPage.illustrationUrl = getImageUrl(illustratedPage.illustrationPath, "page");
+        illustratedPage.illustrationGenerated = true;
+
+        job.storyPages.pages[i] = illustratedPage;
+        activeJobs.set(jobId, job);
+
+        completedCount++;
+
+        // Update progress in database
+        await query(
+          `UPDATE batch_requests SET completed_pages = ? WHERE id = ?`,
+          [completedCount, batchId]
+        );
+
+        // Save draft progress
+        await saveDraft(jobId, job);
+      } catch (pageError) {
+        logger.error(
+          `Batch ${batchId}: Error generating page ${page.pageNumber}:`,
+          pageError.message
+        );
+      }
+    }
+
+    // Generate cover if needed
+    if (job.generateCover !== false && !job.cover?.illustrationUrl) {
+      try {
+        logger.info(`Batch ${batchId}: Generating cover illustration`);
+        const cover = await illustrationAgent.generateCoverIllustration(
+          job.storyPages,
+          job.characters,
+          { artStyle: artStylePrompt }
+        );
+
+        cover.illustrationUrl = getImageUrl(cover.illustrationPath, "page");
+
+        job.cover = cover;
+        activeJobs.set(jobId, job);
+        await saveDraft(jobId, job);
+      } catch (coverError) {
+        logger.error(
+          `Batch ${batchId}: Error generating cover:`,
+          coverError.message
+        );
+      }
+    }
+
+    // Update job status
+    job.status = "pages_ready";
+    job.phase = "awaiting_page_review";
+    job.progress = 95;
+    job.message = "All illustrations generated. Ready for review.";
+    activeJobs.set(jobId, job);
+    await saveDraft(jobId, job);
+
+    // Mark batch as completed
+    await query(
+      `UPDATE batch_requests SET status = 'completed', completed_pages = ?, completed_at = NOW() WHERE id = ?`,
+      [completedCount, batchId]
+    );
+
+    activeBatchJobs.delete(batchId);
+    logger.success(
+      `Batch ${batchId} completed: ${completedCount} pages generated`
+    );
+  } catch (error) {
+    logger.error(`Batch ${batchId} failed:`, error.message);
+
+    await query(
+      `UPDATE batch_requests SET status = 'failed', error_message = ?, completed_at = NOW() WHERE id = ?`,
+      [error.message, batchId]
+    );
+
+    activeBatchJobs.delete(batchId);
+  }
+}
 
 // Start server
 app.listen(PORT, () => {
