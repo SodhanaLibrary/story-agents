@@ -1,0 +1,32 @@
+# Ignore certbot directory (has root permissions)
+certbot/
+certbot
+
+# Ignore node_modules
+node_modules/
+web/node_modules/
+mobile/node_modules/
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore local files
+.env
+*.pem
+*.log
+
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore build artifacts
+web/dist/
+*.md
+
+# Ignore storage (mounted as volume)
+storage/avatars/*
+storage/pages/*
+
+# Ignore test files
+ignrore/

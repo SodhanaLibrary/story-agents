@@ -1,14 +1,12 @@
 # web/Dockerfile
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
+# Pre-built static files - no build step needed
 FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Create directories for SSL and certbot
+RUN mkdir -p /var/www/certbot /etc/letsencrypt
+
+COPY dist/ /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+
+EXPOSE 80 443
 CMD ["nginx", "-g", "daemon off;"]
