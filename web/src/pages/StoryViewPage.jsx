@@ -164,7 +164,7 @@ function StoryViewPage() {
         onReset={() => navigate("/")}
         onEdit={handleEdit}
         onDelete={handleDelete}
-        isEditable={userId && story?.user_id === userId}
+        isEditable={userId && story?.userId === userId}
       />
 
       {/* Delete Confirmation Dialog */}

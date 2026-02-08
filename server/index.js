@@ -2479,8 +2479,11 @@ app.post("/api/batch/create", async (req, res) => {
       return res.status(404).json({ error: "Job not found" });
     }
 
-    const totalPages = job.storyPages?.pages?.length || 0;
+    const pageCount = job.storyPages?.pages?.length || 0;
     const storyTitle = job.storyPages?.title || "Untitled Story";
+    // Include cover in total count if it needs to be generated
+    const needsCover = job.generateCover !== false && !job.cover?.illustrationUrl;
+    const totalPages = pageCount + (needsCover ? 1 : 0);
 
     // Create batch request in database
     const batchId = await insert(
@@ -2689,6 +2692,12 @@ async function processBatchRequest(batchId, jobId, userId) {
 
     // Generate cover if needed
     if (job.generateCover !== false && !job.cover?.illustrationUrl) {
+      // Check if cancelled
+      if (!activeBatchJobs.has(batchId)) {
+        logger.info(`Batch ${batchId} was cancelled, stopping processing`);
+        return;
+      }
+
       try {
         logger.info(`Batch ${batchId}: Generating cover illustration`);
         const cover = await illustrationAgent.generateCoverIllustration(
@@ -2702,6 +2711,13 @@ async function processBatchRequest(batchId, jobId, userId) {
         job.cover = cover;
         activeJobs.set(jobId, job);
         await saveDraft(jobId, job);
+
+        // Increment completed count for cover
+        completedCount++;
+        await query(
+          `UPDATE batch_requests SET completed_pages = ? WHERE id = ?`,
+          [completedCount, batchId]
+        );
       } catch (coverError) {
         logger.error(
           `Batch ${batchId}: Error generating cover:`,
