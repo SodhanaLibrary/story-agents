@@ -11,7 +11,11 @@ import {
   Box,
   Chip,
   IconButton,
-  CircularProgress,
+  Menu,
+  MenuItem,
+  Divider,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   AutoStories,
@@ -31,6 +35,23 @@ function Header() {
   const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [mobileMenuAnchor, setMobileMenuAnchor] = useState(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const mobileMenuOpen = Boolean(mobileMenuAnchor);
+
+  const handleMobileMenuOpen = (event) => {
+    setMobileMenuAnchor(event.currentTarget);
+  };
+
+  const handleMobileMenuClose = () => {
+    setMobileMenuAnchor(null);
+  };
+
+  const handleMobileNavigation = (path) => {
+    navigate(path);
+    handleMobileMenuClose();
+  };
 
   // Determine current tab based on route
   const getTabValue = () => {
@@ -91,11 +112,11 @@ function Header() {
       }}
     >
       <Toolbar sx={{ gap: 2 }}>
-        {/* Logo */}
+        {/* Logo - opens menu on mobile, navigates home on desktop */}
         <Box
           id="header-logo"
           sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
-          onClick={() => navigate("/")}
+          onClick={isMobile && !isCreateMode && !isProfileMode && !isStoryViewMode ? handleMobileMenuOpen : () => navigate("/")}
         >
           <AutoStories sx={{ mr: 1, color: "primary.main" }} />
           <Typography
@@ -109,6 +130,69 @@ function Header() {
             Story Agents
           </Typography>
         </Box>
+
+        {/* Mobile Navigation Menu */}
+        <Menu
+          id="mobile-nav-menu"
+          anchorEl={mobileMenuAnchor}
+          open={mobileMenuOpen}
+          onClose={handleMobileMenuClose}
+          anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+          transformOrigin={{ vertical: "top", horizontal: "left" }}
+          PaperProps={{
+            sx: {
+              mt: 1,
+              minWidth: 200,
+              bgcolor: "background.paper",
+              border: "1px solid",
+              borderColor: "divider",
+            },
+          }}
+        >
+          <MenuItem
+            id="mobile-menu-stories"
+            onClick={() => handleMobileNavigation("/")}
+            selected={location.pathname === "/" || location.pathname.startsWith("/stories")}
+            sx={{ gap: 1.5 }}
+          >
+            <MenuBook fontSize="small" />
+            All Stories
+          </MenuItem>
+          {isAuthenticated && (
+            <MenuItem
+              id="mobile-menu-favorites"
+              onClick={() => handleMobileNavigation("/favorites")}
+              selected={location.pathname === "/favorites"}
+              sx={{ gap: 1.5 }}
+            >
+              <Favorite fontSize="small" />
+              Favorites
+            </MenuItem>
+          )}
+          {isAuthenticated && (
+            <MenuItem
+              id="mobile-menu-drafts"
+              onClick={() => handleMobileNavigation("/drafts")}
+              selected={location.pathname === "/drafts"}
+              sx={{ gap: 1.5 }}
+            >
+              <Edit fontSize="small" />
+              My Drafts
+            </MenuItem>
+          )}
+          {isAuthenticated && <Divider />}
+          {isAuthenticated && (
+            <MenuItem
+              id="mobile-menu-create"
+              onClick={() => handleMobileNavigation("/create")}
+              selected={location.pathname === "/create"}
+              sx={{ gap: 1.5, color: "primary.main" }}
+            >
+              <Add fontSize="small" />
+              Create Story
+            </MenuItem>
+          )}
+        </Menu>
 
         {/* Search Box */}
         <TextField
@@ -153,8 +237,8 @@ function Header() {
           }}
         />
 
-        {/* Navigation Tabs */}
-        {!isCreateMode && !isProfileMode && !isStoryViewMode && (
+        {/* Navigation Tabs - hidden on mobile */}
+        {!isMobile && !isCreateMode && !isProfileMode && !isStoryViewMode && (
           <Tabs
             id="header-tabs"
             value={tabValue}
@@ -165,9 +249,9 @@ function Header() {
               "& .MuiTab-root": {
                 color: "text.secondary",
                 minHeight: 48,
-                minWidth: { xs: 60, sm: 100 },
-                px: { xs: 1, sm: 2 },
-                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                minWidth: 100,
+                px: 2,
+                fontSize: "0.875rem",
               },
               "& .Mui-selected": { color: "primary.main" },
               "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
@@ -205,6 +289,9 @@ function Header() {
             )}
           </Tabs>
         )}
+
+        {/* Spacer for mobile when showing nav menu */}
+        {isMobile && !isCreateMode && !isProfileMode && !isStoryViewMode && <Box sx={{ flex: 1 }} />}
 
         {/* Spacer when in special modes */}
         {(isCreateMode || isProfileMode || isStoryViewMode) && <Box sx={{ flex: 1 }} />}

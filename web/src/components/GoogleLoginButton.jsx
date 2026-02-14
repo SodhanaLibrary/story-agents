@@ -7,6 +7,8 @@ import {
   Menu,
   MenuItem,
   Divider,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +20,8 @@ export default function GoogleLoginButton() {
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   const handleSuccess = async (credentialResponse) => {
     try {
@@ -123,11 +127,19 @@ export default function GoogleLoginButton() {
             </Typography>
           </Box>
           <Divider />
-          <MenuItem id="menu-batch-requests" onClick={handleBatchRequests} sx={{ gap: 1.5 }}>
+          <MenuItem
+            id="menu-batch-requests"
+            onClick={handleBatchRequests}
+            sx={{ gap: 1.5 }}
+          >
             <BatchPrediction fontSize="small" />
             Batch Requests
           </MenuItem>
-          <MenuItem id="menu-prompt-logs" onClick={handlePromptLogs} sx={{ gap: 1.5 }}>
+          <MenuItem
+            id="menu-prompt-logs"
+            onClick={handlePromptLogs}
+            sx={{ gap: 1.5 }}
+          >
             <Timeline fontSize="small" />
             AI Prompt Logs
           </MenuItem>
@@ -153,8 +165,8 @@ export default function GoogleLoginButton() {
         useOneTap
         theme="filled_black"
         shape="pill"
-        size="medium"
-        text="signin_with"
+        size={isMobile ? "small" : "medium"}
+        text={isMobile ? "signin" : "signin_with"}
         locale="en"
       />
     </Box>

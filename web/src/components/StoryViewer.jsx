@@ -1,19 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Box,
-  Card,
-  CardContent,
   Typography,
   Button,
-  Grid,
-  Tabs,
-  Tab,
-  Avatar,
   Stack,
   Chip,
   IconButton,
-  Dialog,
-  DialogContent,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   AutoStories,
@@ -38,6 +32,8 @@ function StoryViewer({
 }) {
   const { isAuthenticated, userId } = useAuth();
   const [currentPage, setCurrentPage] = useState(-1);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Touch/swipe state
   const touchStartX = useRef(null);
@@ -71,7 +67,7 @@ function StoryViewer({
         console.error("Failed to update reading progress:", err);
       }
     },
-    [isAuthenticated, userId, storyId, totalPages]
+    [isAuthenticated, userId, storyId, totalPages],
   );
 
   // Update reading progress when page changes
@@ -321,48 +317,45 @@ function StoryViewer({
           </Box>
         )}
 
-        {/* Current Page - Book Style */}
+        {/* Current Page - Book Style Layout */}
         {pages[currentPage] && (
-          <Card
+          <Box
             sx={{
-              maxWidth: 600,
-              maxHeight: "calc(100vh - 150px)",
+              maxWidth: { xs: "100%", md: 1200 },
               mx: "auto",
               mb: 3,
               bgcolor: "rgba(255, 253, 245, 0.03)",
               border: "1px solid rgba(232, 184, 109, 0.15)",
               borderRadius: 2,
               boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+              display: "flex",
+              // Portrait: column (image top, text bottom)
+              // Landscape: row (image left, text right) - like an open book
+              flexDirection: "column",
+              "@media (orientation: landscape)": {
+                flexDirection: "row",
+                maxHeight: "calc(100vh - 150px)",
+                overflow: "hidden",
+              },
             }}
           >
-            {/* Page Text - Top */}
-            <CardContent
-              sx={{
-                pt: 4,
-                pb: 3,
-                px: { xs: 3, sm: 5 },
-                borderBottom: "1px solid rgba(232, 184, 109, 0.1)",
-              }}
-            >
-              <Typography
-                sx={{
-                  fontFamily:
-                    '"Crimson Pro", Georgia, "Times New Roman", serif',
-                  fontSize: { xs: "1.3rem", sm: "1.5rem", md: "1.7rem" },
-                  lineHeight: 1.9,
-                  color: "rgba(255, 255, 255, 0.9)",
-                  textAlign: "justify",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                {pages[currentPage].text}
-              </Typography>
-            </CardContent>
-
-            {/* Illustration - Bottom */}
+            {/* Illustration - Left side in landscape, Top in portrait */}
             <Box
               sx={{
                 position: "relative",
+                flexShrink: 0,
+                "@media (orientation: portrait)": {
+                  maxHeight: "75vh",
+                },
+                "@media (orientation: landscape)": {
+                  flex: 1,
+                  maxWidth: "50%",
+                  maxHeight: "100%",
+                },
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: "rgba(0,0,0,0.2)",
                 "&:hover .zoom-btn": { opacity: 1 },
               }}
             >
@@ -370,9 +363,10 @@ function StoryViewer({
                 src={pages[currentPage].illustrationUrl}
                 alt={`Page ${currentPage + 1}`}
                 style={{
-                  width: "100%",
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                  objectFit: "contain",
                   display: "block",
-                  borderRadius: "0 0 8px 8px",
                 }}
               />
 
@@ -390,29 +384,107 @@ function StoryViewer({
                 }}
               />
             </Box>
-          </Card>
+
+            {/* Page Text - Right side in landscape, Bottom in portrait */}
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                p: { xs: 2, sm: 3, md: 4 },
+                minHeight: { xs: "auto", sm: 150 },
+                "@media (orientation: landscape)": {
+                  maxWidth: "50%",
+                  borderLeft: "1px solid rgba(232, 184, 109, 0.1)",
+                  overflowY: "auto",
+                },
+                "@media (orientation: portrait)": {
+                  borderTop: "1px solid rgba(232, 184, 109, 0.1)",
+                },
+              }}
+            >
+              <Typography
+                sx={{
+                  fontFamily:
+                    '"Crimson Pro", Georgia, "Times New Roman", serif',
+                  fontSize: {
+                    xs: "1.2rem",
+                    sm: "1.4rem",
+                    md: "1.6rem",
+                    lg: "1.8rem",
+                  },
+                  lineHeight: 1.9,
+                  color: "rgba(255, 255, 255, 0.9)",
+                  textAlign: "justify",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {pages[currentPage].text}
+              </Typography>
+            </Box>
+          </Box>
         )}
 
         {/* Page Navigation */}
         <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mb: 4 }}>
-          <Button
-            id="btn-prev-page"
-            variant="outlined"
-            startIcon={<ArrowBack />}
-            onClick={goToPrevPage}
-            disabled={currentPage <= minPage}
-          >
-            {currentPage === 0 && cover ? "Cover" : "Previous"}
-          </Button>
-          <Button
-            id="btn-next-page"
-            variant="contained"
-            endIcon={<ArrowForward />}
-            onClick={goToNextPage}
-            disabled={currentPage >= maxPage}
-          >
-            Next Page
-          </Button>
+          {isMobile ? (
+            <>
+              <IconButton
+                id="btn-prev-page"
+                onClick={goToPrevPage}
+                disabled={currentPage <= minPage}
+                sx={{
+                  border: "1px solid",
+                  borderColor: "primary.main",
+                  color: "primary.main",
+                  "&:disabled": {
+                    borderColor: "action.disabled",
+                    color: "action.disabled",
+                  },
+                }}
+              >
+                <ArrowBack />
+              </IconButton>
+              <IconButton
+                id="btn-next-page"
+                onClick={goToNextPage}
+                disabled={currentPage >= maxPage}
+                sx={{
+                  bgcolor: "primary.main",
+                  color: "primary.contrastText",
+                  "&:hover": { bgcolor: "primary.dark" },
+                  "&:disabled": {
+                    bgcolor: "action.disabledBackground",
+                    color: "action.disabled",
+                  },
+                }}
+              >
+                <ArrowForward />
+              </IconButton>
+            </>
+          ) : (
+            <>
+              <Button
+                id="btn-prev-page"
+                variant="outlined"
+                startIcon={<ArrowBack />}
+                onClick={goToPrevPage}
+                disabled={currentPage <= minPage}
+              >
+                {currentPage === 0 && cover ? "Cover" : "Previous"}
+              </Button>
+              <Button
+                id="btn-next-page"
+                variant="contained"
+                endIcon={<ArrowForward />}
+                onClick={goToNextPage}
+                disabled={currentPage >= maxPage}
+              >
+                Next Page
+              </Button>
+            </>
+          )}
         </Box>
       </Box>
     </Box>
