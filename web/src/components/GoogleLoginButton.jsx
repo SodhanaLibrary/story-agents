@@ -59,6 +59,7 @@ export default function GoogleLoginButton() {
     return (
       <>
         <Button
+          id="user-menu-button"
           onClick={handleMenuOpen}
           sx={{
             textTransform: "none",
@@ -91,6 +92,7 @@ export default function GoogleLoginButton() {
         </Button>
 
         <Menu
+          id="user-menu"
           anchorEl={anchorEl}
           open={open}
           onClose={handleMenuClose}
@@ -121,16 +123,17 @@ export default function GoogleLoginButton() {
             </Typography>
           </Box>
           <Divider />
-          <MenuItem onClick={handleBatchRequests} sx={{ gap: 1.5 }}>
+          <MenuItem id="menu-batch-requests" onClick={handleBatchRequests} sx={{ gap: 1.5 }}>
             <BatchPrediction fontSize="small" />
             Batch Requests
           </MenuItem>
-          <MenuItem onClick={handlePromptLogs} sx={{ gap: 1.5 }}>
+          <MenuItem id="menu-prompt-logs" onClick={handlePromptLogs} sx={{ gap: 1.5 }}>
             <Timeline fontSize="small" />
             AI Prompt Logs
           </MenuItem>
           <Divider />
           <MenuItem
+            id="menu-logout"
             onClick={handleLogout}
             sx={{ gap: 1.5, color: "error.main" }}
           >

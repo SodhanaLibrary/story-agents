@@ -309,6 +309,7 @@ function StoryCard({
             }
           >
             <IconButton
+              id={`btn-favorite-${story.id}`}
               size="small"
               onClick={(e) => onFavoriteClick(story, e)}
               sx={{

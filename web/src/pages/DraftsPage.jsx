@@ -131,7 +131,7 @@ function DraftsPage() {
           <Typography variant="body2" sx={{ color: "text.secondary", mb: 3 }}>
             Stories you start but don&apos;t finish will appear here
           </Typography>
-          <Button variant="contained" onClick={() => navigate("/create")}>
+          <Button id="btn-create-new-story" variant="contained" onClick={() => navigate("/create")}>
             Create New Story
           </Button>
         </Box>
@@ -183,6 +183,7 @@ function DraftsPage() {
               
               <Box sx={{ display: "flex", alignItems: "center", pr: 2, gap: 1 }}>
                 <Button
+                  id={`btn-continue-draft-${draft.jobId}`}
                   size="small"
                   variant="contained"
                   color="secondary"
@@ -192,6 +193,7 @@ function DraftsPage() {
                   Continue
                 </Button>
                 <IconButton
+                  id={`btn-delete-draft-${draft.jobId}`}
                   size="small"
                   sx={{ color: "error.main" }}
                   onClick={() => setDeleteDialog({ open: true, draft })}
@@ -217,10 +219,10 @@ function DraftsPage() {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialog({ open: false, draft: null })} disabled={deleting}>
+          <Button id="btn-cancel-delete-draft" onClick={() => setDeleteDialog({ open: false, draft: null })} disabled={deleting}>
             Cancel
           </Button>
-          <Button onClick={handleDelete} color="error" variant="contained" disabled={deleting}>
+          <Button id="btn-confirm-delete-draft" onClick={handleDelete} color="error" variant="contained" disabled={deleting}>
             {deleting ? <CircularProgress size={20} /> : "Delete"}
           </Button>
         </DialogActions>

@@ -93,6 +93,7 @@ function Header() {
       <Toolbar sx={{ gap: 2 }}>
         {/* Logo */}
         <Box
+          id="header-logo"
           sx={{ display: "flex", alignItems: "center", cursor: "pointer" }}
           onClick={() => navigate("/")}
         >
@@ -111,6 +112,7 @@ function Header() {
 
         {/* Search Box */}
         <TextField
+          id="header-search"
           size="small"
           placeholder="Search stories..."
           value={searchQuery}
@@ -139,6 +141,7 @@ function Header() {
             endAdornment: searchQuery && (
               <InputAdornment position="end">
                 <IconButton
+                  id="btn-clear-search"
                   size="small"
                   onClick={() => setSearchQuery("")}
                   sx={{ p: 0.25 }}
@@ -153,6 +156,7 @@ function Header() {
         {/* Navigation Tabs */}
         {!isCreateMode && !isProfileMode && !isStoryViewMode && (
           <Tabs
+            id="header-tabs"
             value={tabValue}
             onChange={handleTabChange}
             sx={{
@@ -170,12 +174,14 @@ function Header() {
             }}
           >
             <Tab
+              id="tab-all-stories"
               icon={<MenuBook sx={{ fontSize: 18 }} />}
               iconPosition="start"
               label={<Box sx={{ display: { xs: "none", md: "block" } }}>All Stories</Box>}
             />
             {isAuthenticated && (
               <Tab
+                id="tab-favorites"
                 icon={<Favorite sx={{ fontSize: 18 }} />}
                 iconPosition="start"
                 label={<Box sx={{ display: { xs: "none", md: "block" } }}>Favorites</Box>}
@@ -183,6 +189,7 @@ function Header() {
             )}
             {isAuthenticated && (
               <Tab
+                id="tab-drafts"
                 icon={<Edit sx={{ fontSize: 18 }} />}
                 iconPosition="start"
                 label={<Box sx={{ display: { xs: "none", md: "block" } }}>My Drafts</Box>}
@@ -190,6 +197,7 @@ function Header() {
             )}
             {isAuthenticated && (
               <Tab
+                id="tab-create"
                 icon={<Add sx={{ fontSize: 18 }} />}
                 iconPosition="start"
                 label={<Box sx={{ display: { xs: "none", md: "block" } }}>Create</Box>}

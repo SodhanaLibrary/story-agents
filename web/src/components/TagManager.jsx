@@ -128,6 +128,7 @@ function TagManager({ storyId, isEditable = false }) {
         {isEditable && !isEditing && (
           <Tooltip title="Add tag">
             <IconButton
+              id="btn-add-tag"
               size="small"
               onClick={() => setIsEditing(true)}
               sx={{ color: "text.secondary" }}
@@ -139,6 +140,7 @@ function TagManager({ storyId, isEditable = false }) {
 
         {isEditable && isEditing && (
           <Autocomplete
+            id="tag-autocomplete"
             freeSolo
             size="small"
             options={allTags.map((t) => t.name)}
@@ -165,6 +167,7 @@ function TagManager({ storyId, isEditable = false }) {
             renderInput={(params) => (
               <TextField
                 {...params}
+                id="tag-input"
                 placeholder="Add tag..."
                 autoFocus
                 sx={{

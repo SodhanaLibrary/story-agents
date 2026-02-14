@@ -233,6 +233,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
   return (
     <Box className="fade-in">
       <Button
+        id="btn-back-to-library"
         startIcon={<ArrowBack />}
         onClick={() => navigate("/")}
         sx={{ mb: 2, color: "text.secondary" }}

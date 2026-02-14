@@ -156,6 +156,7 @@ function UserProfile({ userId, onClose, onViewStory }) {
     <Box className="fade-in">
       {/* Back Button */}
       <Button
+        id="btn-back-to-library"
         startIcon={<ArrowBack />}
         onClick={onClose}
         sx={{ mb: 2, color: "text.secondary" }}
@@ -228,6 +229,7 @@ function UserProfile({ userId, onClose, onViewStory }) {
             <Stack spacing={1}>
               {isOwnProfile ? (
                 <Button
+                  id="btn-edit-profile"
                   variant="outlined"
                   startIcon={<Edit />}
                   onClick={openEditDialog}
@@ -237,6 +239,7 @@ function UserProfile({ userId, onClose, onViewStory }) {
                 </Button>
               ) : isAuthenticated ? (
                 <Button
+                  id="btn-follow-user"
                   variant={isFollowing ? "outlined" : "contained"}
                   startIcon={isFollowing ? <PersonRemove /> : <PersonAdd />}
                   onClick={handleFollow}
@@ -253,6 +256,7 @@ function UserProfile({ userId, onClose, onViewStory }) {
 
       {/* Tabs */}
       <Tabs
+        id="profile-tabs"
         value={tabValue}
         onChange={(e, v) => setTabValue(v)}
         sx={{
@@ -262,9 +266,9 @@ function UserProfile({ userId, onClose, onViewStory }) {
           "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
         }}
       >
-        <Tab icon={<MenuBook sx={{ fontSize: 18 }} />} iconPosition="start" label={`Stories (${stories.length})`} />
-        <Tab icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Followers (${followers.length})`} />
-        <Tab icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Following (${following.length})`} />
+        <Tab id="profile-tab-stories" icon={<MenuBook sx={{ fontSize: 18 }} />} iconPosition="start" label={`Stories (${stories.length})`} />
+        <Tab id="profile-tab-followers" icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Followers (${followers.length})`} />
+        <Tab id="profile-tab-following" icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Following (${following.length})`} />
       </Tabs>
 
       {/* Stories Tab */}
@@ -373,6 +377,7 @@ function UserProfile({ userId, onClose, onViewStory }) {
         <DialogTitle>
           Edit Profile
           <IconButton
+            id="btn-close-edit-profile"
             onClick={() => setEditDialogOpen(false)}
             sx={{ position: "absolute", right: 8, top: 8 }}
           >
@@ -382,12 +387,14 @@ function UserProfile({ userId, onClose, onViewStory }) {
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
             <TextField
+              id="profile-name-input"
               label="Name"
               value={editForm.name}
               onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
               fullWidth
             />
             <TextField
+              id="profile-username-input"
               label="Username"
               value={editForm.username}
               onChange={(e) => setEditForm((prev) => ({ ...prev, username: e.target.value }))}
@@ -395,6 +402,7 @@ function UserProfile({ userId, onClose, onViewStory }) {
               helperText="This will be your unique identifier"
             />
             <TextField
+              id="profile-bio-input"
               label="Bio"
               value={editForm.bio}
               onChange={(e) => setEditForm((prev) => ({ ...prev, bio: e.target.value }))}
@@ -405,8 +413,8 @@ function UserProfile({ userId, onClose, onViewStory }) {
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleEditProfile}>
+          <Button id="btn-cancel-edit-profile" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button id="btn-save-profile" variant="contained" onClick={handleEditProfile}>
             Save Changes
           </Button>
         </DialogActions>

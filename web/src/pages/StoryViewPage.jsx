@@ -98,7 +98,7 @@ function StoryViewPage() {
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <Button variant="contained" onClick={() => navigate("/")}>
+        <Button id="btn-back-to-library-error" variant="contained" onClick={() => navigate("/")}>
           Back to Library
         </Button>
       </Box>
@@ -112,6 +112,7 @@ function StoryViewPage() {
           Story not found
         </Typography>
         <Button
+          id="btn-back-to-library-not-found"
           variant="contained"
           onClick={() => navigate("/")}
           sx={{ mt: 2 }}
@@ -133,6 +134,7 @@ function StoryViewPage() {
       >
         <Box display="flex" alignItems="center" gap={0}>
           <IconButton
+            id="btn-toggle-page-list"
             edge="start"
             color="inherit"
             aria-label="menu"
@@ -150,6 +152,7 @@ function StoryViewPage() {
         </Box>
         <Box>
           <IconButton
+            id="btn-close-story-view"
             onClick={() => navigate("/")}
             sx={{ bgcolor: "rgba(0,0,0,0.5)" }}
           >
@@ -182,8 +185,9 @@ function StoryViewPage() {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button id="btn-cancel-delete-story" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
           <Button
+            id="btn-confirm-delete-story"
             variant="contained"
             color="error"
             onClick={confirmDelete}

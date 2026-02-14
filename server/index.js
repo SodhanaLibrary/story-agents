@@ -1687,6 +1687,30 @@ app.put("/api/users/:userId/reading/:storyId", async (req, res) => {
 // ==================== AUTH API ====================
 
 /**
+ * GET /api/auth/verify - Verify if current session is valid
+ * Checks if the user exists in the database
+ */
+app.get("/api/auth/verify", async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ valid: false, error: "No user ID provided" });
+    }
+
+    const user = await getUserById(userId);
+    if (!user) {
+      return res.status(401).json({ valid: false, error: "User not found" });
+    }
+
+    logger.info(`Session verified for user: ${user.email} (ID: ${user.id})`);
+    res.json({ valid: true, user });
+  } catch (error) {
+    logger.error("Error verifying session:", error.message);
+    res.status(500).json({ valid: false, error: error.message });
+  }
+});
+
+/**
  * POST /api/auth/google - Authenticate with Google token
  */
 app.post("/api/auth/google", async (req, res) => {

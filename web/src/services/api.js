@@ -2,10 +2,22 @@
  * Centralized API service that automatically includes user context
  */
 
+const STORAGE_KEY = "story_agents_user";
+
+// Callback for handling auth failures (set by AuthContext)
+let onAuthFailure = null;
+
+/**
+ * Set the auth failure handler (called by AuthContext)
+ */
+export function setAuthFailureHandler(handler) {
+  onAuthFailure = handler;
+}
+
 // Get user ID from localStorage
 function getUserId() {
   try {
-    const storedUser = localStorage.getItem("story_agents_user");
+    const storedUser = localStorage.getItem(STORAGE_KEY);
     if (storedUser) {
       const user = JSON.parse(storedUser);
       return user.id || user.dbUser?.id || null;
@@ -32,7 +44,19 @@ function buildHeaders(customHeaders = {}) {
 }
 
 /**
+ * Handle auth failure - clear storage and trigger callback
+ */
+function handleAuthFailure() {
+  console.warn("API auth failure detected, clearing session");
+  localStorage.removeItem(STORAGE_KEY);
+  if (onAuthFailure) {
+    onAuthFailure();
+  }
+}
+
+/**
  * Wrapper around fetch that automatically includes user context
+ * Also handles 401 responses by triggering logout
  */
 export async function apiFetch(url, options = {}) {
   const headers = buildHeaders(options.headers);
@@ -41,6 +65,12 @@ export async function apiFetch(url, options = {}) {
     ...options,
     headers,
   });
+
+  // Handle auth failures (401 Unauthorized)
+  // Skip for auth endpoints to avoid loops
+  if (response.status === 401 && !url.includes("/api/auth/")) {
+    handleAuthFailure();
+  }
 
   return response;
 }
@@ -107,4 +137,5 @@ export default {
   del,
   postFormData,
   getUserId,
+  setAuthFailureHandler,
 };

@@ -256,7 +256,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
           </Typography>
           <Typography variant="body2">{job.error}</Typography>
         </Alert>
-        <Button variant="outlined" onClick={onBack} sx={{ mt: 3 }}>
+        <Button id="btn-go-back-error" variant="outlined" onClick={onBack} sx={{ mt: 3 }}>
           Go Back
         </Button>
       </Box>
@@ -418,6 +418,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                     }}
                   >
                     <IconButton
+                      id={`btn-zoom-avatar-${index}`}
                       onClick={() => setZoomImage(character.avatarUrl)}
                       sx={{
                         bgcolor: "rgba(255,255,255,0.2)",
@@ -427,6 +428,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                       <ZoomIn />
                     </IconButton>
                     <IconButton
+                      id={`btn-refresh-avatar-${index}`}
                       onClick={() => openEditDialog(character)}
                       sx={{
                         bgcolor: "rgba(255,255,255,0.2)",
@@ -488,6 +490,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                   {!character.avatarGenerated ? (
                     <>
                       <Button
+                        id={`btn-create-avatar-${index}`}
                         variant="contained"
                         size="small"
                         startIcon={<AutoAwesome />}
@@ -507,6 +510,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                   ) : !approvedAvatars[character.name] ? (
                     <Stack direction="row" spacing={1}>
                       <Button
+                        id={`btn-approve-avatar-${index}`}
                         variant="contained"
                         size="small"
                         startIcon={<Check />}
@@ -517,6 +521,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                         Approve
                       </Button>
                       <Button
+                        id={`btn-redo-avatar-${index}`}
                         variant="outlined"
                         size="small"
                         startIcon={<Edit />}
@@ -528,6 +533,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                     </Stack>
                   ) : (
                     <Button
+                      id={`btn-edit-approved-avatar-${index}`}
                       variant="outlined"
                       size="small"
                       color="success"
@@ -552,10 +558,11 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
 
       {/* Navigation Buttons */}
       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Button variant="outlined" startIcon={<ArrowBack />} onClick={onBack}>
+        <Button id="btn-back-to-styles" variant="outlined" startIcon={<ArrowBack />} onClick={onBack}>
           Back to Styles
         </Button>
         <Button
+          id="btn-generate-pages"
           variant="contained"
           size="large"
           endIcon={<ArrowForward />}
@@ -618,6 +625,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                   }}
                 />
                 <IconButton
+                  id="btn-clear-reference-image"
                   size="small"
                   onClick={handleClearImage}
                   sx={{
@@ -633,6 +641,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
               </Box>
             ) : (
               <Button
+                id="btn-upload-reference"
                 variant="outlined"
                 startIcon={<CloudUpload />}
                 onClick={() => fileInputRef.current?.click()}
@@ -654,6 +663,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
               Character Description
             </Typography>
             <TextField
+              id="character-description-input"
               fullWidth
               multiline
               rows={4}
@@ -666,11 +676,13 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
           <Button
+            id="btn-cancel-avatar-dialog"
             onClick={() => setEditDialog({ open: false, character: null })}
           >
             Cancel
           </Button>
           <Button
+            id="btn-generate-avatar"
             variant="contained"
             onClick={() => handleGenerateAvatar(editDialog.character, true)}
             disabled={!customDescription.trim() && !referenceImage}
@@ -688,6 +700,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
         maxWidth="md"
       >
         <IconButton
+          id="btn-close-zoom"
           onClick={() => setZoomImage(null)}
           sx={{
             position: "absolute",

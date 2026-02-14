@@ -459,6 +459,7 @@ function StoryLibrary({ onSelectStory, onCreateNew, onResumeDraft, onViewProfile
       </CardContent>
       <Box sx={{ display: "flex", alignItems: "center", pr: 2, gap: 1 }}>
         <Button
+          id={`btn-continue-draft-${draft.jobId}`}
           size="small"
           variant="contained"
           color="secondary"
@@ -468,6 +469,7 @@ function StoryLibrary({ onSelectStory, onCreateNew, onResumeDraft, onViewProfile
           Continue
         </Button>
         <IconButton
+          id={`btn-delete-draft-${draft.jobId}`}
           size="small"
           sx={{ color: "error.main" }}
           onClick={() => setDeleteDialog({ open: true, item: draft, isDraft: true })}
@@ -525,12 +527,12 @@ function StoryLibrary({ onSelectStory, onCreateNew, onResumeDraft, onViewProfile
         </Typography>
         <Stack direction="row" spacing={1}>
           <Tooltip title="Refresh">
-            <IconButton onClick={fetchData} sx={{ color: "text.secondary" }}>
+            <IconButton id="btn-refresh-stories" onClick={fetchData} sx={{ color: "text.secondary" }}>
               <Refresh />
             </IconButton>
           </Tooltip>
           {isAuthenticated && (
-            <Button variant="contained" startIcon={<Add />} onClick={onCreateNew}>
+            <Button id="btn-create-story" variant="contained" startIcon={<Add />} onClick={onCreateNew}>
               Create Story
             </Button>
           )}
@@ -545,6 +547,7 @@ function StoryLibrary({ onSelectStory, onCreateNew, onResumeDraft, onViewProfile
 
       {/* Search Bar */}
       <TextField
+        id="library-search"
         fullWidth
         placeholder="Search stories by title, summary, or tags..."
         value={searchQuery}
@@ -577,6 +580,7 @@ function StoryLibrary({ onSelectStory, onCreateNew, onResumeDraft, onViewProfile
 
       {/* Tabs */}
       <Tabs
+        id="library-tabs"
         value={tabValue}
         onChange={(e, v) => setTabValue(v)}
         sx={{
@@ -586,9 +590,9 @@ function StoryLibrary({ onSelectStory, onCreateNew, onResumeDraft, onViewProfile
           "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
         }}
       >
-        <Tab label={`All Stories (${displayStories.length})`} />
-        {isAuthenticated && <Tab label={`Favorites (${favorites.length})`} icon={<Favorite sx={{ fontSize: 16 }} />} iconPosition="start" />}
-        {isAuthenticated && <Tab label={`My Drafts (${drafts.length})`} />}
+        <Tab id="library-tab-all" label={`All Stories (${displayStories.length})`} />
+        {isAuthenticated && <Tab id="library-tab-favorites" label={`Favorites (${favorites.length})`} icon={<Favorite sx={{ fontSize: 16 }} />} iconPosition="start" />}
+        {isAuthenticated && <Tab id="library-tab-drafts" label={`My Drafts (${drafts.length})`} />}
       </Tabs>
 
       {/* Tab Panels */}
@@ -604,7 +608,7 @@ function StoryLibrary({ onSelectStory, onCreateNew, onResumeDraft, onViewProfile
                 {searchQuery ? "Try a different search term" : "Be the first to create a magical story!"}
               </Typography>
               {isAuthenticated && !searchQuery && (
-                <Button variant="contained" startIcon={<Add />} onClick={onCreateNew}>
+                <Button id="btn-create-first-story" variant="contained" startIcon={<Add />} onClick={onCreateNew}>
                   Create Your First Story
                 </Button>
               )}
@@ -689,12 +693,14 @@ function StoryLibrary({ onSelectStory, onCreateNew, onResumeDraft, onViewProfile
         </DialogContent>
         <DialogActions>
           <Button
+            id="btn-cancel-delete"
             onClick={() => setDeleteDialog({ open: false, item: null, isDraft: false })}
             disabled={deleting}
           >
             Cancel
           </Button>
           <Button
+            id="btn-confirm-delete"
             onClick={handleDelete}
             color="error"
             variant="contained"
@@ -728,7 +734,7 @@ function StoryLibrary({ onSelectStory, onCreateNew, onResumeDraft, onViewProfile
           </Typography>
         </DialogContent>
         <DialogActions sx={{ justifyContent: "center" }}>
-          <Button onClick={() => setLoginPromptOpen(false)}>
+          <Button id="btn-login-maybe-later" onClick={() => setLoginPromptOpen(false)}>
             Maybe Later
           </Button>
         </DialogActions>

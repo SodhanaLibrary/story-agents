@@ -92,6 +92,7 @@ function StoryInput({ onSubmit, saving = false, initialStory = "" }) {
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ p: 3 }}>
           <TextField
+            id="story-input"
             fullWidth
             multiline
             rows={12}
@@ -114,6 +115,7 @@ function StoryInput({ onSubmit, saving = false, initialStory = "" }) {
 
           <Box sx={{ mt: 3, display: "flex", justifyContent: "flex-end" }}>
             <Button
+              id="btn-choose-art-style"
               variant="contained"
               size="large"
               endIcon={saving ? <CircularProgress size={20} color="inherit" /> : <ArrowForward />}
@@ -134,6 +136,7 @@ function StoryInput({ onSubmit, saving = false, initialStory = "" }) {
         <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
           {sampleStories.map((sample, index) => (
             <Card
+              id={`sample-story-${index}`}
               key={index}
               onClick={() => handleSampleClick(sample.story)}
               sx={{

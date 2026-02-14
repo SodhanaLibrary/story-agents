@@ -104,6 +104,7 @@ function PageCard({
               }}
             />
             <Button
+              id={`btn-generate-page-${page.pageNumber}`}
               variant="contained"
               size="small"
               startIcon={<AutoAwesome />}
@@ -134,6 +135,7 @@ function PageCard({
             }}
           >
             <IconButton
+              id={`btn-zoom-page-${page.pageNumber}`}
               onClick={() => onZoom(page.illustrationUrl)}
               sx={{
                 bgcolor: "rgba(255,255,255,0.2)",
@@ -143,6 +145,7 @@ function PageCard({
               <ZoomIn />
             </IconButton>
             <IconButton
+              id={`btn-edit-page-${page.pageNumber}`}
               onClick={() => onEditDialog(page, false)}
               sx={{
                 bgcolor: "rgba(255,255,255,0.2)",
@@ -200,6 +203,7 @@ function PageCard({
             }}
           >
             <IconButton
+              id={`btn-edit-text-page-${page.pageNumber}`}
               size="small"
               onClick={() => onTextEditDialog(page, false)}
               sx={{
@@ -212,6 +216,7 @@ function PageCard({
             </IconButton>
             {totalPages > 1 && (
               <IconButton
+                id={`btn-delete-page-${page.pageNumber}`}
                 size="small"
                 onClick={() => onDeleteDialog(page)}
                 sx={{
@@ -290,6 +295,7 @@ function PageCard({
             !approvedPages[pageKey] ? (
               <>
                 <Button
+                  id={`btn-approve-page-${page.pageNumber}`}
                   variant="contained"
                   size="small"
                   startIcon={<Check />}
@@ -300,6 +306,7 @@ function PageCard({
                   Approve
                 </Button>
                 <Button
+                  id={`btn-edit-illustration-page-${page.pageNumber}`}
                   variant="outlined"
                   size="small"
                   startIcon={<Edit />}
@@ -311,6 +318,7 @@ function PageCard({
               </>
             ) : (
               <Button
+                id={`btn-unapprove-page-${page.pageNumber}`}
                 variant="outlined"
                 size="small"
                 color="success"
@@ -328,6 +336,7 @@ function PageCard({
             )
           ) : (
             <Button
+              id={`btn-generate-illustration-page-${page.pageNumber}`}
               variant="contained"
               size="small"
               startIcon={<AutoAwesome />}

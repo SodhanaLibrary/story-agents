@@ -122,6 +122,7 @@ function BatchRequestsPage() {
   return (
     <Box className="fade-in">
       <Button
+        id="btn-back-to-library"
         startIcon={<ArrowBack />}
         onClick={() => navigate("/")}
         sx={{ mb: 2, color: "text.secondary" }}
@@ -146,6 +147,7 @@ function BatchRequestsPage() {
 
       <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
         <Button
+          id="btn-refresh-batches"
           variant="outlined"
           startIcon={<Refresh />}
           onClick={fetchBatches}
@@ -239,6 +241,7 @@ function BatchRequestsPage() {
                       {(batch.status === "pending" || batch.status === "processing") && (
                         <Tooltip title="Cancel">
                           <IconButton
+                            id={`btn-cancel-batch-${batch.id}`}
                             size="small"
                             onClick={() => handleCancel(batch.id)}
                             disabled={cancelling === batch.id}

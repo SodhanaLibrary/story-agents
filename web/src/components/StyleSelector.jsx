@@ -184,6 +184,7 @@ function StyleSelector({
 
       {/* Auto-detect Option */}
       <Card
+        id="style-auto"
         onClick={() => setSelectedStyle("auto")}
         sx={{
           mb: 3,
@@ -220,6 +221,7 @@ function StyleSelector({
         {styles.map((style) => (
           <Grid item xs={12} sm={6} md={4} key={style.key}>
             <Card
+              id={`style-${style.key}`}
               onClick={() => setSelectedStyle(style.key)}
               sx={{
                 height: "100%",
@@ -267,6 +269,7 @@ function StyleSelector({
         {/* Custom Style */}
         <Grid item xs={12} sm={6} md={4}>
           <Card
+            id="style-custom"
             onClick={() => setSelectedStyle("custom")}
             sx={{
               height: "100%",
@@ -302,6 +305,7 @@ function StyleSelector({
               Describe Your Art Style
             </Typography>
             <TextField
+              id="custom-style-input"
               fullWidth
               multiline
               rows={3}
@@ -315,10 +319,11 @@ function StyleSelector({
 
       {/* Actions */}
       <Box sx={{ display: "flex", justifyContent: "space-between", mt: 4 }}>
-        <Button variant="outlined" startIcon={<ArrowBack />} onClick={onBack}>
+        <Button id="btn-back-to-story" variant="outlined" startIcon={<ArrowBack />} onClick={onBack}>
           Back to Story
         </Button>
         <Button
+          id="btn-generate-story"
           variant="contained"
           size="large"
           endIcon={<ArrowForward />}

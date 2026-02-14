@@ -691,6 +691,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
       {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
         <Tabs
+          id="page-review-tabs"
           value={tabValue}
           onChange={(e, v) => setTabValue(v)}
           centered
@@ -700,10 +701,12 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           }}
         >
           <Tab
+            id="tab-pages"
             icon={<PhotoLibrary />}
             label={`Pages (${job.storyPages?.pages?.length || 0})`}
           />
           <Tab
+            id="tab-cover"
             icon={<MenuBook />}
             label={job.cover ? "Cover" : "Cover (Pending)"}
           />
@@ -728,6 +731,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
                 Current: {totalPages} pages
               </Typography>
               <TextField
+                id="page-count-input"
                 size="small"
                 type="number"
                 value={desiredPageCount}
@@ -737,6 +741,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
                 sx={{ width: 100 }}
               />
               <Button
+                id="btn-regenerate-pages"
                 variant="outlined"
                 size="small"
                 onClick={handleRegenerateWithPageCount}
@@ -759,6 +764,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
             </Stack>
 
             <Button
+              id="btn-add-new-page"
               variant="outlined"
               startIcon={<Add />}
               onClick={() => openTextEditDialog(null, true)}
@@ -813,13 +819,14 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
 
       {/* Navigation Buttons */}
       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Button variant="outlined" startIcon={<ArrowBack />} onClick={onBack}>
+        <Button id="btn-back-to-avatars" variant="outlined" startIcon={<ArrowBack />} onClick={onBack}>
           Back to Avatars
         </Button>
         {isPromptReviewMode ? (
           <>
             <ButtonGroup variant="contained" size="large">
               <Button
+                id="btn-generate-illustrations"
                 size="small"
                 onClick={(e) => setGenerateMenuAnchor(e.currentTarget)}
               >
@@ -827,6 +834,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
               </Button>
             </ButtonGroup>
             <Menu
+              id="generate-menu"
               anchorEl={generateMenuAnchor}
               open={Boolean(generateMenuAnchor)}
               onClose={() => setGenerateMenuAnchor(null)}
@@ -834,6 +842,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
               transformOrigin={{ vertical: "bottom", horizontal: "right" }}
             >
               <MenuItem
+                id="menu-generate-immediate"
                 onClick={() => handleGenerateAllIllustrations("immediate")}
               >
                 <ListItemIcon>
@@ -844,7 +853,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
                   secondary="Generate now, wait here"
                 />
               </MenuItem>
-              <MenuItem onClick={() => handleGenerateAllIllustrations("batch")}>
+              <MenuItem id="menu-generate-batch" onClick={() => handleGenerateAllIllustrations("batch")}>
                 <ListItemIcon>
                   <Schedule fontSize="small" />
                 </ListItemIcon>
@@ -857,6 +866,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           </>
         ) : (
           <Button
+            id="btn-finalize-story"
             variant="contained"
             size="large"
             endIcon={<ArrowForward />}

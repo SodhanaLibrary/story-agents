@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { setAuthFailureHandler } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -8,26 +9,62 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user from localStorage on mount
-  useEffect(() => {
+  // Verify session with server
+  const verifySession = useCallback(async (userId) => {
     try {
-      const storedUser = localStorage.getItem(STORAGE_KEY);
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        // Check if token is still valid (basic check)
-        if (parsedUser.exp && parsedUser.exp * 1000 > Date.now()) {
-          setUser(parsedUser);
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
+      const response = await fetch("/api/auth/verify", {
+        headers: { "X-User-Id": userId.toString() },
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.valid && data.user;
       }
+      return false;
     } catch (error) {
-      console.error("Failed to load user from storage:", error);
-      localStorage.removeItem(STORAGE_KEY);
-    } finally {
-      setLoading(false);
+      console.error("Session verification failed:", error);
+      return false;
     }
   }, []);
+
+  // Load user from localStorage on mount and verify with server
+  useEffect(() => {
+    const loadAndVerifyUser = async () => {
+      try {
+        const storedUser = localStorage.getItem(STORAGE_KEY);
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+          // Check if token is still valid (basic check)
+          if (parsedUser.exp && parsedUser.exp * 1000 > Date.now()) {
+            const userId = parsedUser.id || parsedUser.dbUser?.id;
+            
+            // Verify session with server
+            if (userId) {
+              const isValid = await verifySession(userId);
+              if (isValid) {
+                setUser(parsedUser);
+              } else {
+                console.warn("Server session invalid, clearing local storage");
+                localStorage.removeItem(STORAGE_KEY);
+              }
+            } else {
+              // No user ID, clear storage
+              localStorage.removeItem(STORAGE_KEY);
+            }
+          } else {
+            localStorage.removeItem(STORAGE_KEY);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load user from storage:", error);
+        localStorage.removeItem(STORAGE_KEY);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAndVerifyUser();
+  }, [verifySession]);
 
   const login = async (credential) => {
     try {
@@ -72,10 +109,16 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);
-  };
+  }, []);
+
+  // Register auth failure handler with API service
+  useEffect(() => {
+    setAuthFailureHandler(logout);
+    return () => setAuthFailureHandler(null);
+  }, [logout]);
 
   const value = {
     user,

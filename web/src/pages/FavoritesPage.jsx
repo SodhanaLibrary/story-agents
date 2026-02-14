@@ -136,7 +136,7 @@ function FavoritesPage() {
                       {story.title}
                     </Typography>
                     <Tooltip title="Remove from favorites">
-                      <IconButton size="small" onClick={(e) => handleRemoveFavorite(story, e)} sx={{ color: "error.main", ml: 1 }}>
+                      <IconButton id={`btn-remove-favorite-${story.id}`} size="small" onClick={(e) => handleRemoveFavorite(story, e)} sx={{ color: "error.main", ml: 1 }}>
                         <Favorite fontSize="small" />
                       </IconButton>
                     </Tooltip>

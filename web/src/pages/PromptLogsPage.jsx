@@ -229,6 +229,7 @@ function PromptLogsPage() {
         </Typography>
         <Box sx={{ display: "flex", gap: 1 }}>
           <Button
+            id="btn-toggle-filters"
             startIcon={<FilterList />}
             onClick={() => setShowFilters(!showFilters)}
             variant={showFilters ? "contained" : "outlined"}
@@ -236,7 +237,7 @@ function PromptLogsPage() {
           >
             Filters
           </Button>
-          <IconButton onClick={fetchLogs} color="primary">
+          <IconButton id="btn-refresh-logs" onClick={fetchLogs} color="primary">
             <Refresh />
           </IconButton>
         </Box>
@@ -342,6 +343,7 @@ function PromptLogsPage() {
               <FormControl fullWidth size="small">
                 <InputLabel>Provider</InputLabel>
                 <Select
+                  id="filter-provider"
                   value={providerFilter}
                   label="Provider"
                   onChange={(e) => setProviderFilter(e.target.value)}
@@ -354,6 +356,7 @@ function PromptLogsPage() {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <TextField
+                id="filter-model"
                 fullWidth
                 size="small"
                 label="Model"
@@ -366,6 +369,7 @@ function PromptLogsPage() {
               <FormControl fullWidth size="small">
                 <InputLabel>Request Type</InputLabel>
                 <Select
+                  id="filter-request-type"
                   value={requestTypeFilter}
                   label="Request Type"
                   onChange={(e) => setRequestTypeFilter(e.target.value)}
@@ -383,6 +387,7 @@ function PromptLogsPage() {
               <FormControl fullWidth size="small">
                 <InputLabel>Status</InputLabel>
                 <Select
+                  id="filter-status"
                   value={statusFilter}
                   label="Status"
                   onChange={(e) => setStatusFilter(e.target.value)}
@@ -394,7 +399,7 @@ function PromptLogsPage() {
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <Button variant="outlined" onClick={clearFilters} fullWidth>
+              <Button id="btn-clear-filters" variant="outlined" onClick={clearFilters} fullWidth>
                 Clear Filters
               </Button>
             </Grid>
@@ -524,6 +529,7 @@ function PromptLogsPage() {
                     </TableCell>
                     <TableCell align="center">
                       <IconButton
+                        id={`btn-view-log-${log.id}`}
                         size="small"
                         onClick={() => handleViewDetail(log)}
                       >
@@ -810,7 +816,7 @@ function PromptLogsPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDetail}>Close</Button>
+          <Button id="btn-close-log-detail" onClick={handleCloseDetail}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -78,6 +78,7 @@ export function EditDialog({
                 }}
               />
               <IconButton
+                id="btn-clear-reference"
                 size="small"
                 onClick={onClearImage}
                 sx={{
@@ -93,6 +94,7 @@ export function EditDialog({
             </Box>
           ) : (
             <Button
+              id="btn-upload-reference"
               variant="outlined"
               startIcon={<CloudUpload />}
               onClick={() => fileInputRef.current?.click()}
@@ -114,6 +116,7 @@ export function EditDialog({
             Scene Description
           </Typography>
           <TextField
+            id="scene-description-input"
             fullWidth
             multiline
             rows={4}
@@ -125,8 +128,9 @@ export function EditDialog({
         </Box>
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0 }}>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button id="btn-cancel-regenerate" onClick={onClose}>Cancel</Button>
         <Button
+          id="btn-regenerate-illustration"
           variant="contained"
           onClick={onRegenerate}
           disabled={!customDescription.trim() && !referenceImage}
@@ -144,6 +148,7 @@ export function ZoomDialog({ zoomImage, onClose }) {
   return (
     <Dialog open={!!zoomImage} onClose={onClose} maxWidth="lg">
       <IconButton
+        id="btn-close-zoom"
         onClick={onClose}
         sx={{
           position: "absolute",
@@ -203,6 +208,7 @@ export function TextEditDialog({
             Page Text *
           </Typography>
           <TextField
+            id="page-text-input"
             fullWidth
             multiline
             rows={4}
@@ -219,6 +225,7 @@ export function TextEditDialog({
             Illustration Description *
           </Typography>
           <TextField
+            id="illustration-description-input"
             fullWidth
             multiline
             rows={4}
@@ -230,8 +237,9 @@ export function TextEditDialog({
         </Box>
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0 }}>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button id="btn-cancel-text-edit" onClick={onClose}>Cancel</Button>
         <Button
+          id="btn-save-page-text"
           variant="contained"
           onClick={onSave}
           disabled={!editedText.trim() || !editedImageDescription.trim() || savingText}
@@ -261,8 +269,9 @@ export function DeleteDialog({ open, page, deleting, onClose, onDelete }) {
         </Typography>
       </DialogContent>
       <DialogActions sx={{ p: 2, pt: 0 }}>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button id="btn-cancel-delete-page" onClick={onClose}>Cancel</Button>
         <Button
+          id="btn-confirm-delete-page"
           variant="contained"
           color="error"
           onClick={onDelete}

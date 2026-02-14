@@ -155,6 +155,7 @@ function StoryViewer({
           <Stack direction="column" spacing={2} sx={{ px: 2 }}>
             {cover && (
               <Box
+                id="page-thumbnail-cover"
                 onClick={() => setCurrentPage(-1)}
                 sx={{
                   flexShrink: 0,
@@ -185,6 +186,7 @@ function StoryViewer({
             )}
             {pages.map((page, index) => (
               <Box
+                id={`page-thumbnail-${index}`}
                 key={index}
                 onClick={() => setCurrentPage(index)}
                 sx={{
@@ -266,6 +268,7 @@ function StoryViewer({
           >
             {isAuthenticated && isEditable && onEdit && (
               <IconButton
+                id="btn-edit-story"
                 variant="contained"
                 startIcon={<Edit />}
                 onClick={() => onEdit(story)}
@@ -279,6 +282,7 @@ function StoryViewer({
             )}
             {isAuthenticated && isEditable && onDelete && (
               <IconButton
+                id="btn-delete-story"
                 variant="outlined"
                 color="error"
                 startIcon={<Delete />}
@@ -392,6 +396,7 @@ function StoryViewer({
         {/* Page Navigation */}
         <Box sx={{ display: "flex", justifyContent: "center", gap: 2, mb: 4 }}>
           <Button
+            id="btn-prev-page"
             variant="outlined"
             startIcon={<ArrowBack />}
             onClick={goToPrevPage}
@@ -400,6 +405,7 @@ function StoryViewer({
             {currentPage === 0 && cover ? "Cover" : "Previous"}
           </Button>
           <Button
+            id="btn-next-page"
             variant="contained"
             endIcon={<ArrowForward />}
             onClick={goToNextPage}

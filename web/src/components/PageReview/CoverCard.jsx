@@ -122,6 +122,7 @@ function CoverCard({
               }}
             >
               <IconButton
+                id="btn-zoom-cover"
                 onClick={() => onZoom(job.cover.illustrationUrl)}
                 sx={{
                   bgcolor: "rgba(255,255,255,0.2)",
@@ -131,6 +132,7 @@ function CoverCard({
                 <ZoomIn />
               </IconButton>
               <IconButton
+                id="btn-edit-cover"
                 onClick={() => onEditDialog(job.cover, true)}
                 sx={{
                   bgcolor: "rgba(255,255,255,0.2)",
@@ -163,6 +165,7 @@ function CoverCard({
               {!approvedPages.cover ? (
                 <>
                   <Button
+                    id="btn-approve-cover"
                     variant="contained"
                     size="small"
                     startIcon={<Check />}
@@ -173,6 +176,7 @@ function CoverCard({
                     Approve Cover
                   </Button>
                   <Button
+                    id="btn-edit-cover-illustration"
                     variant="outlined"
                     size="small"
                     startIcon={<Edit />}
@@ -184,6 +188,7 @@ function CoverCard({
                 </>
               ) : (
                 <Button
+                  id="btn-unapprove-cover"
                   variant="outlined"
                   size="small"
                   color="success"
@@ -205,6 +210,7 @@ function CoverCard({
                   : "Cover illustration pending..."}
               </Typography>
               <Button
+                id="btn-generate-cover"
                 variant="contained"
                 startIcon={<AutoAwesome />}
                 onClick={onGenerateCover}

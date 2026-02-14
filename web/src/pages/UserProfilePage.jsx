@@ -149,7 +149,7 @@ function UserProfilePage() {
         <Typography variant="h6" sx={{ color: "text.secondary" }}>
           User not found
         </Typography>
-        <Button variant="contained" onClick={() => navigate("/")} sx={{ mt: 2 }}>
+        <Button id="btn-back-to-library-not-found" variant="contained" onClick={() => navigate("/")} sx={{ mt: 2 }}>
           Back to Library
         </Button>
       </Box>
@@ -159,6 +159,7 @@ function UserProfilePage() {
   return (
     <Box className="fade-in">
       <Button
+        id="btn-back-to-library"
         startIcon={<ArrowBack />}
         onClick={() => navigate("/")}
         sx={{ mb: 2, color: "text.secondary" }}
@@ -216,11 +217,12 @@ function UserProfilePage() {
 
             <Stack spacing={1}>
               {isOwnProfile ? (
-                <Button variant="outlined" startIcon={<Edit />} onClick={openEditDialog} sx={{ borderColor: "primary.main", color: "primary.main" }}>
+                <Button id="btn-edit-profile" variant="outlined" startIcon={<Edit />} onClick={openEditDialog} sx={{ borderColor: "primary.main", color: "primary.main" }}>
                   Edit Profile
                 </Button>
               ) : isAuthenticated ? (
                 <Button
+                  id="btn-follow-user"
                   variant={isFollowing ? "outlined" : "contained"}
                   startIcon={isFollowing ? <PersonRemove /> : <PersonAdd />}
                   onClick={handleFollow}
@@ -237,6 +239,7 @@ function UserProfilePage() {
 
       {/* Tabs */}
       <Tabs
+        id="profile-tabs"
         value={tabValue}
         onChange={(e, v) => setTabValue(v)}
         sx={{
@@ -246,9 +249,9 @@ function UserProfilePage() {
           "& .MuiTabs-indicator": { backgroundColor: "primary.main" },
         }}
       >
-        <Tab icon={<MenuBook sx={{ fontSize: 18 }} />} iconPosition="start" label={`Stories (${stories.length})`} />
-        <Tab icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Followers (${followers.length})`} />
-        <Tab icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Following (${following.length})`} />
+        <Tab id="profile-tab-stories" icon={<MenuBook sx={{ fontSize: 18 }} />} iconPosition="start" label={`Stories (${stories.length})`} />
+        <Tab id="profile-tab-followers" icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Followers (${followers.length})`} />
+        <Tab id="profile-tab-following" icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Following (${following.length})`} />
       </Tabs>
 
       {/* Stories Tab */}
@@ -354,20 +357,20 @@ function UserProfilePage() {
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: "background.paper" } }}>
         <DialogTitle>
           Edit Profile
-          <IconButton onClick={() => setEditDialogOpen(false)} sx={{ position: "absolute", right: 8, top: 8 }}>
+          <IconButton id="btn-close-edit-profile" onClick={() => setEditDialogOpen(false)} sx={{ position: "absolute", right: 8, top: 8 }}>
             <Close />
           </IconButton>
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField label="Name" value={editForm.name} onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))} fullWidth />
-            <TextField label="Username" value={editForm.username} onChange={(e) => setEditForm((prev) => ({ ...prev, username: e.target.value }))} fullWidth helperText="This will be your unique identifier" />
-            <TextField label="Bio" value={editForm.bio} onChange={(e) => setEditForm((prev) => ({ ...prev, bio: e.target.value }))} fullWidth multiline rows={3} />
+            <TextField id="profile-name-input" label="Name" value={editForm.name} onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))} fullWidth />
+            <TextField id="profile-username-input" label="Username" value={editForm.username} onChange={(e) => setEditForm((prev) => ({ ...prev, username: e.target.value }))} fullWidth helperText="This will be your unique identifier" />
+            <TextField id="profile-bio-input" label="Bio" value={editForm.bio} onChange={(e) => setEditForm((prev) => ({ ...prev, bio: e.target.value }))} fullWidth multiline rows={3} />
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleEditProfile}>Save Changes</Button>
+          <Button id="btn-cancel-edit-profile" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+          <Button id="btn-save-profile" variant="contained" onClick={handleEditProfile}>Save Changes</Button>
         </DialogActions>
       </Dialog>
     </Box>
