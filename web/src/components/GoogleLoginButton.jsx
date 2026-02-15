@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Logout, Timeline, BatchPrediction, Storage } from "@mui/icons-material";
+import { Logout, Timeline, BatchPrediction, Storage, CloudQueue, Group } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
 export default function GoogleLoginButton() {
@@ -61,6 +61,16 @@ export default function GoogleLoginButton() {
 
   const handleServerLogs = () => {
     navigate("/server-logs");
+    handleMenuClose();
+  };
+
+  const handleS3Resources = () => {
+    navigate("/s3-resources");
+    handleMenuClose();
+  };
+
+  const handleUserManagement = () => {
+    navigate("/user-management");
     handleMenuClose();
   };
 
@@ -155,6 +165,22 @@ export default function GoogleLoginButton() {
           >
             <Storage fontSize="small" />
             Server Logs
+          </MenuItem>
+          <MenuItem
+            id="menu-s3-resources"
+            onClick={handleS3Resources}
+            sx={{ gap: 1.5 }}
+          >
+            <CloudQueue fontSize="small" />
+            S3 Resources
+          </MenuItem>
+          <MenuItem
+            id="menu-user-management"
+            onClick={handleUserManagement}
+            sx={{ gap: 1.5 }}
+          >
+            <Group fontSize="small" />
+            User Management
           </MenuItem>
           <Divider />
           <MenuItem

@@ -61,10 +61,36 @@ export async function initializeDatabase() {
       email VARCHAR(255) UNIQUE NOT NULL,
       name VARCHAR(255),
       picture TEXT,
+      role ENUM('user', 'premium-user', 'admin', 'super-admin') DEFAULT 'user',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_role (role)
     )
   `);
+
+  // Migration: Add role column to existing users table
+  try {
+    await pool.execute(`
+      ALTER TABLE users 
+      ADD COLUMN IF NOT EXISTS role ENUM('user', 'premium-user', 'admin', 'super-admin') DEFAULT 'user'
+    `);
+  } catch (err) {
+    // Column might already exist or syntax not supported, try alternative
+    if (!err.message.includes('Duplicate column')) {
+      try {
+        // Check if column exists
+        const [columns] = await pool.execute(`SHOW COLUMNS FROM users LIKE 'role'`);
+        if (columns.length === 0) {
+          await pool.execute(`
+            ALTER TABLE users 
+            ADD COLUMN role ENUM('user', 'premium-user', 'admin', 'super-admin') DEFAULT 'user'
+          `);
+        }
+      } catch (innerErr) {
+        console.log("Role column migration:", innerErr.message);
+      }
+    }
+  }
 
   // Stories table
   await pool.execute(`

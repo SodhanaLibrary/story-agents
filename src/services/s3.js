@@ -3,6 +3,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import config from "../config.js";
@@ -144,10 +145,75 @@ export function isS3Enabled() {
   return config.storage.type === "s3" && !!config.storage.s3.bucket;
 }
 
+/**
+ * List all objects in the S3 bucket
+ * @param {string} prefix - Optional prefix to filter objects
+ * @param {number} maxKeys - Maximum number of keys to return (default 1000)
+ * @returns {Promise<Array>} - Array of S3 objects with key, size, lastModified
+ */
+export async function listS3Objects(prefix = "", maxKeys = 1000) {
+  const client = getS3Client();
+  const s3Config = config.storage.s3;
+
+  const objects = [];
+  let continuationToken = null;
+
+  do {
+    const command = new ListObjectsV2Command({
+      Bucket: s3Config.bucket,
+      Prefix: prefix,
+      MaxKeys: Math.min(maxKeys - objects.length, 1000),
+      ContinuationToken: continuationToken,
+    });
+
+    const response = await client.send(command);
+
+    if (response.Contents) {
+      for (const obj of response.Contents) {
+        // Build the full URL for each object
+        let url;
+        if (s3Config.cdnUrl) {
+          url = `${s3Config.cdnUrl}/${obj.Key}`;
+        } else {
+          url = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${obj.Key}`;
+        }
+
+        objects.push({
+          key: obj.Key,
+          size: obj.Size,
+          lastModified: obj.LastModified,
+          url: url,
+        });
+      }
+    }
+
+    continuationToken = response.IsTruncated ? response.NextContinuationToken : null;
+  } while (continuationToken && objects.length < maxKeys);
+
+  logger.info(`Listed ${objects.length} objects from S3 with prefix: ${prefix || "(none)"}`);
+  return objects;
+}
+
+/**
+ * Get S3 bucket info (configuration details)
+ * @returns {Object} - Bucket configuration
+ */
+export function getS3BucketInfo() {
+  const s3Config = config.storage.s3;
+  return {
+    bucket: s3Config.bucket,
+    region: s3Config.region,
+    cdnUrl: s3Config.cdnUrl || null,
+    isEnabled: isS3Enabled(),
+  };
+}
+
 export default {
   uploadToS3,
   deleteFromS3,
   getSignedS3Url,
   extractS3Key,
   isS3Enabled,
+  listS3Objects,
+  getS3BucketInfo,
 };

@@ -19,26 +19,115 @@ export async function findOrCreateUser(googleUser) {
   );
 
   if (existing.length > 0) {
-    // Update user info
+    // Update user info (but not role)
     await query(
       "UPDATE users SET name = ?, picture = ?, google_id = ? WHERE id = ?",
       [name, picture, googleId, existing[0].id],
     );
-    return existing[0];
+    // Return updated user with role
+    const updated = await query("SELECT * FROM users WHERE id = ?", [existing[0].id]);
+    return updated[0];
   }
 
-  // Create new user
+  // Create new user with default role 'user'
   const userId = await insert(
-    "INSERT INTO users (google_id, email, name, picture) VALUES (?, ?, ?, ?)",
+    "INSERT INTO users (google_id, email, name, picture, role) VALUES (?, ?, ?, ?, 'user')",
     [googleId, email, name, picture],
   );
 
-  return { id: userId, google_id: googleId, email, name, picture };
+  return { id: userId, google_id: googleId, email, name, picture, role: 'user' };
 }
 
 export async function getUserById(userId) {
   const rows = await query("SELECT * FROM users WHERE id = ?", [userId]);
   return rows[0] || null;
+}
+
+/**
+ * Get all users (for admin panel)
+ */
+export async function getAllUsers(options = {}) {
+  const { search, role, limit = 100, offset = 0 } = options;
+  
+  // Ensure limit and offset are integers (MySQL prepared statements issue)
+  const limitInt = parseInt(limit, 10) || 100;
+  const offsetInt = parseInt(offset, 10) || 0;
+  
+  let sql = `
+    SELECT id, google_id, email, name, picture, role, created_at, updated_at,
+           (SELECT COUNT(*) FROM stories WHERE user_id = users.id) as story_count
+    FROM users
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (search) {
+    sql += " AND (name LIKE ? OR email LIKE ?)";
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  if (role) {
+    sql += " AND role = ?";
+    params.push(role);
+  }
+
+  // LIMIT and OFFSET embedded directly (safe since they're validated integers)
+  sql += ` ORDER BY created_at DESC LIMIT ${limitInt} OFFSET ${offsetInt}`;
+
+  return await query(sql, params);
+}
+
+/**
+ * Get user count by role (for admin stats)
+ */
+export async function getUserStats() {
+  const stats = await query(`
+    SELECT 
+      role,
+      COUNT(*) as count
+    FROM users
+    GROUP BY role
+  `);
+  
+  const totalUsers = await query("SELECT COUNT(*) as total FROM users");
+  
+  return {
+    total: totalUsers[0]?.total || 0,
+    byRole: stats.reduce((acc, row) => {
+      acc[row.role] = row.count;
+      return acc;
+    }, {}),
+  };
+}
+
+/**
+ * Update user role (super-admin only)
+ */
+export async function updateUserRole(userId, newRole) {
+  const validRoles = ['user', 'premium-user', 'admin', 'super-admin'];
+  if (!validRoles.includes(newRole)) {
+    throw new Error(`Invalid role: ${newRole}`);
+  }
+
+  await query("UPDATE users SET role = ? WHERE id = ?", [newRole, userId]);
+  
+  // Return updated user
+  const rows = await query("SELECT * FROM users WHERE id = ?", [userId]);
+  return rows[0] || null;
+}
+
+/**
+ * Check if user has required role
+ */
+export function hasRole(userRole, requiredRole) {
+  const roleHierarchy = {
+    'user': 1,
+    'premium-user': 2,
+    'admin': 3,
+    'super-admin': 4,
+  };
+  
+  return (roleHierarchy[userRole] || 0) >= (roleHierarchy[requiredRole] || 0);
 }
 
 // ==================== STORIES ====================
@@ -1563,6 +1652,81 @@ export async function clearOldAppLogs(daysOld = 7) {
   return result.affectedRows || 0;
 }
 
+// ==================== S3 RESOURCES ====================
+
+/**
+ * Get all image URLs stored in the database (for S3 orphan detection)
+ * Returns URLs from: stories (cover), characters (avatars), pages (illustrations),
+ * user_avatars, and drafts
+ */
+export async function getAllImageUrls() {
+  const urls = new Set();
+
+  // Story cover images
+  const storyCoverUrls = await query(
+    "SELECT cover_url, cover_path FROM stories WHERE cover_url IS NOT NULL OR cover_path IS NOT NULL"
+  );
+  for (const row of storyCoverUrls) {
+    if (row.cover_url) urls.add(row.cover_url);
+    if (row.cover_path) urls.add(row.cover_path);
+  }
+
+  // Character avatar images
+  const characterAvatarUrls = await query(
+    "SELECT avatar_url, avatar_path FROM characters WHERE avatar_url IS NOT NULL OR avatar_path IS NOT NULL"
+  );
+  for (const row of characterAvatarUrls) {
+    if (row.avatar_url) urls.add(row.avatar_url);
+    if (row.avatar_path) urls.add(row.avatar_path);
+  }
+
+  // Page illustration images
+  const pageIllustrationUrls = await query(
+    "SELECT illustration_url, illustration_path FROM pages WHERE illustration_url IS NOT NULL OR illustration_path IS NOT NULL"
+  );
+  for (const row of pageIllustrationUrls) {
+    if (row.illustration_url) urls.add(row.illustration_url);
+    if (row.illustration_path) urls.add(row.illustration_path);
+  }
+
+  // User saved avatars
+  const userAvatarUrls = await query(
+    "SELECT avatar_url FROM user_avatars WHERE avatar_url IS NOT NULL"
+  );
+  for (const row of userAvatarUrls) {
+    if (row.avatar_url) urls.add(row.avatar_url);
+  }
+
+  // Draft images (stored in separate JSON columns)
+  const drafts = await query("SELECT characters, story_pages, cover FROM drafts");
+  for (const row of drafts) {
+    try {
+      // Draft cover
+      const cover = typeof row.cover === "string" ? JSON.parse(row.cover) : row.cover;
+      if (cover?.illustrationUrl) urls.add(cover.illustrationUrl);
+      if (cover?.illustrationPath) urls.add(cover.illustrationPath);
+      
+      // Draft characters
+      const characters = typeof row.characters === "string" ? JSON.parse(row.characters) : row.characters;
+      for (const char of characters || []) {
+        if (char.avatarUrl) urls.add(char.avatarUrl);
+        if (char.avatarPath) urls.add(char.avatarPath);
+      }
+      
+      // Draft pages
+      const storyPages = typeof row.story_pages === "string" ? JSON.parse(row.story_pages) : row.story_pages;
+      for (const page of storyPages?.pages || []) {
+        if (page.illustrationUrl) urls.add(page.illustrationUrl);
+        if (page.illustrationPath) urls.add(page.illustrationPath);
+      }
+    } catch (e) {
+      // Skip invalid JSON
+    }
+  }
+
+  return Array.from(urls);
+}
+
 // ==================== HELPERS ====================
 
 /**
@@ -1692,6 +1856,10 @@ export default {
   // Users
   findOrCreateUser,
   getUserById,
+  getAllUsers,
+  getUserStats,
+  updateUserRole,
+  hasRole,
   // Stories
   createStory,
   updateStory,
@@ -1754,4 +1922,6 @@ export default {
   getAppLogs,
   getAppLogStats,
   clearOldAppLogs,
+  // S3 Resources
+  getAllImageUrls,
 };

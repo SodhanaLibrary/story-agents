@@ -9,6 +9,10 @@ import { uploadToS3, deleteFromS3, extractS3Key, isS3Enabled } from "../services
 export const {
   findOrCreateUser,
   getUserById,
+  getAllUsers,
+  getUserStats,
+  updateUserRole,
+  hasRole,
   createStory,
   updateStory,
   getStoryById,
@@ -284,6 +288,10 @@ export async function deleteStory(storyIdOrFilename) {
 
   return await storyRepo.deleteStory(storyId);
 }
+
+// Re-export S3 resource management functions
+export { getAllImageUrls } from "../services/storyRepository.js";
+export { listS3Objects, getS3BucketInfo, deleteFromS3, extractS3Key } from "../services/s3.js";
 
 export default {
   ensureStorageDirectories,

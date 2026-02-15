@@ -9,6 +9,8 @@ import StoryViewPage from "./pages/StoryViewPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import PromptLogsPage from "./pages/PromptLogsPage";
 import AppLogsPage from "./pages/AppLogsPage";
+import S3ResourcesPage from "./pages/S3ResourcesPage";
+import UserManagementPage from "./pages/UserManagementPage";
 import BatchRequestsPage from "./pages/BatchRequestsPage";
 import { useAuth } from "./context/AuthContext";
 
@@ -87,6 +89,18 @@ function AppContent() {
             path="/server-logs"
             element={
               isAuthenticated ? <AppLogsPage /> : <Navigate to="/" replace />
+            }
+          />
+          <Route
+            path="/s3-resources"
+            element={
+              isAuthenticated ? <S3ResourcesPage /> : <Navigate to="/" replace />
+            }
+          />
+          <Route
+            path="/user-management"
+            element={
+              isAuthenticated ? <UserManagementPage /> : <Navigate to="/" replace />
             }
           />
           <Route

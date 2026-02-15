@@ -43,6 +43,10 @@ import {
   // Users
   findOrCreateUser,
   getUserById,
+  getAllUsers,
+  getUserStats,
+  updateUserRole,
+  hasRole,
   // User Profiles
   getUserProfile,
   updateUserProfile,
@@ -76,6 +80,11 @@ import {
   getAppLogs,
   getAppLogStats,
   clearOldAppLogs,
+  getAllImageUrls,
+  listS3Objects,
+  getS3BucketInfo,
+  deleteFromS3,
+  extractS3Key,
 } from "../src/utils/storage.js";
 
 const logger = createLogger("Server");
@@ -2718,6 +2727,339 @@ app.get("/api/jobs/:jobId/app-logs", async (req, res) => {
     res.json({ logs });
   } catch (error) {
     logger.error("Error fetching job app logs:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== S3 RESOURCES API ====================
+
+/**
+ * GET /api/s3/info - Get S3 bucket configuration info
+ */
+app.get("/api/s3/info", async (req, res) => {
+  try {
+    const info = getS3BucketInfo();
+    res.json(info);
+  } catch (error) {
+    logger.error("Error getting S3 info:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/s3/objects - List all S3 objects with orphan detection
+ */
+app.get("/api/s3/objects", async (req, res) => {
+  try {
+    const { prefix } = req.query;
+    
+    // Get S3 bucket info
+    const bucketInfo = getS3BucketInfo();
+    if (!bucketInfo.isEnabled) {
+      return res.status(400).json({ error: "S3 storage is not enabled" });
+    }
+
+    // Get all S3 objects
+    const s3Objects = await listS3Objects(prefix || "", 5000);
+    
+    // Get all image URLs from database
+    const dbUrls = await getAllImageUrls();
+    const dbUrlSet = new Set(dbUrls);
+
+    // Mark each S3 object as linked or orphan
+    const objectsWithStatus = s3Objects.map((obj) => {
+      // Check if this S3 object URL is in the database
+      const isLinked = dbUrlSet.has(obj.url) || dbUrlSet.has(obj.key);
+      return {
+        ...obj,
+        isLinked,
+        isOrphan: !isLinked,
+      };
+    });
+
+    // Calculate stats
+    const totalSize = s3Objects.reduce((sum, obj) => sum + obj.size, 0);
+    const orphanCount = objectsWithStatus.filter((obj) => obj.isOrphan).length;
+    const orphanSize = objectsWithStatus
+      .filter((obj) => obj.isOrphan)
+      .reduce((sum, obj) => sum + obj.size, 0);
+
+    res.json({
+      bucket: bucketInfo.bucket,
+      region: bucketInfo.region,
+      cdnUrl: bucketInfo.cdnUrl,
+      totalCount: s3Objects.length,
+      totalSize,
+      orphanCount,
+      orphanSize,
+      linkedCount: s3Objects.length - orphanCount,
+      objects: objectsWithStatus,
+    });
+  } catch (error) {
+    logger.error("Error listing S3 objects:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/s3/objects - Delete specified S3 objects
+ */
+app.delete("/api/s3/objects", async (req, res) => {
+  try {
+    const { keys } = req.body;
+
+    if (!Array.isArray(keys) || keys.length === 0) {
+      return res.status(400).json({ error: "Keys array is required" });
+    }
+
+    const results = {
+      deleted: [],
+      failed: [],
+    };
+
+    for (const key of keys) {
+      try {
+        const success = await deleteFromS3(key);
+        if (success) {
+          results.deleted.push(key);
+        } else {
+          results.failed.push({ key, error: "Delete failed" });
+        }
+      } catch (err) {
+        results.failed.push({ key, error: err.message });
+      }
+    }
+
+    logger.info(`S3 cleanup: deleted ${results.deleted.length}, failed ${results.failed.length}`);
+
+    res.json({
+      success: true,
+      deletedCount: results.deleted.length,
+      failedCount: results.failed.length,
+      deleted: results.deleted,
+      failed: results.failed,
+    });
+  } catch (error) {
+    logger.error("Error deleting S3 objects:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/s3/orphans - Delete all orphan S3 objects
+ */
+app.delete("/api/s3/orphans", async (req, res) => {
+  try {
+    const { prefix } = req.query;
+
+    // Get S3 bucket info
+    const bucketInfo = getS3BucketInfo();
+    if (!bucketInfo.isEnabled) {
+      return res.status(400).json({ error: "S3 storage is not enabled" });
+    }
+
+    // Get all S3 objects
+    const s3Objects = await listS3Objects(prefix || "", 5000);
+    
+    // Get all image URLs from database
+    const dbUrls = await getAllImageUrls();
+    const dbUrlSet = new Set(dbUrls);
+
+    // Find orphan objects
+    const orphanKeys = s3Objects
+      .filter((obj) => !dbUrlSet.has(obj.url) && !dbUrlSet.has(obj.key))
+      .map((obj) => obj.key);
+
+    if (orphanKeys.length === 0) {
+      return res.json({
+        success: true,
+        message: "No orphan objects found",
+        deletedCount: 0,
+      });
+    }
+
+    const results = {
+      deleted: [],
+      failed: [],
+    };
+
+    for (const key of orphanKeys) {
+      try {
+        const success = await deleteFromS3(key);
+        if (success) {
+          results.deleted.push(key);
+        } else {
+          results.failed.push({ key, error: "Delete failed" });
+        }
+      } catch (err) {
+        results.failed.push({ key, error: err.message });
+      }
+    }
+
+    logger.info(`S3 orphan cleanup: deleted ${results.deleted.length}, failed ${results.failed.length}`);
+
+    res.json({
+      success: true,
+      deletedCount: results.deleted.length,
+      failedCount: results.failed.length,
+      deleted: results.deleted,
+      failed: results.failed,
+    });
+  } catch (error) {
+    logger.error("Error deleting orphan S3 objects:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== USER MANAGEMENT API ====================
+
+/**
+ * Middleware to check if user has required role
+ */
+function requireRole(requiredRole) {
+  return async (req, res, next) => {
+    try {
+      if (!req.userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const user = await getUserById(req.userId);
+      if (!user) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      if (!hasRole(user.role, requiredRole)) {
+        return res.status(403).json({ 
+          error: "Insufficient permissions",
+          required: requiredRole,
+          current: user.role,
+        });
+      }
+
+      req.userRole = user.role;
+      next();
+    } catch (error) {
+      logger.error("Role check error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  };
+}
+
+/**
+ * GET /api/admin/users - List all users (admin+ only)
+ */
+app.get("/api/admin/users", requireRole("admin"), async (req, res) => {
+  try {
+    const { search, role, limit, offset } = req.query;
+
+    const users = await getAllUsers({
+      search,
+      role,
+      limit: parseInt(limit) || 100,
+      offset: parseInt(offset) || 0,
+    });
+
+    // Don't expose sensitive data
+    const sanitizedUsers = users.map((u) => ({
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      picture: u.picture,
+      role: u.role,
+      storyCount: u.story_count,
+      createdAt: u.created_at,
+      updatedAt: u.updated_at,
+    }));
+
+    res.json({ users: sanitizedUsers });
+  } catch (error) {
+    logger.error("Error fetching users:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/admin/users/stats - Get user statistics (admin+ only)
+ */
+app.get("/api/admin/users/stats", requireRole("admin"), async (req, res) => {
+  try {
+    const stats = await getUserStats();
+    res.json(stats);
+  } catch (error) {
+    logger.error("Error fetching user stats:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/admin/users/:userId/role - Update user role (super-admin only)
+ */
+app.put("/api/admin/users/:userId/role", requireRole("super-admin"), async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role: newRole } = req.body;
+
+    if (!newRole) {
+      return res.status(400).json({ error: "Role is required" });
+    }
+
+    // Prevent changing own role
+    if (parseInt(userId) === req.userId) {
+      return res.status(400).json({ error: "Cannot change your own role" });
+    }
+
+    // Get target user
+    const targetUser = await getUserById(parseInt(userId));
+    if (!targetUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Prevent demoting another super-admin (only another super-admin could try this)
+    // This is allowed since only super-admins can reach this endpoint
+
+    const updatedUser = await updateUserRole(parseInt(userId), newRole);
+
+    logger.info(`User ${req.userId} changed role of user ${userId} to ${newRole}`);
+
+    res.json({
+      success: true,
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+      },
+    });
+  } catch (error) {
+    logger.error("Error updating user role:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/users/me - Get current user info including role
+ */
+app.get("/api/users/me", async (req, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const user = await getUserById(req.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      picture: user.picture,
+      role: user.role,
+      createdAt: user.created_at,
+    });
+  } catch (error) {
+    logger.error("Error fetching current user:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
