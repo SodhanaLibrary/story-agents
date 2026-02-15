@@ -4,6 +4,7 @@ const path = await import("path");
 const os = await import("os");
 import { generateImage, generateImageWithReferences } from "../services/ai.js";
 import { saveImageFromUrl } from "../utils/storage.js";
+import config from "../config.js";
 
 /**
  * Avatar Agent - Generates and saves character avatar images
@@ -21,7 +22,7 @@ export class AvatarAgent {
    */
   async generateAvatar(character) {
     const enhancedPrompt = this.enhancePromptForConsistency(
-      character.avatarPrompt
+      character.avatarPrompt,
     );
 
     let imageUrl = null;
@@ -35,7 +36,7 @@ export class AvatarAgent {
         : "avatar_ref";
       const tmpFilePath = path.join(
         tmpDir,
-        `${safeName}_ref_${Date.now()}.png`
+        `${safeName}_ref_${Date.now()}.png`,
       );
 
       // Strip data URI if present
@@ -51,20 +52,20 @@ export class AvatarAgent {
           size: "1024x1024",
           quality: "standard",
           style: "vivid",
-        }
+        },
       );
     } else {
       imageUrl = await generateImage(enhancedPrompt, {
-        size: "1024x1024",
-        quality: "standard",
-        style: "vivid",
+        size: config.image.size,
+        quality: config.image.quality,
+        style: config.image.style,
       });
     }
 
     const savedPath = await saveImageFromUrl(
       imageUrl,
       "avatar",
-      character.name
+      character.name,
     );
 
     return {

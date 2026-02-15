@@ -87,7 +87,7 @@ function PromptLogsPage() {
         setTotalCount(
           data.logs.length < rowsPerPage
             ? page * rowsPerPage + data.logs.length
-            : (page + 2) * rowsPerPage
+            : (page + 2) * rowsPerPage,
         );
       }
     } catch (err) {
@@ -201,11 +201,11 @@ function PromptLogsPage() {
   // Calculate summary stats
   const totalRequests = stats.reduce(
     (sum, s) => sum + (s.total_requests || 0),
-    0
+    0,
   );
   const totalTokens = stats.reduce(
     (sum, s) => sum + (s.total_tokens_total || 0),
-    0
+    0,
   );
   const totalErrors = stats.reduce((sum, s) => sum + (s.error_count || 0), 0);
   const avgDuration =
@@ -399,7 +399,12 @@ function PromptLogsPage() {
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <Button id="btn-clear-filters" variant="outlined" onClick={clearFilters} fullWidth>
+              <Button
+                id="btn-clear-filters"
+                variant="outlined"
+                onClick={clearFilters}
+                fullWidth
+              >
                 Clear Filters
               </Button>
             </Grid>
@@ -522,7 +527,7 @@ function PromptLogsPage() {
                           {truncateText(
                             log.promptText ||
                               (log.promptMessages ? "[Messages]" : "-"),
-                            50
+                            50,
                           )}
                         </Typography>
                       </Tooltip>
@@ -816,7 +821,9 @@ function PromptLogsPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button id="btn-close-log-detail" onClick={handleCloseDetail}>Close</Button>
+          <Button id="btn-close-log-detail" onClick={handleCloseDetail}>
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -17,6 +17,9 @@ import {
   DialogActions,
   Stack,
   LinearProgress,
+  Tabs,
+  Tab,
+  Tooltip,
 } from "@mui/material";
 import {
   Check,
@@ -31,9 +34,14 @@ import {
   Image as ImageIcon,
   AutoAwesome,
   Delete,
+  Collections,
+  Save,
+  PhotoLibrary,
 } from "@mui/icons-material";
+import { useAuth } from "../context/AuthContext";
 
 function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
+  const { userId, isAuthenticated } = useAuth();
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState({});
@@ -47,6 +55,106 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
   const [zoomImage, setZoomImage] = useState(null);
   const [approvedAvatars, setApprovedAvatars] = useState({});
   const fileInputRef = useRef(null);
+
+  // Avatar library state
+  const [savedAvatars, setSavedAvatars] = useState([]);
+  const [libraryDialogOpen, setLibraryDialogOpen] = useState(false);
+  const [selectedCharacterForLibrary, setSelectedCharacterForLibrary] =
+    useState(null);
+  const [dialogTab, setDialogTab] = useState(0); // 0 = create new, 1 = use existing
+  const [savingAvatar, setSavingAvatar] = useState({});
+
+  // Fetch saved avatars
+  useEffect(() => {
+    if (isAuthenticated && userId) {
+      fetchSavedAvatars();
+    }
+  }, [isAuthenticated, userId]);
+
+  const fetchSavedAvatars = async () => {
+    try {
+      const response = await fetch(`/api/users/${userId}/avatars`);
+      const data = await response.json();
+      setSavedAvatars(data.avatars || []);
+    } catch (err) {
+      console.error("Failed to fetch saved avatars:", err);
+    }
+  };
+
+  const handleSaveAvatarToLibrary = async (character) => {
+    if (!isAuthenticated || !userId) return;
+
+    setSavingAvatar((prev) => ({ ...prev, [character.name]: true }));
+    try {
+      const response = await fetch(`/api/users/${userId}/avatars`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: character.name,
+          description: character.description,
+          avatarUrl: character.avatarUrl,
+          avatarPath: character.avatarPath,
+          avatarPrompt: character.avatarPrompt,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchSavedAvatars();
+      }
+    } catch (err) {
+      console.error("Failed to save avatar:", err);
+    } finally {
+      setSavingAvatar((prev) => ({ ...prev, [character.name]: false }));
+    }
+  };
+
+  const handleUseExistingAvatar = async (savedAvatar) => {
+    if (!selectedCharacterForLibrary) return;
+
+    const charName = selectedCharacterForLibrary.name;
+    setGenerating((prev) => ({ ...prev, [charName]: true }));
+    setLibraryDialogOpen(false);
+
+    try {
+      // Update the character with the saved avatar
+      const response = await fetch(
+        `/api/job/${jobId}/character/${charName}/avatar`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            avatarUrl: savedAvatar.avatarUrl,
+            avatarPath: savedAvatar.avatarPath,
+            avatarPrompt: savedAvatar.avatarPrompt,
+          }),
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setJob((prev) => ({
+          ...prev,
+          characters: prev.characters.map((c) =>
+            c.name === charName
+              ? { ...c, ...data.character, avatarGenerated: true }
+              : c,
+          ),
+        }));
+        setApprovedAvatars((prev) => ({ ...prev, [charName]: false }));
+      }
+    } catch (err) {
+      console.error("Failed to use existing avatar:", err);
+    } finally {
+      setGenerating((prev) => ({ ...prev, [charName]: false }));
+      setSelectedCharacterForLibrary(null);
+    }
+  };
+
+  const openLibraryDialog = (character) => {
+    setSelectedCharacterForLibrary(character);
+    setDialogTab(savedAvatars.length > 0 ? 1 : 0);
+    setLibraryDialogOpen(true);
+  };
 
   useEffect(() => {
     if (!jobId) return;
@@ -155,7 +263,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
         setJob((prev) => ({
           ...prev,
           characters: prev.characters.map((c) =>
-            c.name === charName ? data.character : c
+            c.name === charName ? data.character : c,
           ),
         }));
         // Reset approval for this character
@@ -181,7 +289,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
 
   const openEditDialog = (character) => {
     setCustomDescription(
-      character.customDescription || character.avatarPrompt || ""
+      character.customDescription || character.avatarPrompt || "",
     );
     setReferenceImage(null);
     setReferenceImagePreview(null);
@@ -256,7 +364,12 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
           </Typography>
           <Typography variant="body2">{job.error}</Typography>
         </Alert>
-        <Button id="btn-go-back-error" variant="outlined" onClick={onBack} sx={{ mt: 3 }}>
+        <Button
+          id="btn-go-back-error"
+          variant="outlined"
+          onClick={onBack}
+          sx={{ mt: 3 }}
+        >
           Go Back
         </Button>
       </Box>
@@ -489,65 +602,139 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                 <Stack spacing={1}>
                   {!character.avatarGenerated ? (
                     <>
-                      <Button
-                        id={`btn-create-avatar-${index}`}
-                        variant="contained"
-                        size="small"
-                        startIcon={<AutoAwesome />}
-                        onClick={() => openEditDialog(character)}
-                        disabled={generating[character.name]}
-                        fullWidth
-                      >
-                        Create Avatar
-                      </Button>
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          id={`btn-create-avatar-${index}`}
+                          variant="contained"
+                          size="small"
+                          startIcon={<AutoAwesome />}
+                          onClick={() => openEditDialog(character)}
+                          disabled={generating[character.name]}
+                          sx={{ flex: 1 }}
+                        >
+                          Create New
+                        </Button>
+                        {isAuthenticated && savedAvatars.length > 0 && (
+                          <Tooltip title="Use saved avatar">
+                            <Button
+                              id={`btn-use-library-${index}`}
+                              variant="outlined"
+                              size="small"
+                              onClick={() => openLibraryDialog(character)}
+                              disabled={generating[character.name]}
+                              sx={{ minWidth: 40, px: 1 }}
+                            >
+                              <Collections />
+                            </Button>
+                          </Tooltip>
+                        )}
+                      </Stack>
                       <Typography
                         variant="caption"
                         sx={{ color: "text.secondary", textAlign: "center" }}
                       >
-                        Add description or upload reference image
+                        {savedAvatars.length > 0
+                          ? "Create new or use saved avatar"
+                          : "Add description or upload reference image"}
                       </Typography>
                     </>
                   ) : !approvedAvatars[character.name] ? (
-                    <Stack direction="row" spacing={1}>
+                    <>
+                      <Stack direction="row" spacing={1}>
+                        <Button
+                          id={`btn-approve-avatar-${index}`}
+                          variant="contained"
+                          size="small"
+                          startIcon={<Check />}
+                          onClick={() => handleApprove(character.name)}
+                          disabled={generating[character.name]}
+                          sx={{ flex: 1 }}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          id={`btn-redo-avatar-${index}`}
+                          variant="outlined"
+                          size="small"
+                          startIcon={<Edit />}
+                          onClick={() => openEditDialog(character)}
+                          disabled={generating[character.name]}
+                        >
+                          Redo
+                        </Button>
+                        {isAuthenticated && savedAvatars.length > 0 && (
+                          <Tooltip title="Use saved avatar">
+                            <Button
+                              id={`btn-use-library-${index}`}
+                              variant="outlined"
+                              size="small"
+                              onClick={() => openLibraryDialog(character)}
+                              disabled={generating[character.name]}
+                              sx={{ minWidth: 40, px: 1 }}
+                            >
+                              <Collections />
+                            </Button>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                      {isAuthenticated && (
+                        <Button
+                          id={`btn-save-to-library-${index}`}
+                          variant="text"
+                          size="small"
+                          startIcon={
+                            savingAvatar[character.name] ? (
+                              <CircularProgress size={14} />
+                            ) : (
+                              <Save />
+                            )
+                          }
+                          onClick={() => handleSaveAvatarToLibrary(character)}
+                          disabled={savingAvatar[character.name]}
+                          sx={{ color: "text.secondary", fontSize: "0.75rem" }}
+                        >
+                          Save to Library
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <>
                       <Button
-                        id={`btn-approve-avatar-${index}`}
-                        variant="contained"
-                        size="small"
-                        startIcon={<Check />}
-                        onClick={() => handleApprove(character.name)}
-                        disabled={generating[character.name]}
-                        sx={{ flex: 1 }}
-                      >
-                        Approve
-                      </Button>
-                      <Button
-                        id={`btn-redo-avatar-${index}`}
+                        id={`btn-edit-approved-avatar-${index}`}
                         variant="outlined"
                         size="small"
-                        startIcon={<Edit />}
-                        onClick={() => openEditDialog(character)}
-                        disabled={generating[character.name]}
+                        color="success"
+                        startIcon={<Check />}
+                        onClick={() =>
+                          setApprovedAvatars((prev) => ({
+                            ...prev,
+                            [character.name]: false,
+                          }))
+                        }
+                        fullWidth
                       >
-                        Redo
+                        Approved - Click to Edit
                       </Button>
-                    </Stack>
-                  ) : (
-                    <Button
-                      id={`btn-edit-approved-avatar-${index}`}
-                      variant="outlined"
-                      size="small"
-                      color="success"
-                      startIcon={<Check />}
-                      onClick={() =>
-                        setApprovedAvatars((prev) => ({
-                          ...prev,
-                          [character.name]: false,
-                        }))
-                      }
-                      fullWidth
-                    >
-                      Approved - Click to Edit
-                    </Button>
+                      {isAuthenticated && (
+                        <Button
+                          id={`btn-save-approved-to-library-${index}`}
+                          variant="text"
+                          size="small"
+                          startIcon={
+                            savingAvatar[character.name] ? (
+                              <CircularProgress size={14} />
+                            ) : (
+                              <Save />
+                            )
+                          }
+                          onClick={() => handleSaveAvatarToLibrary(character)}
+                          disabled={savingAvatar[character.name]}
+                          sx={{ color: "text.secondary", fontSize: "0.75rem" }}
+                        >
+                          Save to Library
+                        </Button>
+                      )}
+                    </>
                   )}
                 </Stack>
               </CardContent>
@@ -558,7 +745,12 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
 
       {/* Navigation Buttons */}
       <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-        <Button id="btn-back-to-styles" variant="outlined" startIcon={<ArrowBack />} onClick={onBack}>
+        <Button
+          id="btn-back-to-styles"
+          variant="outlined"
+          startIcon={<ArrowBack />}
+          onClick={onBack}
+        >
           Back to Styles
         </Button>
         <Button
@@ -720,6 +912,248 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
             />
           )}
         </DialogContent>
+      </Dialog>
+
+      {/* Avatar Library Dialog */}
+      <Dialog
+        open={libraryDialogOpen}
+        onClose={() => {
+          setLibraryDialogOpen(false);
+          setSelectedCharacterForLibrary(null);
+        }}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <PhotoLibrary sx={{ color: "primary.main" }} />
+            <Typography variant="h6">
+              Choose Avatar for {selectedCharacterForLibrary?.name}
+            </Typography>
+          </Stack>
+        </DialogTitle>
+        <DialogContent>
+          <Tabs
+            value={dialogTab}
+            onChange={(e, v) => setDialogTab(v)}
+            sx={{ mb: 2, borderBottom: 1, borderColor: "divider" }}
+          >
+            <Tab
+              id="tab-saved-avatars"
+              icon={<Collections sx={{ fontSize: 18 }} />}
+              iconPosition="start"
+              label={`Saved Avatars (${savedAvatars.length})`}
+            />
+            <Tab
+              id="tab-create-new"
+              icon={<AutoAwesome sx={{ fontSize: 18 }} />}
+              iconPosition="start"
+              label="Create New"
+            />
+          </Tabs>
+
+          {dialogTab === 0 && (
+            <Box>
+              {savedAvatars.length === 0 ? (
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <Collections
+                    sx={{ fontSize: 60, color: "text.secondary", mb: 2 }}
+                  />
+                  <Typography
+                    variant="body1"
+                    sx={{ color: "text.secondary", mb: 2 }}
+                  >
+                    No saved avatars yet
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    Generate avatars and save them to your library to reuse
+                    across stories.
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<AutoAwesome />}
+                    onClick={() => setDialogTab(1)}
+                    sx={{ mt: 2 }}
+                  >
+                    Create New Avatar
+                  </Button>
+                </Box>
+              ) : (
+                <Grid container spacing={2}>
+                  {savedAvatars.map((avatar) => (
+                    <Grid item xs={6} sm={4} md={3} key={avatar.id}>
+                      <Card
+                        onClick={() => handleUseExistingAvatar(avatar)}
+                        sx={{
+                          cursor: "pointer",
+                          transition: "all 0.2s",
+                          "&:hover": {
+                            transform: "scale(1.02)",
+                            boxShadow: "0 4px 20px rgba(232, 184, 109, 0.3)",
+                            borderColor: "primary.main",
+                          },
+                          border: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Box sx={{ position: "relative" }}>
+                          <img
+                            src={avatar.avatarUrl}
+                            alt={avatar.name}
+                            style={{
+                              width: "100%",
+                              height: 150,
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                          />
+                          <Box
+                            sx={{
+                              position: "absolute",
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                              bgcolor: "rgba(0,0,0,0.7)",
+                              p: 1,
+                            }}
+                          >
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 600,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {avatar.name}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+              )}
+            </Box>
+          )}
+
+          {dialogTab === 1 && (
+            <Box>
+              <Typography
+                variant="body2"
+                sx={{ color: "text.secondary", mb: 3 }}
+              >
+                Provide a custom description and/or upload a reference image to
+                create a new avatar.
+              </Typography>
+
+              {/* Reference Image Upload */}
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Reference Image (Optional)
+                </Typography>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  style={{ display: "none" }}
+                />
+                {referenceImagePreview ? (
+                  <Box sx={{ position: "relative", display: "inline-block" }}>
+                    <img
+                      src={referenceImagePreview}
+                      alt="Reference"
+                      style={{
+                        maxWidth: "100%",
+                        maxHeight: 200,
+                        borderRadius: 8,
+                        border: "2px solid rgba(232, 184, 109, 0.3)",
+                      }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={handleClearImage}
+                      sx={{
+                        position: "absolute",
+                        top: -8,
+                        right: -8,
+                        bgcolor: "error.main",
+                        "&:hover": { bgcolor: "error.dark" },
+                      }}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Box>
+                ) : (
+                  <Button
+                    variant="outlined"
+                    startIcon={<CloudUpload />}
+                    onClick={() => fileInputRef.current?.click()}
+                    sx={{
+                      py: 3,
+                      width: "100%",
+                      border: "2px dashed rgba(232, 184, 109, 0.3)",
+                      "&:hover": {
+                        border: "2px dashed rgba(232, 184, 109, 0.6)",
+                      },
+                    }}
+                  >
+                    Click to upload reference image
+                  </Button>
+                )}
+              </Box>
+
+              {/* Custom Description */}
+              <Box>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                  Character Description
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={customDescription}
+                  onChange={(e) => setCustomDescription(e.target.value)}
+                  placeholder="e.g., A young woman with long flowing red hair, wearing a blue medieval dress..."
+                />
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 0 }}>
+          <Button
+            onClick={() => {
+              setLibraryDialogOpen(false);
+              setSelectedCharacterForLibrary(null);
+            }}
+          >
+            Cancel
+          </Button>
+          {dialogTab === 1 && (
+            <Button
+              variant="contained"
+              onClick={() => {
+                setLibraryDialogOpen(false);
+                if (selectedCharacterForLibrary) {
+                  handleGenerateAvatar(
+                    {
+                      ...selectedCharacterForLibrary,
+                      avatarPrompt: customDescription,
+                    },
+                    true,
+                  );
+                }
+                setSelectedCharacterForLibrary(null);
+              }}
+              disabled={!customDescription.trim() && !referenceImage}
+              startIcon={<AutoAwesome />}
+            >
+              Generate Avatar
+            </Button>
+          )}
+        </DialogActions>
       </Dialog>
     </Box>
   );

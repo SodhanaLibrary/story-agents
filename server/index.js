@@ -54,18 +54,28 @@ import {
   getFollowing,
   // Personalized Feed
   getPersonalizedFeed,
+  // User Avatars
+  getUserAvatars,
+  saveUserAvatar,
+  getUserAvatarById,
+  deleteUserAvatar,
   // Storage type check
   isUsingS3,
 } from "../src/utils/storage.js";
 import { generateTextResponse } from "../src/services/openai.js";
 import { initializeDatabase, query, insert } from "../src/services/database.js";
 import config from "../src/config.js";
-import { createLogger, requestLogger } from "../src/utils/logger.js";
+import { createLogger, requestLogger, enableDbLogging, setLogContext, clearLogContext } from "../src/utils/logger.js";
 import {
   getPromptLogs,
   getPromptStats,
   setContext as setPromptContext,
 } from "../src/services/promptLogger.js";
+import {
+  getAppLogs,
+  getAppLogStats,
+  clearOldAppLogs,
+} from "../src/utils/storage.js";
 
 const logger = createLogger("Server");
 
@@ -91,7 +101,16 @@ function getImageUrl(imagePath, type = "page") {
 }
 
 // Initialize database on startup
-initializeDatabase().catch((err) => {
+import { getPool } from "../src/services/database.js";
+
+initializeDatabase().then(() => {
+  // Enable database logging after DB is initialized
+  const pool = getPool();
+  if (pool) {
+    enableDbLogging(pool);
+    logger.info("Database logging enabled");
+  }
+}).catch((err) => {
   logger.error("Failed to initialize database:", err.message);
   logger.warn("Server will continue but database features may not work.");
 });
@@ -401,6 +420,57 @@ app.post("/api/generate/avatars", async (req, res) => {
     res.json({ jobId, message: "Avatar generation started" });
   } catch (error) {
     logger.error("Error starting avatar generation:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/job/:jobId/character/:characterName/avatar - Update character with existing avatar
+ */
+app.put("/api/job/:jobId/character/:characterName/avatar", async (req, res) => {
+  try {
+    const { jobId, characterName } = req.params;
+    const { avatarUrl, avatarPath, avatarPrompt } = req.body;
+
+    const job = activeJobs.get(jobId);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    // Find and update the character
+    const charIndex = job.characters?.findIndex(
+      (c) => c.name.toLowerCase() === characterName.toLowerCase()
+    );
+
+    if (charIndex === -1) {
+      return res.status(404).json({ error: "Character not found" });
+    }
+
+    // Update character with the existing avatar
+    const updatedCharacter = {
+      ...job.characters[charIndex],
+      avatarUrl,
+      avatarPath: avatarPath || avatarUrl,
+      avatarPrompt: avatarPrompt || job.characters[charIndex].avatarPrompt,
+      avatarGenerated: true,
+      fromLibrary: true,
+    };
+
+    job.characters[charIndex] = updatedCharacter;
+
+    // Update the job
+    await updateJobWithDraft(jobId, {
+      characters: job.characters,
+    });
+
+    logger.info(`Character ${characterName} updated with existing avatar`);
+
+    res.json({
+      success: true,
+      character: updatedCharacter,
+    });
+  } catch (error) {
+    logger.error("Error updating character avatar:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1743,6 +1813,84 @@ app.post("/api/auth/google", async (req, res) => {
   }
 });
 
+// ==================== USER AVATARS API ====================
+
+/**
+ * GET /api/users/:userId/avatars - Get user's saved avatars
+ */
+app.get("/api/users/:userId/avatars", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const avatars = await getUserAvatars(parseInt(userId, 10));
+    res.json({ avatars });
+  } catch (error) {
+    logger.error("Error fetching user avatars:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/users/:userId/avatars - Save avatar to user's library
+ */
+app.post("/api/users/:userId/avatars", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { name, description, avatarUrl, avatarPath, avatarPrompt } = req.body;
+
+    if (!name || !avatarUrl) {
+      return res.status(400).json({ error: "Name and avatarUrl are required" });
+    }
+
+    const avatar = await saveUserAvatar(parseInt(userId, 10), {
+      name,
+      description,
+      avatarUrl,
+      avatarPath: avatarPath || avatarUrl,
+      avatarPrompt,
+    });
+
+    logger.info(`Avatar saved for user ${userId}: ${name}`);
+    res.json({ avatar });
+  } catch (error) {
+    logger.error("Error saving user avatar:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/users/:userId/avatars/:avatarId - Get a specific avatar
+ */
+app.get("/api/users/:userId/avatars/:avatarId", async (req, res) => {
+  try {
+    const { avatarId } = req.params;
+    const avatar = await getUserAvatarById(parseInt(avatarId, 10));
+    
+    if (!avatar) {
+      return res.status(404).json({ error: "Avatar not found" });
+    }
+
+    res.json({ avatar });
+  } catch (error) {
+    logger.error("Error fetching avatar:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/users/:userId/avatars/:avatarId - Delete an avatar from library
+ */
+app.delete("/api/users/:userId/avatars/:avatarId", async (req, res) => {
+  try {
+    const { userId, avatarId } = req.params;
+    await deleteUserAvatar(parseInt(userId, 10), parseInt(avatarId, 10));
+    logger.info(`Avatar ${avatarId} deleted for user ${userId}`);
+    res.json({ success: true });
+  } catch (error) {
+    logger.error("Error deleting avatar:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== USER PROFILES API ====================
 
 /**
@@ -2473,6 +2621,91 @@ app.get("/api/stories/:storyId/prompts", async (req, res) => {
     res.json({ logs });
   } catch (error) {
     logger.error("Error fetching story prompts:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== APP LOGS API ====================
+
+/**
+ * GET /api/app-logs - Get application logs (server logs)
+ * Note: Server logs are not filtered by user - they're system-wide logs
+ */
+app.get("/api/app-logs", async (req, res) => {
+  try {
+    const { level, context, jobId, userId, search, limit, offset } = req.query;
+
+    const logs = await getAppLogs({
+      level,
+      context,
+      jobId,
+      userId: userId || null, // Only filter by userId if explicitly passed as query param
+      search,
+      limit: parseInt(limit) || 100,
+      offset: parseInt(offset) || 0,
+    });
+
+    res.json({ logs });
+  } catch (error) {
+    logger.error("Error fetching app logs:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/app-logs/stats - Get application log statistics
+ */
+app.get("/api/app-logs/stats", async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const stats = await getAppLogStats({
+      startDate,
+      endDate,
+    });
+
+    res.json({ stats });
+  } catch (error) {
+    logger.error("Error fetching app log stats:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/app-logs/clear - Clear old application logs
+ */
+app.delete("/api/app-logs/clear", async (req, res) => {
+  try {
+    const { daysOld } = req.query;
+
+    const deletedCount = await clearOldAppLogs(parseInt(daysOld) || 7);
+
+    res.json({ 
+      success: true, 
+      message: `Cleared ${deletedCount} logs older than ${daysOld || 7} days` 
+    });
+  } catch (error) {
+    logger.error("Error clearing app logs:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/jobs/:jobId/app-logs - Get application logs for a specific job
+ */
+app.get("/api/jobs/:jobId/app-logs", async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const { limit } = req.query;
+
+    const logs = await getAppLogs({
+      jobId,
+      limit: parseInt(limit) || 500,
+    });
+
+    res.json({ logs });
+  } catch (error) {
+    logger.error("Error fetching job app logs:", error.message);
     res.status(500).json({ error: error.message });
   }
 });

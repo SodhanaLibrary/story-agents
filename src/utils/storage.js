@@ -56,6 +56,16 @@ export const {
   getFollowingIds,
   // Personalized Feed
   getPersonalizedFeed,
+  // User Avatars
+  getUserAvatars,
+  saveUserAvatar,
+  getUserAvatarById,
+  deleteUserAvatar,
+  updateUserAvatar,
+  // App Logs
+  getAppLogs,
+  getAppLogStats,
+  clearOldAppLogs,
 } = storyRepo;
 
 /**

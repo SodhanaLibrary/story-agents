@@ -11,6 +11,73 @@ const LOG_LEVELS = {
   silent: 4,
 };
 
+// Database logging configuration
+let dbLoggingEnabled = false;
+let dbPool = null;
+let logContext = { jobId: null, userId: null };
+
+/**
+ * Enable database logging
+ * @param {object} pool - MySQL connection pool
+ */
+export function enableDbLogging(pool) {
+  dbPool = pool;
+  dbLoggingEnabled = true;
+}
+
+/**
+ * Disable database logging
+ */
+export function disableDbLogging() {
+  dbLoggingEnabled = false;
+}
+
+/**
+ * Set logging context (jobId, userId)
+ */
+export function setLogContext(context) {
+  logContext = { ...logContext, ...context };
+}
+
+/**
+ * Clear logging context
+ */
+export function clearLogContext() {
+  logContext = { jobId: null, userId: null };
+}
+
+/**
+ * Save log to database (async, non-blocking)
+ */
+async function saveLogToDb(level, context, message, details = null) {
+  if (!dbLoggingEnabled || !dbPool) return;
+  
+  // Skip debug logs in database to avoid noise (configurable)
+  const dbLogLevel = process.env.DB_LOG_LEVEL?.toLowerCase() || "info";
+  if (LOG_LEVELS[level] < LOG_LEVELS[dbLogLevel]) return;
+  
+  try {
+    const detailsStr = details ? 
+      (typeof details === 'string' ? details : JSON.stringify(details)) : null;
+    
+    await dbPool.execute(
+      `INSERT INTO app_logs (level, context, message, details, job_id, user_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        level,
+        context || null,
+        String(message).substring(0, 65535), // Limit message length
+        detailsStr ? detailsStr.substring(0, 16777215) : null, // LONGTEXT limit
+        logContext.jobId || null,
+        logContext.userId || null,
+      ]
+    );
+  } catch (err) {
+    // Don't let DB errors break logging
+    console.error("Failed to save log to DB:", err.message);
+  }
+}
+
 /**
  * Get current log level from environment
  */
@@ -73,6 +140,10 @@ function log(level, context, message, ...args) {
   } else {
     console.log(prefix, msg, ...extraArgs);
   }
+  
+  // Save to database (async, non-blocking)
+  const details = extraArgs.length > 0 ? extraArgs : null;
+  saveLogToDb(level, context, msg, details);
 }
 
 /**
@@ -98,6 +169,10 @@ export function createLogger(context = "") {
       const levelStr = chalk.green("✓ OK ");
       const contextStr = context ? chalk.cyan(`[${context}]`) : "";
       console.log(`${timestamp} ${levelStr}${contextStr ? ` ${contextStr}` : ""}`, message, ...args);
+      
+      // Save to database
+      const details = args.length > 0 ? args : null;
+      saveLogToDb("success", context, message, details);
     },
 
     /**

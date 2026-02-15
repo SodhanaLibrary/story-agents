@@ -311,6 +311,41 @@ export async function initializeDatabase() {
     )
   `);
 
+  // User avatars table for reusable character avatars
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS user_avatars (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      description TEXT,
+      avatar_url VARCHAR(500),
+      avatar_path VARCHAR(500),
+      avatar_prompt TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_user_id (user_id),
+      INDEX idx_name (name)
+    )
+  `);
+
+  // Application logs table for server logs
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS app_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      level ENUM('debug', 'info', 'warn', 'error', 'success') NOT NULL,
+      context VARCHAR(100),
+      message TEXT NOT NULL,
+      details LONGTEXT,
+      job_id VARCHAR(100),
+      user_id INT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_level (level),
+      INDEX idx_context (context),
+      INDEX idx_created_at (created_at),
+      INDEX idx_job_id (job_id)
+    )
+  `);
+
   logger.success("Database schema initialized");
 }
 

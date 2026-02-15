@@ -1096,6 +1096,194 @@ export async function getPersonalizedFeed(userId, limit = 50) {
   }));
 }
 
+// ==================== USER AVATARS ====================
+
+/**
+ * Get all avatars saved by a user
+ */
+export async function getUserAvatars(userId) {
+  const rows = await query(
+    `SELECT * FROM user_avatars WHERE user_id = ? ORDER BY created_at DESC`,
+    [userId]
+  );
+  return rows.map((a) => ({
+    id: a.id,
+    name: a.name,
+    description: a.description,
+    avatarUrl: a.avatar_url,
+    avatarPath: a.avatar_path,
+    avatarPrompt: a.avatar_prompt,
+    createdAt: a.created_at,
+  }));
+}
+
+/**
+ * Save an avatar to user's library
+ */
+export async function saveUserAvatar(userId, avatarData) {
+  const id = await insert(
+    `INSERT INTO user_avatars (user_id, name, description, avatar_url, avatar_path, avatar_prompt)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      userId,
+      avatarData.name,
+      avatarData.description || null,
+      avatarData.avatarUrl,
+      avatarData.avatarPath || avatarData.avatarUrl,
+      avatarData.avatarPrompt || null,
+    ]
+  );
+  return { id, ...avatarData };
+}
+
+/**
+ * Get a single user avatar by ID
+ */
+export async function getUserAvatarById(avatarId) {
+  const rows = await query(`SELECT * FROM user_avatars WHERE id = ?`, [avatarId]);
+  if (rows.length === 0) return null;
+  const a = rows[0];
+  return {
+    id: a.id,
+    userId: a.user_id,
+    name: a.name,
+    description: a.description,
+    avatarUrl: a.avatar_url,
+    avatarPath: a.avatar_path,
+    avatarPrompt: a.avatar_prompt,
+    createdAt: a.created_at,
+  };
+}
+
+/**
+ * Delete a user avatar
+ */
+export async function deleteUserAvatar(userId, avatarId) {
+  await query(`DELETE FROM user_avatars WHERE id = ? AND user_id = ?`, [avatarId, userId]);
+}
+
+/**
+ * Update a user avatar
+ */
+export async function updateUserAvatar(avatarId, updates) {
+  const fields = [];
+  const values = [];
+
+  if (updates.name !== undefined) {
+    fields.push("name = ?");
+    values.push(updates.name);
+  }
+  if (updates.description !== undefined) {
+    fields.push("description = ?");
+    values.push(updates.description);
+  }
+
+  if (fields.length === 0) return;
+
+  values.push(avatarId);
+  await query(`UPDATE user_avatars SET ${fields.join(", ")} WHERE id = ?`, values);
+}
+
+// ==================== APP LOGS ====================
+
+/**
+ * Get application logs with optional filtering
+ */
+export async function getAppLogs(filters = {}) {
+  const {
+    level,
+    context,
+    jobId,
+    userId,
+    search,
+    limit = 100,
+    offset = 0,
+  } = filters;
+
+  const limitInt = parseInt(limit, 10) || 100;
+  const offsetInt = parseInt(offset, 10) || 0;
+
+  let sql = "SELECT * FROM app_logs WHERE 1=1";
+  const params = [];
+
+  if (level) {
+    sql += " AND level = ?";
+    params.push(level);
+  }
+  if (context) {
+    sql += " AND context LIKE ?";
+    params.push(`%${context}%`);
+  }
+  if (jobId) {
+    sql += " AND job_id = ?";
+    params.push(jobId);
+  }
+  if (userId) {
+    sql += " AND user_id = ?";
+    params.push(parseInt(userId, 10));
+  }
+  if (search) {
+    sql += " AND (message LIKE ? OR details LIKE ?)";
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  sql += ` ORDER BY created_at DESC LIMIT ${limitInt} OFFSET ${offsetInt}`;
+
+  const logs = await query(sql, params);
+
+  return logs.map((log) => ({
+    id: log.id,
+    level: log.level,
+    context: log.context,
+    message: log.message,
+    details: log.details ? safeJsonParse(log.details, log.details) : null,
+    jobId: log.job_id,
+    userId: log.user_id,
+    createdAt: log.created_at,
+  }));
+}
+
+/**
+ * Get app log statistics
+ */
+export async function getAppLogStats(filters = {}) {
+  const { startDate, endDate } = filters;
+
+  let sql = `
+    SELECT 
+      level,
+      context,
+      COUNT(*) as count
+    FROM app_logs
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (startDate) {
+    sql += " AND created_at >= ?";
+    params.push(startDate);
+  }
+  if (endDate) {
+    sql += " AND created_at <= ?";
+    params.push(endDate);
+  }
+
+  sql += " GROUP BY level, context ORDER BY count DESC LIMIT 50";
+
+  return await query(sql, params);
+}
+
+/**
+ * Clear old app logs (older than specified days)
+ */
+export async function clearOldAppLogs(daysOld = 7) {
+  const result = await query(
+    "DELETE FROM app_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
+    [daysOld]
+  );
+  return result.affectedRows || 0;
+}
+
 // ==================== HELPERS ====================
 
 /**
@@ -1277,4 +1465,14 @@ export default {
   getFollowingIds,
   // Personalized Feed
   getPersonalizedFeed,
+  // User Avatars
+  getUserAvatars,
+  saveUserAvatar,
+  getUserAvatarById,
+  deleteUserAvatar,
+  updateUserAvatar,
+  // App Logs
+  getAppLogs,
+  getAppLogStats,
+  clearOldAppLogs,
 };

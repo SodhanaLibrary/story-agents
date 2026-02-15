@@ -134,12 +134,14 @@ function StoriesPage() {
   return (
     <Box className="fade-in">
       {/* Page Title */}
-      <Typography
-        variant="h4"
-        sx={{ mb: 3, fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}
-      >
-        {searchQuery ? `Search: "${searchQuery}"` : "📚 Story Library"}
-      </Typography>
+      {searchQuery && (
+        <Typography
+          variant="h4"
+          sx={{ mb: 3, fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}
+        >
+          {`Search: "${searchQuery}"`}
+        </Typography>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
