@@ -13,6 +13,7 @@ import {
 } from "../src/agents/index.js";
 import {
   saveJson,
+  updateJson,
   ensureStorageDirectories,
   listSavedStories,
   loadJson,
@@ -947,6 +948,12 @@ app.post("/api/regenerate-page", async (req, res) => {
     const page = { ...job.storyPages.pages[pageIndex] };
     const artStyleAgent = new ArtStyleAgent();
     const illustrationAgent = new IllustrationAgent();
+    
+    // Set character reference for avatar-based illustration generation
+    if (job.characters && job.characters.length > 0) {
+      illustrationAgent.setCharacterReference(job.characters);
+    }
+    
     const artStylePrompt =
       job.artStylePrompt || artStyleAgent.getStylePrompt("illustration");
 
@@ -1015,6 +1022,12 @@ app.post("/api/regenerate-cover", async (req, res) => {
 
     const artStyleAgent = new ArtStyleAgent();
     const illustrationAgent = new IllustrationAgent();
+    
+    // Set character reference for avatar-based illustration generation
+    if (job.characters && job.characters.length > 0) {
+      illustrationAgent.setCharacterReference(job.characters);
+    }
+    
     const artStylePrompt =
       job.artStylePrompt || artStyleAgent.getStylePrompt("illustration");
 
@@ -2347,7 +2360,8 @@ app.delete("/api/stories/:storyId", async (req, res) => {
       return res.status(401).json({ error: "Authentication required" });
     }
 
-    if (story.user_id !== requestUserId) {
+    if (story.userId !== requestUserId) {
+      logger.warn(`Delete story ${id} denied: story.userId=${story.userId}, requestUserId=${requestUserId}`);
       return res
         .status(403)
         .json({ error: "You can only delete your own stories" });
@@ -2444,7 +2458,7 @@ app.post("/api/stories/:storyId/edit", async (req, res) => {
 });
 
 /**
- * POST /api/stories/:storyId/save - Save edited story (creates new version in MySQL)
+ * POST /api/stories/:storyId/save - Save edited story (updates existing story in MySQL)
  */
 app.post("/api/stories/:storyId/save", async (req, res) => {
   try {
@@ -2478,24 +2492,22 @@ app.post("/api/stories/:storyId/save", async (req, res) => {
       },
     };
 
-    // Delete old story and save new version (or update in place)
-    await deleteStory(originalId);
-
-    const newStoryId = await saveJson(updatedStory, req.userId);
+    // Update the existing story in-place (same story ID)
+    await updateJson(originalId, updatedStory);
 
     // Update job status
     job.status = "completed";
     job.phase = "complete";
     job.progress = 100;
     job.message = "Story updated successfully!";
-    job.storyId = newStoryId;
+    job.storyId = originalId;
     job.result = updatedStory;
     activeJobs.set(jobId, job);
 
     res.json({
       success: true,
       message: "Story saved successfully",
-      storyId: newStoryId,
+      storyId: originalId,
       story: updatedStory,
     });
   } catch (error) {

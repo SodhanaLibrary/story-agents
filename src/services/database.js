@@ -264,7 +264,7 @@ export async function initializeDatabase() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       provider ENUM('openai', 'gemini') NOT NULL,
       model VARCHAR(100) NOT NULL,
-      request_type ENUM('completion', 'json', 'vision', 'image') NOT NULL,
+      request_type ENUM('completion', 'json', 'vision', 'image', 'image_edit', 'image_generate_ref', 'image_generate_ref_pre') NOT NULL,
       prompt_messages LONGTEXT,
       prompt_text TEXT,
       response_text LONGTEXT,
@@ -272,7 +272,7 @@ export async function initializeDatabase() {
       tokens_output INT,
       tokens_total INT,
       duration_ms INT,
-      status ENUM('success', 'error') DEFAULT 'success',
+      status ENUM('success', 'error', 'initiated') DEFAULT 'success',
       error_message TEXT,
       job_id VARCHAR(100),
       story_id INT,
@@ -287,6 +287,32 @@ export async function initializeDatabase() {
       INDEX idx_status (status)
     )
   `);
+
+  // Migrate existing prompt_logs table to support new request_type and status values
+  try {
+    await pool.execute(`
+      ALTER TABLE prompt_logs 
+      MODIFY COLUMN request_type ENUM('completion', 'json', 'vision', 'image', 'image_edit', 'image_generate_ref', 'image_generate_ref_pre') NOT NULL
+    `);
+    logger.debug("prompt_logs request_type column updated");
+  } catch (err) {
+    // Ignore if column is already correct
+    if (!err.message.includes("Duplicate")) {
+      logger.debug("prompt_logs request_type migration skipped: " + err.message);
+    }
+  }
+  
+  try {
+    await pool.execute(`
+      ALTER TABLE prompt_logs 
+      MODIFY COLUMN status ENUM('success', 'error', 'initiated') DEFAULT 'success'
+    `);
+    logger.debug("prompt_logs status column updated");
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) {
+      logger.debug("prompt_logs status migration skipped: " + err.message);
+    }
+  }
 
   // Batch requests table for illustration generation
   await pool.execute(`

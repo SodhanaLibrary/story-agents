@@ -1,11 +1,9 @@
 import {
   generateImage,
   generateImageWithReferences,
-  saveBase64Image,
 } from "../services/ai.js";
-import { saveImageFromUrl, getStoragePath } from "../utils/storage.js";
+import { saveImageFromUrl, saveImage } from "../utils/storage.js";
 import { createLogger } from "../utils/logger.js";
-import path from "path";
 
 const logger = createLogger("IllustrationAgent");
 
@@ -33,47 +31,82 @@ export class IllustrationAgent {
   setCharacterReference(characters) {
     this.characterReference = characters;
 
-    // Log available avatar paths
-    const avatarPaths = characters
-      .filter((c) => c.avatarPath)
-      .map((c) => `${c.name}: ${c.avatarPath}`);
+    if (!characters || characters.length === 0) {
+      logger.warn("setCharacterReference called with no characters");
+      return;
+    }
 
-    if (avatarPaths.length > 0) {
-      logger.debug(`Avatar references set: ${avatarPaths.join(", ")}`);
+    // Log available avatar paths/URLs
+    const avatarInfo = characters
+      .filter((c) => c.avatarPath || c.avatarUrl)
+      .map((c) => `${c.name}: ${c.avatarPath || c.avatarUrl}`);
+
+    if (avatarInfo.length > 0) {
+      logger.info(`Avatar references set (${avatarInfo.length} characters): ${avatarInfo.join(", ")}`);
+    } else {
+      logger.warn(`setCharacterReference: ${characters.length} characters but none have avatarPath or avatarUrl`);
+      // Log character data for debugging
+      characters.forEach((c, i) => {
+        logger.debug(`Character ${i}: name="${c.name}", avatarPath="${c.avatarPath}", avatarUrl="${c.avatarUrl}"`);
+      });
     }
   }
 
   /**
-   * Gets avatar file paths for characters in the scene
+   * Gets avatar file paths/URLs for characters in the scene
    * @param {Array} charactersInScene - Names of characters appearing in this scene
-   * @returns {Array<string>} - Array of avatar file paths
+   * @returns {Array<string>} - Array of avatar file paths or URLs
    */
   getAvatarPaths(charactersInScene = []) {
     if (!this.characterReference || this.characterReference.length === 0) {
+      logger.debug("No character reference set for avatar paths");
       return [];
     }
+
+    // Helper to get avatar path or URL from character
+    const getAvatarLocation = (char) => {
+      // Prefer avatarPath, but fallback to avatarUrl (for S3 storage)
+      return char.avatarPath || char.avatarUrl || null;
+    };
 
     // Find characters in the scene that have avatar paths
     const avatarPaths = [];
 
-    for (const charName of charactersInScene) {
-      const character = this.characterReference.find(
-        (c) => c.name.toLowerCase() === charName.toLowerCase()
-      );
+    if (charactersInScene.length > 0) {
+      for (const charName of charactersInScene) {
+        const character = this.characterReference.find(
+          (c) => c.name && c.name.toLowerCase() === charName.toLowerCase()
+        );
 
-      if (character?.avatarPath) {
-        avatarPaths.push(character.avatarPath);
+        const avatarLocation = character ? getAvatarLocation(character) : null;
+        if (avatarLocation) {
+          avatarPaths.push(avatarLocation);
+          logger.debug(`Found avatar for "${charName}": ${avatarLocation}`);
+        }
       }
     }
 
-    // If no specific characters found, use main character avatars
+    // If no specific characters found, use all characters with avatars (prioritize main characters)
     if (avatarPaths.length === 0) {
+      // First try main characters
       const mainChars = this.characterReference.filter(
-        (c) => c.role === "main" && c.avatarPath
+        (c) => c.role === "main" && getAvatarLocation(c)
       );
-      avatarPaths.push(...mainChars.map((c) => c.avatarPath));
+      
+      if (mainChars.length > 0) {
+        avatarPaths.push(...mainChars.map((c) => getAvatarLocation(c)));
+        logger.debug(`Using ${mainChars.length} main character avatars as fallback`);
+      } else {
+        // Fallback to any character with an avatar
+        const anyCharsWithAvatars = this.characterReference.filter(
+          (c) => getAvatarLocation(c)
+        );
+        avatarPaths.push(...anyCharsWithAvatars.map((c) => getAvatarLocation(c)));
+        logger.debug(`Using ${anyCharsWithAvatars.length} character avatars as fallback`);
+      }
     }
 
+    logger.debug(`getAvatarPaths returning ${avatarPaths.length} paths: ${avatarPaths.join(", ")}`);
     return avatarPaths;
   }
 
@@ -107,7 +140,13 @@ export class IllustrationAgent {
     if (relevantChars.length === 0) return "";
 
     const charDescriptions = relevantChars.map((char) => {
-      // Prefer detailed visual identity if available
+      // FIRST priority: User's custom description (edited by user)
+      if (char.customDescription) {
+        logger.debug(`Using customDescription for ${char.name}: ${char.customDescription.substring(0, 50)}...`);
+        return `${char.name}: ${char.customDescription}`;
+      }
+
+      // SECOND priority: Detailed visual identity if available
       if (char.visualIdentity) {
         const vi = char.visualIdentity;
         const parts = [`${char.name}:`];
@@ -124,7 +163,7 @@ export class IllustrationAgent {
         return parts.join(" ");
       }
 
-      // Fallback to consistencyTag
+      // THIRD priority: consistencyTag
       if (char.consistencyTag) {
         return `${char.name}: ${char.consistencyTag}`;
       }
@@ -206,11 +245,14 @@ ${charDescriptions.join("\n")}]
 
         // Handle base64 response from GPT Image model
         if (result.base64) {
-          const outputFileName = `${storyTitle}_page_${page.pageNumber}.png`;
-          const storagePath = getStoragePath("page");
-          savedPath = path.join(storagePath, outputFileName);
-          saveBase64Image(result.base64, savedPath);
-          imageUrl = `data:image/png;base64,${result.base64.substring(0, 50)}...`; // Truncated for logging
+          // Save base64 image to storage (S3 or local)
+          savedPath = await saveImage(
+            result.base64,
+            "page",
+            `${storyTitle}_page_${page.pageNumber}`
+          );
+          imageUrl = savedPath; // savedPath is the S3 URL or local path
+          logger.debug(`Page ${page.pageNumber} image saved to: ${savedPath}`);
         } else if (result.url) {
           imageUrl = result.url;
           savedPath = await saveImageFromUrl(
@@ -529,11 +571,14 @@ Don't add any characters at the top of the image.`;
 
         // Handle base64 response from GPT Image model
         if (result.base64) {
-          const outputFileName = `${storyPages.title.replace(" ", "_")}_cover.png`;
-          const storagePath = getStoragePath("page");
-          savedPath = path.join(storagePath, outputFileName);
-          saveBase64Image(result.base64, savedPath);
-          imageUrl = `data:image/png;base64,${result.base64.substring(0, 50)}...`;
+          // Save base64 image to storage (S3 or local)
+          savedPath = await saveImage(
+            result.base64,
+            "page",
+            `${storyPages.title}_cover`
+          );
+          imageUrl = savedPath; // savedPath is the S3 URL or local path
+          logger.debug(`Cover image saved to: ${savedPath}`);
         } else if (result.url) {
           imageUrl = result.url;
           savedPath = await saveImageFromUrl(

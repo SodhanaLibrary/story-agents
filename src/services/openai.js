@@ -357,22 +357,48 @@ export async function generateImageWithReferences(
     // }
 
     const images = await Promise.all(
-      referenceImagePaths.map(
-        async (file) =>
-          await toFile(fs.createReadStream(file), null, {
+      referenceImagePaths.map(async (filePath) => {
+        // Check if it's a URL (S3 or other remote URL)
+        if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+          logger.debug(`Fetching remote reference image: ${filePath}`);
+          try {
+            const response = await fetch(filePath);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch image: ${response.status}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            return await toFile(buffer, "reference.png", {
+              type: "image/png",
+            });
+          } catch (err) {
+            logger.warn(`Failed to fetch remote image ${filePath}: ${err.message}`);
+            return null;
+          }
+        } else {
+          // Local file path
+          if (!fs.existsSync(filePath)) {
+            logger.warn(`Local reference image not found: ${filePath}`);
+            return null;
+          }
+          return await toFile(fs.createReadStream(filePath), null, {
             type: "image/png",
-          })
-      )
+          });
+        }
+      })
     );
 
-    if (images.length === 0) {
+    // Filter out any null entries (failed loads)
+    const validImages = images.filter((img) => img !== null);
+
+    if (validImages.length === 0) {
       logger.warn(
         "No valid reference images found, falling back to standard generation"
       );
       return await generateImage(prompt, options);
     }
 
-    logger.debug(`Loaded ${images.length} reference images for generation`);
+    logger.debug(`Loaded ${validImages.length} reference images for generation`);
 
     // Log use of reference images before calling OpenAI API
     await logPrompt({
@@ -385,7 +411,7 @@ export async function generateImageWithReferences(
       status: "initiated",
       metadata: {
         size,
-        referenceCount: images.length,
+        referenceCount: validImages.length,
         referencePaths: referenceImagePaths,
         weight,
       },
@@ -396,7 +422,7 @@ export async function generateImageWithReferences(
     const response = await client.images.edit({
       model,
       prompt,
-      image: images,
+      image: validImages,
       n: 1,
       size,
     });

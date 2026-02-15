@@ -256,6 +256,16 @@ export async function saveJson(data, userId = null) {
 }
 
 /**
+ * Updates an existing complete story in MySQL
+ * @param {number} storyId - Story ID to update
+ * @param {object} data - Story data
+ * @returns {Promise<number>} - Story ID
+ */
+export async function updateJson(storyId, data) {
+  return await storyRepo.updateCompleteStory(storyId, data);
+}
+
+/**
  * Deletes a story from MySQL
  * @param {number|string} storyIdOrFilename - Story ID or filename
  * @returns {Promise<boolean>} - Success status
@@ -284,6 +294,7 @@ export default {
   listSavedStories,
   loadJson,
   saveJson,
+  updateJson,
   deleteStory,
   saveDraft,
   loadDraft,

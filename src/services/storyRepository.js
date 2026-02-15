@@ -15,14 +15,14 @@ export async function findOrCreateUser(googleUser) {
   // Check if user exists
   const existing = await query(
     "SELECT * FROM users WHERE google_id = ? OR email = ?",
-    [googleId, email]
+    [googleId, email],
   );
 
   if (existing.length > 0) {
     // Update user info
     await query(
       "UPDATE users SET name = ?, picture = ?, google_id = ? WHERE id = ?",
-      [name, picture, googleId, existing[0].id]
+      [name, picture, googleId, existing[0].id],
     );
     return existing[0];
   }
@@ -30,7 +30,7 @@ export async function findOrCreateUser(googleUser) {
   // Create new user
   const userId = await insert(
     "INSERT INTO users (google_id, email, name, picture) VALUES (?, ?, ?, ?)",
-    [googleId, email, name, picture]
+    [googleId, email, name, picture],
   );
 
   return { id: userId, google_id: googleId, email, name, picture };
@@ -74,7 +74,7 @@ export async function createStory(storyData, userId = null) {
       coverPath ?? null,
       pageCount ?? 0,
       targetAudience ?? "children",
-    ]
+    ],
   );
 
   logger.info(`Created story ${storyId}: ${title}`);
@@ -118,13 +118,13 @@ export async function getStoryById(storyId) {
   // Get characters
   const characters = await query(
     "SELECT * FROM characters WHERE story_id = ? ORDER BY id",
-    [storyId]
+    [storyId],
   );
 
   // Get pages
   const pages = await query(
     "SELECT * FROM pages WHERE story_id = ? ORDER BY page_number",
-    [storyId]
+    [storyId],
   );
 
   return formatStoryOutput(story, characters, pages);
@@ -178,7 +178,61 @@ export async function listStories(userId = null) {
   }));
 }
 
-export async function deleteStory(storyId) {
+export async function deleteStory(storyId, deleteImages = false) {
+  // First, collect and delete all images associated with the story
+  if (deleteImages) {
+    try {
+      const imagesToDelete = [];
+
+      // Get story cover
+      const stories = await query(
+        "SELECT cover_url, cover_path FROM stories WHERE id = ?",
+        [storyId],
+      );
+      if (stories.length > 0) {
+        const story = stories[0];
+        if (story.cover_path) imagesToDelete.push(story.cover_path);
+        if (story.cover_url && story.cover_url.includes("s3"))
+          imagesToDelete.push(story.cover_url);
+      }
+
+      // NOTE: We do NOT delete avatar images as they can be reused across stories
+
+      // Get page illustrations
+      const pages = await query(
+        "SELECT illustration_url, illustration_path FROM pages WHERE story_id = ?",
+        [storyId],
+      );
+      for (const page of pages) {
+        if (page.illustration_path) imagesToDelete.push(page.illustration_path);
+        if (page.illustration_url && page.illustration_url.includes("s3"))
+          imagesToDelete.push(page.illustration_url);
+      }
+
+      // Delete all images
+      if (imagesToDelete.length > 0) {
+        logger.info(
+          `Deleting ${imagesToDelete.length} images for story ${storyId} (avatars preserved)`,
+        );
+
+        // Import deleteImage dynamically to avoid circular dependency
+        const { deleteImage } = await import("../utils/storage.js");
+
+        for (const imagePath of imagesToDelete) {
+          try {
+            await deleteImage(imagePath);
+            logger.debug(`Deleted image: ${imagePath}`);
+          } catch (err) {
+            logger.warn(`Failed to delete image ${imagePath}: ${err.message}`);
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn(`Error cleaning up story images: ${err.message}`);
+      // Continue with story deletion even if image cleanup fails
+    }
+  }
+
   // Characters and pages will be cascade deleted
   await query("DELETE FROM stories WHERE id = ?", [storyId]);
   logger.info(`Deleted story ${storyId}`);
@@ -214,7 +268,7 @@ export async function createCharacter(storyId, characterData) {
       avatarPath ?? null,
       customDescription ?? null,
       hasReferenceImage ?? false,
-    ]
+    ],
   );
 
   return characterId;
@@ -244,7 +298,7 @@ export async function updateCharacter(characterId, updates) {
   values.push(characterId);
   await query(
     `UPDATE characters SET ${fields.join(", ")} WHERE id = ?`,
-    values
+    values,
   );
 }
 
@@ -277,7 +331,7 @@ export async function createPage(storyId, pageData) {
       JSON.stringify(charactersInScene ?? []),
       illustrationUrl ?? null,
       illustrationPath ?? null,
-    ]
+    ],
   );
 
   return pageId;
@@ -312,7 +366,7 @@ export async function updatePage(pageId, updates) {
 export async function getPagesByStoryId(storyId) {
   return await query(
     "SELECT * FROM pages WHERE story_id = ? ORDER BY page_number",
-    [storyId]
+    [storyId],
   );
 }
 
@@ -391,7 +445,7 @@ export async function saveDraft(jobId, draftData, userId = null) {
         currentStep,
         userId,
         jobId,
-      ]
+      ],
     );
   } else {
     await insert(
@@ -417,7 +471,7 @@ export async function saveDraft(jobId, draftData, userId = null) {
         pageCount || 6,
         targetAudience || "children",
         currentStep,
-      ]
+      ],
     );
   }
 
@@ -451,7 +505,69 @@ export async function listDrafts(userId = null) {
   return drafts.map(formatDraftOutput);
 }
 
-export async function deleteDraft(jobId) {
+export async function deleteDraft(jobId, deleteImages = true) {
+  // First, load the draft to get image paths for cleanup
+  if (deleteImages) {
+    try {
+      const drafts = await query("SELECT * FROM drafts WHERE job_id = ?", [
+        jobId,
+      ]);
+      if (drafts.length > 0) {
+        const draft = drafts[0];
+        const imagesToDelete = [];
+
+        // NOTE: We do NOT delete avatar images as they can be reused across stories
+
+        // Collect page illustration paths
+        const storyPages = safeJsonParse(draft.story_pages, null);
+        if (storyPages?.pages) {
+          for (const page of storyPages.pages) {
+            if (page.illustrationPath) {
+              imagesToDelete.push(page.illustrationPath);
+            }
+            if (page.illustrationUrl && page.illustrationUrl.includes("s3")) {
+              imagesToDelete.push(page.illustrationUrl);
+            }
+          }
+        }
+
+        // Collect cover image path
+        const cover = safeJsonParse(draft.cover, null);
+        if (cover?.illustrationPath) {
+          imagesToDelete.push(cover.illustrationPath);
+        }
+        if (cover?.illustrationUrl && cover.illustrationUrl.includes("s3")) {
+          imagesToDelete.push(cover.illustrationUrl);
+        }
+
+        // Log images to be deleted
+        if (imagesToDelete.length > 0) {
+          logger.info(
+            `Deleting ${imagesToDelete.length} images for draft ${jobId} (avatars preserved)`,
+          );
+
+          // Import deleteImage dynamically to avoid circular dependency
+          const { deleteImage } = await import("../utils/storage.js");
+
+          // Delete all images (don't fail if some don't exist)
+          for (const imagePath of imagesToDelete) {
+            try {
+              await deleteImage(imagePath);
+              logger.debug(`Deleted image: ${imagePath}`);
+            } catch (err) {
+              logger.warn(
+                `Failed to delete image ${imagePath}: ${err.message}`,
+              );
+            }
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn(`Error cleaning up draft images: ${err.message}`);
+      // Continue with draft deletion even if image cleanup fails
+    }
+  }
+
   await query("DELETE FROM drafts WHERE job_id = ?", [jobId]);
   logger.debug(`Draft deleted: ${jobId}`);
   return true;
@@ -483,7 +599,7 @@ export async function saveCompleteStory(result, userId = null) {
       pageCount: storyPages?.pages?.length || 0,
       targetAudience: metadata?.targetAudience,
     },
-    userId
+    userId,
   );
 
   // Create characters
@@ -513,6 +629,161 @@ export async function saveCompleteStory(result, userId = null) {
   }
 
   logger.success(`Saved complete story ${storyId}: ${storyPages?.title}`);
+  return storyId;
+}
+
+/**
+ * Update an existing complete story (story + characters + pages)
+ * @param {number} storyId - The ID of the story to update
+ * @param {Object} result - The complete story data
+ * @returns {Promise<number>} - The same story ID
+ */
+export async function updateCompleteStory(storyId, result) {
+  const {
+    originalStory,
+    artStyleDecision,
+    characters,
+    storyPages,
+    cover,
+    metadata,
+  } = result;
+
+  // Update story record
+  await query(
+    `UPDATE stories SET 
+      title = ?,
+      summary = ?,
+      original_story = ?,
+      art_style_key = ?,
+      art_style_prompt = ?,
+      art_style_reasoning = ?,
+      cover_url = ?,
+      cover_path = ?,
+      page_count = ?,
+      target_audience = ?,
+      updated_at = NOW()
+    WHERE id = ?`,
+    [
+      storyPages?.title || "Untitled Story",
+      storyPages?.summary || "",
+      originalStory,
+      artStyleDecision?.selectedStyle,
+      artStyleDecision?.stylePrompt,
+      artStyleDecision?.reasoning,
+      cover?.illustrationUrl,
+      cover?.illustrationPath,
+      storyPages?.pages?.length || 0,
+      metadata?.targetAudience,
+      storyId,
+    ],
+  );
+
+  // Get existing characters and pages to update them
+  const existingCharacters = await query(
+    "SELECT * FROM characters WHERE story_id = ?",
+    [storyId],
+  );
+  const existingPages = await query("SELECT * FROM pages WHERE story_id = ?", [
+    storyId,
+  ]);
+
+  // Update characters - match by id or name
+  for (const char of characters || []) {
+    // Try to find existing character by id first, then by name
+    let existingChar = existingCharacters.find((c) => c.id === char.id);
+    if (!existingChar) {
+      existingChar = existingCharacters.find((c) => c.name === char.name);
+    }
+
+    if (existingChar) {
+      // Update existing character
+      await query(
+        `UPDATE characters SET
+          name = ?,
+          role = ?,
+          description = ?,
+          avatar_prompt = ?,
+          avatar_url = ?,
+          avatar_path = ?,
+          custom_description = ?,
+          has_reference_image = ?
+        WHERE id = ?`,
+        [
+          char.name,
+          char.role,
+          char.description,
+          char.avatarPrompt,
+          char.avatarUrl,
+          char.avatarPath,
+          char.customDescription,
+          char.hasReferenceImage || false,
+          existingChar.id,
+        ],
+      );
+    } else {
+      // Create new character if not found
+      await createCharacter(storyId, {
+        name: char.name,
+        role: char.role,
+        description: char.description,
+        avatarPrompt: char.avatarPrompt,
+        avatarUrl: char.avatarUrl,
+        avatarPath: char.avatarPath,
+        customDescription: char.customDescription,
+        hasReferenceImage: char.hasReferenceImage,
+      });
+    }
+  }
+
+  // Update pages - match by id or page number
+  for (const page of storyPages?.pages || []) {
+    // Try to find existing page by id first, then by page number
+    let existingPage = existingPages.find((p) => p.id === page.id);
+    if (!existingPage) {
+      existingPage = existingPages.find(
+        (p) => p.page_number === page.pageNumber,
+      );
+    }
+
+    if (existingPage) {
+      // Update existing page
+      await query(
+        `UPDATE pages SET
+          page_number = ?,
+          text = ?,
+          image_description = ?,
+          characters_in_scene = ?,
+          illustration_url = ?,
+          illustration_path = ?,
+          custom_description = ?,
+          regenerated = ?
+        WHERE id = ?`,
+        [
+          page.pageNumber,
+          page.text,
+          page.imageDescription,
+          JSON.stringify(page.charactersInScene || []),
+          page.illustrationUrl,
+          page.illustrationPath,
+          page.customDescription,
+          page.regenerated || false,
+          existingPage.id,
+        ],
+      );
+    } else {
+      // Create new page if not found
+      await createPage(storyId, {
+        pageNumber: page.pageNumber,
+        text: page.text,
+        imageDescription: page.imageDescription,
+        charactersInScene: page.charactersInScene,
+        illustrationUrl: page.illustrationUrl,
+        illustrationPath: page.illustrationPath,
+      });
+    }
+  }
+
+  logger.success(`Updated complete story ${storyId}: ${storyPages?.title}`);
   return storyId;
 }
 
@@ -597,7 +868,7 @@ export async function getTagsByStoryId(storyId) {
     `SELECT t.* FROM tags t 
      JOIN story_tags st ON t.id = st.tag_id 
      WHERE st.story_id = ?`,
-    [storyId]
+    [storyId],
   );
 }
 
@@ -639,7 +910,7 @@ export async function addFavorite(userId, storyId) {
   try {
     await insert(
       "INSERT INTO user_favorites (user_id, story_id) VALUES (?, ?)",
-      [userId, storyId]
+      [userId, storyId],
     );
     return true;
   } catch (e) {
@@ -688,7 +959,7 @@ export async function getUserFavorites(userId) {
 export async function isFavorite(userId, storyId) {
   const rows = await query(
     "SELECT id FROM user_favorites WHERE user_id = ? AND story_id = ?",
-    [userId, storyId]
+    [userId, storyId],
   );
   return rows.length > 0;
 }
@@ -696,7 +967,7 @@ export async function isFavorite(userId, storyId) {
 export async function getUserFavoriteIds(userId) {
   const rows = await query(
     "SELECT story_id FROM user_favorites WHERE user_id = ?",
-    [userId]
+    [userId],
   );
   return rows.map((r) => r.story_id);
 }
@@ -707,13 +978,13 @@ export async function updateReadingProgress(
   userId,
   storyId,
   currentPage,
-  totalPages
+  totalPages,
 ) {
   const completed = currentPage >= totalPages;
 
   const existing = await query(
     "SELECT id FROM user_reading_history WHERE user_id = ? AND story_id = ?",
-    [userId, storyId]
+    [userId, storyId],
   );
 
   if (existing.length > 0) {
@@ -721,14 +992,14 @@ export async function updateReadingProgress(
       `UPDATE user_reading_history 
        SET current_page = ?, total_pages = ?, completed = ?, last_read_at = NOW()
        WHERE user_id = ? AND story_id = ?`,
-      [currentPage, totalPages, completed, userId, storyId]
+      [currentPage, totalPages, completed, userId, storyId],
     );
   } else {
     await insert(
       `INSERT INTO user_reading_history 
        (user_id, story_id, current_page, total_pages, completed)
        VALUES (?, ?, ?, ?, ?)`,
-      [userId, storyId, currentPage, totalPages, completed]
+      [userId, storyId, currentPage, totalPages, completed],
     );
   }
 
@@ -738,7 +1009,7 @@ export async function updateReadingProgress(
 export async function getReadingProgress(userId, storyId) {
   const rows = await query(
     "SELECT * FROM user_reading_history WHERE user_id = ? AND story_id = ?",
-    [userId, storyId]
+    [userId, storyId],
   );
   if (rows.length === 0) return null;
 
@@ -817,7 +1088,7 @@ export async function getUserProfile(userId) {
             (SELECT COUNT(*) FROM user_followers WHERE follower_id = u.id) as following_count,
             (SELECT COUNT(*) FROM stories WHERE user_id = u.id AND status = 'completed') as story_count
      FROM users u WHERE u.id = ?`,
-    [userId]
+    [userId],
   );
 
   if (users.length === 0) return null;
@@ -906,7 +1177,7 @@ export async function followUser(followerId, followingId) {
   try {
     await insert(
       "INSERT INTO user_followers (follower_id, following_id) VALUES (?, ?)",
-      [followerId, followingId]
+      [followerId, followingId],
     );
     return true;
   } catch (e) {
@@ -918,7 +1189,7 @@ export async function followUser(followerId, followingId) {
 export async function unfollowUser(followerId, followingId) {
   await query(
     "DELETE FROM user_followers WHERE follower_id = ? AND following_id = ?",
-    [followerId, followingId]
+    [followerId, followingId],
   );
   return true;
 }
@@ -926,7 +1197,7 @@ export async function unfollowUser(followerId, followingId) {
 export async function isFollowing(followerId, followingId) {
   const rows = await query(
     "SELECT id FROM user_followers WHERE follower_id = ? AND following_id = ?",
-    [followerId, followingId]
+    [followerId, followingId],
   );
   return rows.length > 0;
 }
@@ -960,7 +1231,7 @@ export async function getFollowing(userId, limit = 50) {
 export async function getFollowingIds(userId) {
   const rows = await query(
     "SELECT following_id FROM user_followers WHERE follower_id = ?",
-    [userId]
+    [userId],
   );
   return rows.map((r) => r.following_id);
 }
@@ -974,7 +1245,7 @@ export async function getPersonalizedFeed(userId, limit = 50) {
   // Get IDs of stories the user is currently reading (not completed)
   const readingRows = await query(
     "SELECT story_id FROM user_reading_history WHERE user_id = ? AND completed = FALSE",
-    [userId]
+    [userId],
   );
   const readingStoryIds = readingRows.map((r) => r.story_id);
 
@@ -1104,7 +1375,7 @@ export async function getPersonalizedFeed(userId, limit = 50) {
 export async function getUserAvatars(userId) {
   const rows = await query(
     `SELECT * FROM user_avatars WHERE user_id = ? ORDER BY created_at DESC`,
-    [userId]
+    [userId],
   );
   return rows.map((a) => ({
     id: a.id,
@@ -1131,7 +1402,7 @@ export async function saveUserAvatar(userId, avatarData) {
       avatarData.avatarUrl,
       avatarData.avatarPath || avatarData.avatarUrl,
       avatarData.avatarPrompt || null,
-    ]
+    ],
   );
   return { id, ...avatarData };
 }
@@ -1140,7 +1411,9 @@ export async function saveUserAvatar(userId, avatarData) {
  * Get a single user avatar by ID
  */
 export async function getUserAvatarById(avatarId) {
-  const rows = await query(`SELECT * FROM user_avatars WHERE id = ?`, [avatarId]);
+  const rows = await query(`SELECT * FROM user_avatars WHERE id = ?`, [
+    avatarId,
+  ]);
   if (rows.length === 0) return null;
   const a = rows[0];
   return {
@@ -1159,7 +1432,10 @@ export async function getUserAvatarById(avatarId) {
  * Delete a user avatar
  */
 export async function deleteUserAvatar(userId, avatarId) {
-  await query(`DELETE FROM user_avatars WHERE id = ? AND user_id = ?`, [avatarId, userId]);
+  await query(`DELETE FROM user_avatars WHERE id = ? AND user_id = ?`, [
+    avatarId,
+    userId,
+  ]);
 }
 
 /**
@@ -1181,7 +1457,10 @@ export async function updateUserAvatar(avatarId, updates) {
   if (fields.length === 0) return;
 
   values.push(avatarId);
-  await query(`UPDATE user_avatars SET ${fields.join(", ")} WHERE id = ?`, values);
+  await query(
+    `UPDATE user_avatars SET ${fields.join(", ")} WHERE id = ?`,
+    values,
+  );
 }
 
 // ==================== APP LOGS ====================
@@ -1279,7 +1558,7 @@ export async function getAppLogStats(filters = {}) {
 export async function clearOldAppLogs(daysOld = 7) {
   const result = await query(
     "DELETE FROM app_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)",
-    [daysOld]
+    [daysOld],
   );
   return result.affectedRows || 0;
 }
