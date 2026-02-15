@@ -70,7 +70,13 @@ import {
 import { generateTextResponse } from "../src/services/openai.js";
 import { initializeDatabase, query, insert } from "../src/services/database.js";
 import config from "../src/config.js";
-import { createLogger, requestLogger, enableDbLogging, setLogContext, clearLogContext } from "../src/utils/logger.js";
+import {
+  createLogger,
+  requestLogger,
+  enableDbLogging,
+  setLogContext,
+  clearLogContext,
+} from "../src/utils/logger.js";
 import {
   getPromptLogs,
   getPromptStats,
@@ -101,7 +107,11 @@ function getImageUrl(imagePath, type = "page") {
   if (!imagePath) return null;
 
   // If using S3, the path is already a full URL
-  if (isUsingS3() || imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+  if (
+    isUsingS3() ||
+    imagePath.startsWith("http://") ||
+    imagePath.startsWith("https://")
+  ) {
     return imagePath;
   }
 
@@ -113,17 +123,19 @@ function getImageUrl(imagePath, type = "page") {
 // Initialize database on startup
 import { getPool } from "../src/services/database.js";
 
-initializeDatabase().then(() => {
-  // Enable database logging after DB is initialized
-  const pool = getPool();
-  if (pool) {
-    enableDbLogging(pool);
-    logger.info("Database logging enabled");
-  }
-}).catch((err) => {
-  logger.error("Failed to initialize database:", err.message);
-  logger.warn("Server will continue but database features may not work.");
-});
+initializeDatabase()
+  .then(() => {
+    // Enable database logging after DB is initialized
+    const pool = getPool();
+    if (pool) {
+      enableDbLogging(pool);
+      logger.info("Database logging enabled");
+    }
+  })
+  .catch((err) => {
+    logger.error("Failed to initialize database:", err.message);
+    logger.warn("Server will continue but database features may not work.");
+  });
 
 /**
  * Analyze reference image to extract visual characteristics
@@ -335,7 +347,7 @@ app.post("/api/generate-avatar", async (req, res) => {
     setPromptContext({ jobId, userId: req.userId || null });
 
     const characterIndex = job.characters.findIndex(
-      (c) => c.name === characterName
+      (c) => c.name === characterName,
     );
     if (characterIndex === -1) {
       return res.status(404).json({ error: "Character not found" });
@@ -356,7 +368,7 @@ app.post("/api/generate-avatar", async (req, res) => {
     // Apply art style
     const enhancedPrompt = artStyleAgent.enhancePromptWithStyle(
       avatarPrompt,
-      styleKey
+      styleKey,
     );
 
     // Generate avatar
@@ -368,7 +380,10 @@ app.post("/api/generate-avatar", async (req, res) => {
     });
 
     // Convert path to URL
-    updatedCharacter.avatarUrl = getImageUrl(updatedCharacter.avatarPath, "avatar");
+    updatedCharacter.avatarUrl = getImageUrl(
+      updatedCharacter.avatarPath,
+      "avatar",
+    );
 
     // Preserve user's description
     updatedCharacter.avatarPrompt = avatarPrompt;
@@ -449,7 +464,7 @@ app.put("/api/job/:jobId/character/:characterName/avatar", async (req, res) => {
 
     // Find and update the character
     const charIndex = job.characters?.findIndex(
-      (c) => c.name.toLowerCase() === characterName.toLowerCase()
+      (c) => c.name.toLowerCase() === characterName.toLowerCase(),
     );
 
     if (charIndex === -1) {
@@ -498,7 +513,7 @@ app.post("/api/regenerate-avatar", async (req, res) => {
     }
 
     const characterIndex = job.characters.findIndex(
-      (c) => c.name === characterName
+      (c) => c.name === characterName,
     );
     if (characterIndex === -1) {
       return res.status(404).json({ error: "Character not found" });
@@ -517,7 +532,7 @@ app.post("/api/regenerate-avatar", async (req, res) => {
       ...character,
       avatarPrompt: artStyleAgent.enhancePromptWithStyle(
         character.avatarPrompt,
-        styleKey
+        styleKey,
       ),
     };
 
@@ -527,7 +542,10 @@ app.post("/api/regenerate-avatar", async (req, res) => {
       await avatarAgent.generateAvatar(enhancedCharacter);
 
     // Convert path to URL
-    updatedCharacter.avatarUrl = getImageUrl(updatedCharacter.avatarPath, "avatar");
+    updatedCharacter.avatarUrl = getImageUrl(
+      updatedCharacter.avatarPath,
+      "avatar",
+    );
 
     // Preserve the original prompt (not the enhanced one)
     updatedCharacter.avatarPrompt = customPrompt || character.avatarPrompt;
@@ -542,7 +560,7 @@ app.post("/api/regenerate-avatar", async (req, res) => {
     } catch (err) {
       logger.warn(
         "Failed to save draft after avatar regeneration:",
-        err.message
+        err.message,
       );
     }
 
@@ -664,7 +682,7 @@ app.post("/api/generate/page/:pageNumber/illustration", async (req, res) => {
     }
 
     const pageIndex = job.storyPages.pages.findIndex(
-      (p) => p.pageNumber === pageNumber
+      (p) => p.pageNumber === pageNumber,
     );
     if (pageIndex === -1) {
       return res.status(404).json({ error: "Page not found" });
@@ -690,11 +708,14 @@ app.post("/api/generate/page/:pageNumber/illustration", async (req, res) => {
     const updatedPage = await illustrationAgent.generatePageIllustration(
       page,
       storyTitle,
-      { artStyle: artStylePrompt }
+      { artStyle: artStylePrompt },
     );
 
     // Convert path to URL
-    updatedPage.illustrationUrl = getImageUrl(updatedPage.illustrationPath, "page");
+    updatedPage.illustrationUrl = getImageUrl(
+      updatedPage.illustrationPath,
+      "page",
+    );
 
     updatedPage.illustrationGenerated = true;
     updatedPage.approved = false;
@@ -757,7 +778,7 @@ app.post("/api/generate/cover/illustration", async (req, res) => {
     const cover = await illustrationAgent.generateCoverIllustration(
       job.storyPages,
       job.characters,
-      { artStyle: artStylePrompt }
+      { artStyle: artStylePrompt },
     );
 
     // Convert path to URL
@@ -805,7 +826,7 @@ app.post("/api/pages/update", async (req, res) => {
     }
 
     const pageIndex = job.storyPages.pages.findIndex(
-      (p) => p.pageNumber === pageNumber
+      (p) => p.pageNumber === pageNumber,
     );
     if (pageIndex === -1) {
       return res.status(404).json({ error: "Page not found" });
@@ -948,7 +969,7 @@ app.post("/api/regenerate-page", async (req, res) => {
     }
 
     const pageIndex = job.storyPages.pages.findIndex(
-      (p) => p.pageNumber === pageNumber
+      (p) => p.pageNumber === pageNumber,
     );
     if (pageIndex === -1) {
       return res.status(404).json({ error: "Page not found" });
@@ -957,12 +978,12 @@ app.post("/api/regenerate-page", async (req, res) => {
     const page = { ...job.storyPages.pages[pageIndex] };
     const artStyleAgent = new ArtStyleAgent();
     const illustrationAgent = new IllustrationAgent();
-    
+
     // Set character reference for avatar-based illustration generation
     if (job.characters && job.characters.length > 0) {
       illustrationAgent.setCharacterReference(job.characters);
     }
-    
+
     const artStylePrompt =
       job.artStylePrompt || artStyleAgent.getStylePrompt("illustration");
 
@@ -988,11 +1009,14 @@ app.post("/api/regenerate-page", async (req, res) => {
     const updatedPage = await illustrationAgent.generatePageIllustration(
       { ...page, imageDescription: illustrationPrompt },
       storyTitle,
-      { artStyle: artStylePrompt }
+      { artStyle: artStylePrompt },
     );
 
     // Convert path to URL
-    updatedPage.illustrationUrl = getImageUrl(updatedPage.illustrationPath, "page");
+    updatedPage.illustrationUrl = getImageUrl(
+      updatedPage.illustrationPath,
+      "page",
+    );
 
     // Preserve metadata
     updatedPage.customDescription = page.customDescription;
@@ -1031,12 +1055,12 @@ app.post("/api/regenerate-cover", async (req, res) => {
 
     const artStyleAgent = new ArtStyleAgent();
     const illustrationAgent = new IllustrationAgent();
-    
+
     // Set character reference for avatar-based illustration generation
     if (job.characters && job.characters.length > 0) {
       illustrationAgent.setCharacterReference(job.characters);
     }
-    
+
     const artStylePrompt =
       job.artStylePrompt || artStyleAgent.getStylePrompt("illustration");
 
@@ -1065,7 +1089,7 @@ app.post("/api/regenerate-cover", async (req, res) => {
     const cover = await illustrationAgent.generateCoverIllustration(
       { ...job.storyPages, customCoverPrompt: coverPrompt },
       job.characters,
-      { artStyle: artStylePrompt }
+      { artStyle: artStylePrompt },
     );
 
     // Convert path to URL
@@ -1193,7 +1217,7 @@ async function extractCharactersAsync(jobId, options) {
     } else if (options.artStyleKey && options.artStyleKey !== "auto") {
       const styleDecision = await artStyleAgent.decideStyle(
         options.story,
-        options.artStyleKey
+        options.artStyleKey,
       );
       artStylePrompt = styleDecision.stylePrompt;
       artStyleKey = styleDecision.selectedStyle;
@@ -1201,7 +1225,7 @@ async function extractCharactersAsync(jobId, options) {
     } else {
       const styleDecision = await artStyleAgent.decideStyle(
         options.story,
-        null
+        null,
       );
       artStylePrompt = styleDecision.stylePrompt;
       artStyleKey = styleDecision.selectedStyle;
@@ -1285,7 +1309,7 @@ async function generateAvatarsAsync(jobId, options) {
     } else if (options.artStyleKey && options.artStyleKey !== "auto") {
       const styleDecision = await artStyleAgent.decideStyle(
         options.story,
-        options.artStyleKey
+        options.artStyleKey,
       );
       artStylePrompt = styleDecision.stylePrompt;
       artStyleKey = styleDecision.selectedStyle;
@@ -1293,7 +1317,7 @@ async function generateAvatarsAsync(jobId, options) {
     } else {
       const styleDecision = await artStyleAgent.decideStyle(
         options.story,
-        null
+        null,
       );
       artStylePrompt = styleDecision.stylePrompt;
       artStyleKey = styleDecision.selectedStyle;
@@ -1324,7 +1348,7 @@ async function generateAvatarsAsync(jobId, options) {
       ...char,
       avatarPrompt: artStyleAgent.enhancePromptWithStyle(
         char.avatarPrompt,
-        artStyleKey
+        artStyleKey,
       ),
       originalPrompt: char.avatarPrompt, // Keep original for editing
     }));
@@ -1335,7 +1359,7 @@ async function generateAvatarsAsync(jobId, options) {
         job.message = `Generating avatar for ${name}...`;
         job.progress = 25 + Math.round((current / total) * 20);
         activeJobs.set(jobId, { ...job });
-      }
+      },
     );
 
     // Convert paths to URLs
@@ -1469,7 +1493,7 @@ async function generateIllustrationsAsync(jobId) {
         job.message = `Illustrating page ${pageNum}...`;
         job.progress = 75 + Math.round((current / total) * 15);
         activeJobs.set(jobId, { ...job });
-      }
+      },
     );
 
     job.storyPages = illustratedPages;
@@ -1484,7 +1508,7 @@ async function generateIllustrationsAsync(jobId) {
       const cover = await illustrationAgent.generateCoverIllustration(
         illustratedPages,
         job.characters,
-        { artStyle: artStylePrompt }
+        { artStyle: artStylePrompt },
       );
       job.cover = cover;
     }
@@ -1497,7 +1521,10 @@ async function generateIllustrationsAsync(jobId) {
     }));
 
     if (job.cover) {
-      job.cover.illustrationUrl = getImageUrl(job.cover.illustrationPath, "page");
+      job.cover.illustrationUrl = getImageUrl(
+        job.cover.illustrationPath,
+        "page",
+      );
     }
 
     // Save final output
@@ -1767,7 +1794,7 @@ app.put("/api/users/:userId/reading/:storyId", async (req, res) => {
       userId,
       storyId,
       currentPage,
-      totalPages
+      totalPages,
     );
     res.json({ progress });
   } catch (error) {
@@ -1786,7 +1813,9 @@ app.get("/api/auth/verify", async (req, res) => {
   try {
     const userId = req.userId;
     if (!userId) {
-      return res.status(401).json({ valid: false, error: "No user ID provided" });
+      return res
+        .status(401)
+        .json({ valid: false, error: "No user ID provided" });
     }
 
     const user = await getUserById(userId);
@@ -1886,7 +1915,7 @@ app.get("/api/users/:userId/avatars/:avatarId", async (req, res) => {
   try {
     const { avatarId } = req.params;
     const avatar = await getUserAvatarById(parseInt(avatarId, 10));
-    
+
     if (!avatar) {
       return res.status(404).json({ error: "Avatar not found" });
     }
@@ -2370,7 +2399,9 @@ app.delete("/api/stories/:storyId", async (req, res) => {
     }
 
     if (story.userId !== requestUserId) {
-      logger.warn(`Delete story ${id} denied: story.userId=${story.userId}, requestUserId=${requestUserId}`);
+      logger.warn(
+        `Delete story ${id} denied: story.userId=${story.userId}, requestUserId=${requestUserId}`,
+      );
       return res
         .status(403)
         .json({ error: "You can only delete your own stories" });
@@ -2701,9 +2732,9 @@ app.delete("/api/app-logs/clear", async (req, res) => {
 
     const deletedCount = await clearOldAppLogs(parseInt(daysOld) || 7);
 
-    res.json({ 
-      success: true, 
-      message: `Cleared ${deletedCount} logs older than ${daysOld || 7} days` 
+    res.json({
+      success: true,
+      message: `Cleared ${deletedCount} logs older than ${daysOld || 7} days`,
     });
   } catch (error) {
     logger.error("Error clearing app logs:", error.message);
@@ -2752,7 +2783,7 @@ app.get("/api/s3/info", async (req, res) => {
 app.get("/api/s3/objects", async (req, res) => {
   try {
     const { prefix } = req.query;
-    
+
     // Get S3 bucket info
     const bucketInfo = getS3BucketInfo();
     if (!bucketInfo.isEnabled) {
@@ -2761,7 +2792,7 @@ app.get("/api/s3/objects", async (req, res) => {
 
     // Get all S3 objects
     const s3Objects = await listS3Objects(prefix || "", 5000);
-    
+
     // Get all image URLs from database
     const dbUrls = await getAllImageUrls();
     const dbUrlSet = new Set(dbUrls);
@@ -2830,7 +2861,9 @@ app.delete("/api/s3/objects", async (req, res) => {
       }
     }
 
-    logger.info(`S3 cleanup: deleted ${results.deleted.length}, failed ${results.failed.length}`);
+    logger.info(
+      `S3 cleanup: deleted ${results.deleted.length}, failed ${results.failed.length}`,
+    );
 
     res.json({
       success: true,
@@ -2860,7 +2893,7 @@ app.delete("/api/s3/orphans", async (req, res) => {
 
     // Get all S3 objects
     const s3Objects = await listS3Objects(prefix || "", 5000);
-    
+
     // Get all image URLs from database
     const dbUrls = await getAllImageUrls();
     const dbUrlSet = new Set(dbUrls);
@@ -2896,7 +2929,9 @@ app.delete("/api/s3/orphans", async (req, res) => {
       }
     }
 
-    logger.info(`S3 orphan cleanup: deleted ${results.deleted.length}, failed ${results.failed.length}`);
+    logger.info(
+      `S3 orphan cleanup: deleted ${results.deleted.length}, failed ${results.failed.length}`,
+    );
 
     res.json({
       success: true,
@@ -2929,7 +2964,7 @@ function requireRole(requiredRole) {
       }
 
       if (!hasRole(user.role, requiredRole)) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           error: "Insufficient permissions",
           required: requiredRole,
           current: user.role,
@@ -2994,47 +3029,53 @@ app.get("/api/admin/users/stats", requireRole("admin"), async (req, res) => {
 /**
  * PUT /api/admin/users/:userId/role - Update user role (super-admin only)
  */
-app.put("/api/admin/users/:userId/role", requireRole("super-admin"), async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { role: newRole } = req.body;
+app.put(
+  "/api/admin/users/:userId/role",
+  requireRole("super-admin"),
+  async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { role: newRole } = req.body;
 
-    if (!newRole) {
-      return res.status(400).json({ error: "Role is required" });
+      if (!newRole) {
+        return res.status(400).json({ error: "Role is required" });
+      }
+
+      // Prevent changing own role
+      if (parseInt(userId) === req.userId) {
+        return res.status(400).json({ error: "Cannot change your own role" });
+      }
+
+      // Get target user
+      const targetUser = await getUserById(parseInt(userId));
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Prevent demoting another super-admin (only another super-admin could try this)
+      // This is allowed since only super-admins can reach this endpoint
+
+      const updatedUser = await updateUserRole(parseInt(userId), newRole);
+
+      logger.info(
+        `User ${req.userId} changed role of user ${userId} to ${newRole}`,
+      );
+
+      res.json({
+        success: true,
+        user: {
+          id: updatedUser.id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          role: updatedUser.role,
+        },
+      });
+    } catch (error) {
+      logger.error("Error updating user role:", error.message);
+      res.status(500).json({ error: error.message });
     }
-
-    // Prevent changing own role
-    if (parseInt(userId) === req.userId) {
-      return res.status(400).json({ error: "Cannot change your own role" });
-    }
-
-    // Get target user
-    const targetUser = await getUserById(parseInt(userId));
-    if (!targetUser) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Prevent demoting another super-admin (only another super-admin could try this)
-    // This is allowed since only super-admins can reach this endpoint
-
-    const updatedUser = await updateUserRole(parseInt(userId), newRole);
-
-    logger.info(`User ${req.userId} changed role of user ${userId} to ${newRole}`);
-
-    res.json({
-      success: true,
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-        role: updatedUser.role,
-      },
-    });
-  } catch (error) {
-    logger.error("Error updating user role:", error.message);
-    res.status(500).json({ error: error.message });
-  }
-});
+  },
+);
 
 /**
  * GET /api/users/me - Get current user info including role
@@ -3093,14 +3134,15 @@ app.post("/api/batch/create", async (req, res) => {
     const pageCount = job.storyPages?.pages?.length || 0;
     const storyTitle = job.storyPages?.title || "Untitled Story";
     // Include cover in total count if it needs to be generated
-    const needsCover = job.generateCover !== false && !job.cover?.illustrationUrl;
+    const needsCover =
+      job.generateCover !== false && !job.cover?.illustrationUrl;
     const totalPages = pageCount + (needsCover ? 1 : 0);
 
     // Create batch request in database
     const batchId = await insert(
       `INSERT INTO batch_requests (user_id, job_id, story_title, total_pages, status)
        VALUES (?, ?, ?, ?, 'pending')`,
-      [userId, jobId, storyTitle, totalPages]
+      [userId, jobId, storyTitle, totalPages],
     );
 
     // Start batch processing
@@ -3134,7 +3176,7 @@ app.get("/api/batch/list", async (req, res) => {
        WHERE user_id = ? 
        ORDER BY created_at DESC 
        LIMIT 50`,
-      [userId]
+      [userId],
     );
 
     res.json({ batches });
@@ -3207,7 +3249,7 @@ app.post("/api/batch/:batchId/cancel", async (req, res) => {
     // Mark as cancelled
     await query(
       `UPDATE batch_requests SET status = 'cancelled', completed_at = NOW() WHERE id = ?`,
-      [parseInt(batchId)]
+      [parseInt(batchId)],
     );
 
     // Remove from active processing
@@ -3228,7 +3270,7 @@ async function processBatchRequest(batchId, jobId, userId) {
     // Mark as processing
     await query(
       `UPDATE batch_requests SET status = 'processing', started_at = NOW() WHERE id = ?`,
-      [batchId]
+      [batchId],
     );
 
     activeBatchJobs.set(batchId, { jobId, status: "processing" });
@@ -3268,7 +3310,7 @@ async function processBatchRequest(batchId, jobId, userId) {
 
       try {
         logger.info(
-          `Batch ${batchId}: Generating illustration for page ${page.pageNumber}`
+          `Batch ${batchId}: Generating illustration for page ${page.pageNumber}`,
         );
 
         const illustratedPage =
@@ -3277,7 +3319,10 @@ async function processBatchRequest(batchId, jobId, userId) {
           });
 
         // Update page in job
-        illustratedPage.illustrationUrl = getImageUrl(illustratedPage.illustrationPath, "page");
+        illustratedPage.illustrationUrl = getImageUrl(
+          illustratedPage.illustrationPath,
+          "page",
+        );
         illustratedPage.illustrationGenerated = true;
 
         job.storyPages.pages[i] = illustratedPage;
@@ -3288,7 +3333,7 @@ async function processBatchRequest(batchId, jobId, userId) {
         // Update progress in database
         await query(
           `UPDATE batch_requests SET completed_pages = ? WHERE id = ?`,
-          [completedCount, batchId]
+          [completedCount, batchId],
         );
 
         // Save draft progress
@@ -3296,7 +3341,7 @@ async function processBatchRequest(batchId, jobId, userId) {
       } catch (pageError) {
         logger.error(
           `Batch ${batchId}: Error generating page ${page.pageNumber}:`,
-          pageError.message
+          pageError.message,
         );
       }
     }
@@ -3314,7 +3359,7 @@ async function processBatchRequest(batchId, jobId, userId) {
         const cover = await illustrationAgent.generateCoverIllustration(
           job.storyPages,
           job.characters,
-          { artStyle: artStylePrompt }
+          { artStyle: artStylePrompt },
         );
 
         cover.illustrationUrl = getImageUrl(cover.illustrationPath, "page");
@@ -3327,12 +3372,12 @@ async function processBatchRequest(batchId, jobId, userId) {
         completedCount++;
         await query(
           `UPDATE batch_requests SET completed_pages = ? WHERE id = ?`,
-          [completedCount, batchId]
+          [completedCount, batchId],
         );
       } catch (coverError) {
         logger.error(
           `Batch ${batchId}: Error generating cover:`,
-          coverError.message
+          coverError.message,
         );
       }
     }
@@ -3348,19 +3393,19 @@ async function processBatchRequest(batchId, jobId, userId) {
     // Mark batch as completed
     await query(
       `UPDATE batch_requests SET status = 'completed', completed_pages = ?, completed_at = NOW() WHERE id = ?`,
-      [completedCount, batchId]
+      [completedCount, batchId],
     );
 
     activeBatchJobs.delete(batchId);
     logger.success(
-      `Batch ${batchId} completed: ${completedCount} pages generated`
+      `Batch ${batchId} completed: ${completedCount} pages generated`,
     );
   } catch (error) {
     logger.error(`Batch ${batchId} failed:`, error.message);
 
     await query(
       `UPDATE batch_requests SET status = 'failed', error_message = ?, completed_at = NOW() WHERE id = ?`,
-      [error.message, batchId]
+      [error.message, batchId],
     );
 
     activeBatchJobs.delete(batchId);

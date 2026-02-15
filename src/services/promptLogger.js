@@ -99,7 +99,7 @@ export async function logPrompt(logData) {
         toNull(effectiveStoryId),
         toNull(effectiveUserId),
         metadata ? JSON.stringify(metadata) : null,
-      ]
+      ],
     );
 
     logger.debug(`Prompt logged: ${provider}/${model} (${requestType})`);

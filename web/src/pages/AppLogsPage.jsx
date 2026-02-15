@@ -150,7 +150,7 @@ function AppLogsPage() {
   const handleClearLogs = async () => {
     setClearing(true);
     try {
-      const response = await api.delete(`/api/app-logs/clear?daysOld=${clearDays}`);
+      const response = await api.del(`/api/app-logs/clear?daysOld=${clearDays}`);
       const data = await response.json();
       if (data.success) {
         setClearDialogOpen(false);
