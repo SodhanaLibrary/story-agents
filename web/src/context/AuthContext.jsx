@@ -1,5 +1,15 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { setAuthFailureHandler } from "../services/api";
+import { fetchWithAuth } from "../lib/queryClient";
+import {
+  useLoginGoogle,
+  useLoginEmail,
+  useSignup,
+  useVerifyEmail,
+  useForgotPassword,
+  useResetPassword,
+  useChangePassword,
+} from "../hooks/useAuthApi";
 
 const AuthContext = createContext(null);
 
@@ -24,17 +34,19 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Verify session with server; returns user data if valid so we can merge into stored user
-  const verifySession = useCallback(async (userId) => {
+  const loginGoogleMutation = useLoginGoogle();
+  const loginEmailMutation = useLoginEmail();
+  const signupMutation = useSignup();
+  const verifyEmailMutation = useVerifyEmail();
+  const forgotPasswordMutation = useForgotPassword();
+  const resetPasswordMutation = useResetPassword();
+  const changePasswordMutation = useChangePassword();
+
+  // Verify session with server (uses X-User-Id from localStorage via fetchWithAuth)
+  const verifySession = useCallback(async () => {
     try {
-      const response = await fetch("/api/auth/verify", {
-        headers: { "X-User-Id": userId.toString() },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        return data.valid && data.user ? data.user : false;
-      }
-      return false;
+      const data = await fetchWithAuth("/api/auth/verify");
+      return data.valid && data.user ? data.user : false;
     } catch (error) {
       console.error("Session verification failed:", error);
       return false;
@@ -52,7 +64,7 @@ export function AuthProvider({ children }) {
           // Valid if: we have userId and (email login has no exp, or exp is in future)
           const hasValidExp = !parsedUser.exp || parsedUser.exp * 1000 > Date.now();
           if (userId && hasValidExp) {
-            const serverUser = await verifySession(userId);
+            const serverUser = await verifySession();
             if (serverUser) {
               const merged = {
                 ...parsedUser,
@@ -80,48 +92,25 @@ export function AuthProvider({ children }) {
     loadAndVerifyUser();
   }, [verifySession]);
 
-  const login = async (credential) => {
-    try {
-      // Decode JWT locally for basic info
-      const base64Url = credential.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const payload = JSON.parse(atob(base64));
-
-      // Authenticate with backend to get/create database user
-      const response = await fetch("/api/auth/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ credential }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const userData = {
-          ...payload,
-          id: data.user.id, // Database user ID
-          dbUser: data.user,
-        };
+  const login = useCallback(
+    async (credential) => {
+      try {
+        const userData = await loginGoogleMutation.mutateAsync(credential);
         setUser(userData);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-        console.log("User logged in, ID saved in context:", data.user.id);
         return userData;
-      } else {
-        // Fallback to just JWT data if backend auth fails
+      } catch (error) {
+        console.error("Login error:", error);
+        const base64Url = credential.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(atob(base64));
         setUser(payload);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
         return payload;
       }
-    } catch (error) {
-      console.error("Login error:", error);
-      // Still allow login with just Google data
-      const base64Url = credential.split(".")[1];
-      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-      const payload = JSON.parse(atob(base64));
-      setUser(payload);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      return payload;
-    }
-  };
+    },
+    [loginGoogleMutation]
+  );
 
   const logout = useCallback(() => {
     setUser(null);
@@ -129,117 +118,69 @@ export function AuthProvider({ children }) {
   }, []);
 
   /** Login with email and password. Stores user and returns same shape as login(). */
-  const loginWithEmail = useCallback(async (email, password) => {
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim(), password }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || "Login failed");
-    }
-    const dbUser = data.user;
-    const userData = {
-      id: dbUser.id,
-      email: dbUser.email,
-      name: dbUser.name,
-      picture: dbUser.picture,
-      dbUser: { ...dbUser },
-      exp: Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 60 * 60, // 10 years for session check
-    };
-    setUser(userData);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
-    return userData;
-  }, []);
+  const loginWithEmail = useCallback(
+    async (email, password) => {
+      const userData = await loginEmailMutation.mutateAsync({ email, password });
+      setUser(userData);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+      return userData;
+    },
+    [loginEmailMutation]
+  );
 
   /** Sign up with email, name, password. Does not log in; user must verify email then login. */
-  const signup = useCallback(async (email, name, password) => {
-    const response = await fetch("/api/auth/signup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim(), name: (name || "").trim() || undefined, password }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || "Signup failed");
-    }
-    return data;
-  }, []);
+  const signup = useCallback(
+    async (email, name, password) => {
+      return signupMutation.mutateAsync({ email, name, password });
+    },
+    [signupMutation]
+  );
 
   /** Verify email with token (from link). Returns { verified, user } or throws. */
-  const verifyEmail = useCallback(async (token) => {
-    const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || "Verification failed");
-    }
-    return data;
-  }, []);
+  const verifyEmail = useCallback(
+    async (token) => verifyEmailMutation.mutateAsync(token),
+    [verifyEmailMutation]
+  );
 
   /** Request password reset email. */
-  const forgotPassword = useCallback(async (email) => {
-    const response = await fetch("/api/auth/forgot-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim() }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || "Request failed");
-    }
-    return data;
-  }, []);
+  const forgotPassword = useCallback(
+    async (email) => forgotPasswordMutation.mutateAsync(email),
+    [forgotPasswordMutation]
+  );
 
   /** Reset password with token from email. */
-  const resetPassword = useCallback(async (token, newPassword) => {
-    const response = await fetch("/api/auth/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, newPassword }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || "Reset failed");
-    }
-    return data;
-  }, []);
+  const resetPassword = useCallback(
+    async (token, newPassword) =>
+      resetPasswordMutation.mutateAsync({ token, newPassword }),
+    [resetPasswordMutation]
+  );
 
   /** Change password (authenticated). */
-  const changePassword = useCallback(async (currentPassword, newPassword) => {
-    const userId = user?.id || user?.dbUser?.id;
-    if (!userId) throw new Error("Not logged in");
-    const response = await fetch("/api/auth/change-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-User-Id": String(userId) },
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.error || "Change password failed");
-    }
-    return data;
-  }, [user]);
+  const changePassword = useCallback(
+    async (currentPassword, newPassword) => {
+      if (!user?.id && !user?.dbUser?.id) throw new Error("Not logged in");
+      return changePasswordMutation.mutateAsync({
+        currentPassword,
+        newPassword,
+      });
+    },
+    [user, changePasswordMutation]
+  );
 
   // Refresh user from server (e.g. after plan upgrade)
   const refreshUser = useCallback(async () => {
     const userId = user?.id || user?.dbUser?.id;
     if (!userId) return;
     try {
-      const response = await fetch("/api/users/me", {
-        headers: { "X-User-Id": String(userId) },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const updated = {
-          ...user,
-          dbUser: { ...(user?.dbUser || {}), ...data },
-          plan: data.plan,
-          role: data.role,
-        };
-        setUser(updated);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      }
+      const data = await fetchWithAuth("/api/users/me");
+      const updated = {
+        ...user,
+        dbUser: { ...(user?.dbUser || {}), ...data },
+        plan: data.plan,
+        role: data.role,
+      };
+      setUser(updated);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch (e) {
       console.error("Refresh user failed:", e);
     }

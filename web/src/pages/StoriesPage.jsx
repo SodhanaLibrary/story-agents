@@ -1,4 +1,3 @@
-import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
@@ -15,24 +14,24 @@ import {
   Alert,
   Avatar,
   LinearProgress,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
 } from "@mui/material";
 import {
   MenuBook,
-  Visibility,
-  Delete,
   Favorite,
   FavoriteBorder,
-  Palette,
-  Image as ImageIcon,
   CalendarToday,
 } from "@mui/icons-material";
+import ImageIcon from "@mui/icons-material/Image";
+import Palette from "@mui/icons-material/Palette";
 import { useAuth } from "../context/AuthContext";
+import { useFeed } from "../hooks/useStories";
+import { useStories } from "../hooks/useStories";
+import {
+  useCurrentlyReading,
+  useFavoriteIds,
+  useAddFavorite,
+  useRemoveFavorite,
+} from "../hooks/useUser";
 
 function StoriesPage() {
   const navigate = useNavigate();
@@ -40,80 +39,39 @@ function StoriesPage() {
   const searchQuery = searchParams.get("q") || "";
 
   const { isAuthenticated, userId } = useAuth();
-  const [stories, setStories] = useState([]);
-  const [currentlyReading, setCurrentlyReading] = useState([]);
-  const [favoriteIds, setFavoriteIds] = useState(new Set());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Use search or personalized feed
-      let url =
-        isAuthenticated && userId
-          ? `/api/feed?userId=${userId}`
-          : "/api/stories";
-      if (searchQuery) {
-        url = `/api/stories?q=${encodeURIComponent(searchQuery)}`;
-      }
+  const hasSearch = !!searchQuery.trim();
+  const feedQuery = useFeed(userId || "");
+  const publicQuery = useStories("");
+  const searchQueryResult = useStories(searchQuery);
 
-      const storiesRes = await fetch(url);
-      const storiesData = await storiesRes.json();
-      setStories(storiesData.stories || []);
+  const stories = hasSearch
+    ? searchQueryResult.data || []
+    : userId
+      ? feedQuery.data || []
+      : publicQuery.data || [];
 
-      if (isAuthenticated && userId) {
-        const [readingRes, favoriteIdsRes] = await Promise.all([
-          fetch(`/api/users/${userId}/reading`),
-          fetch(`/api/users/${userId}/favorite-ids`),
-        ]);
-        const [readingData, favoriteIdsData] = await Promise.all([
-          readingRes.json(),
-          favoriteIdsRes.json(),
-        ]);
-        setCurrentlyReading(readingData.reading || []);
-        setFavoriteIds(new Set(favoriteIdsData.favoriteIds || []));
-      }
-    } catch (err) {
-      console.error("Failed to fetch data:", err);
-      setError("Failed to load stories");
-    } finally {
-      setLoading(false);
-    }
-  }, [isAuthenticated, userId, searchQuery]);
+  const { data: currentlyReading = [] } = useCurrentlyReading(userId || "");
+  const { data: favoriteIds = new Set() } = useFavoriteIds(userId || "");
+  const addFavorite = useAddFavorite(userId || "");
+  const removeFavorite = useRemoveFavorite(userId || "");
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const loading = hasSearch
+    ? searchQueryResult.isLoading
+    : userId
+      ? feedQuery.isLoading
+      : publicQuery.isLoading;
 
   const handleFavoriteClick = async (story, event) => {
     event.stopPropagation();
-    if (!isAuthenticated) {
-      // Could show login prompt
-      return;
-    }
-
+    if (!isAuthenticated) return;
     const storyId = story.id;
     const isFav = favoriteIds.has(storyId);
-
     try {
       if (isFav) {
-        await fetch(`/api/users/${userId}/favorites/${storyId}`, {
-          method: "DELETE",
-        });
-        setFavoriteIds((prev) => {
-          const next = new Set(prev);
-          next.delete(storyId);
-          return next;
-        });
+        await removeFavorite.mutateAsync(storyId);
       } else {
-        await fetch(`/api/users/${userId}/favorites`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ storyId }),
-        });
-        setFavoriteIds((prev) => new Set([...prev, storyId]));
+        await addFavorite.mutateAsync(storyId);
       }
     } catch (err) {
       console.error("Failed to update favorite:", err);
@@ -140,21 +98,39 @@ function StoriesPage() {
   return (
     <Box className="fade-in">
       {/* Page Title + Submit story */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2, mb: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 2,
+          mb: 3,
+        }}
+      >
         {searchQuery ? (
-          <Typography variant="h4" sx={{ fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}>
+          <Typography
+            variant="h4"
+            sx={{ fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}
+          >
             {`Search: "${searchQuery}"`}
           </Typography>
         ) : (
-          <Typography variant="h4" sx={{ fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}>
+          <Typography
+            variant="h4"
+            sx={{ fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}
+          >
             Stories
           </Typography>
         )}
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
+      {(searchQueryResult.isError ||
+        feedQuery.isError ||
+        publicQuery.isError) && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {(searchQueryResult.error || feedQuery.error || publicQuery.error)
+            ?.message || "Failed to load stories"}
         </Alert>
       )}
 
@@ -213,7 +189,6 @@ function StoriesPage() {
           ))}
         </Grid>
       )}
-
     </Box>
   );
 }
@@ -312,7 +287,11 @@ function StoryCard({
             {story.title}
           </Typography>
           {story.genre && (
-            <Typography variant="caption" color="primary" sx={{ display: "block", mb: 0.5 }}>
+            <Typography
+              variant="caption"
+              color="primary"
+              sx={{ display: "block", mb: 0.5 }}
+            >
               {story.genre}
             </Typography>
           )}

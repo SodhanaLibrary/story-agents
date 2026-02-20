@@ -5,6 +5,7 @@ import { fetchWithAuth } from "../lib/queryClient";
 export const userKeys = {
   all: ["user"],
   profile: (userId) => [...userKeys.all, "profile", userId],
+  stories: (userId, viewerId) => [...userKeys.all, "stories", userId, viewerId],
   favorites: (userId) => [...userKeys.all, "favorites", userId],
   favoriteIds: (userId) => [...userKeys.all, "favorite-ids", userId],
   reading: (userId) => [...userKeys.all, "reading", userId],
@@ -19,8 +20,9 @@ export const userKeys = {
 export function useUserProfile(userId) {
   return useQuery({
     queryKey: userKeys.profile(userId),
-    queryFn: () => fetchWithAuth(`/api/users/${userId}`),
+    queryFn: () => fetchWithAuth(`/api/users/${userId}/profile`),
     enabled: !!userId,
+    select: (data) => data.profile,
   });
 }
 
@@ -169,34 +171,28 @@ export function useUpdateReadingProgress(userId) {
 export function useDrafts(userId) {
   return useQuery({
     queryKey: userKeys.drafts(userId),
-    queryFn: () => fetchWithAuth(`/api/users/${userId}/drafts`),
+    queryFn: () => fetchWithAuth(`/api/drafts?userId=${userId}`),
     enabled: !!userId,
     select: (data) => data.drafts || [],
   });
 }
 
 /**
- * Follow a user
+ * Follow a user (targetUserId = user to follow, currentUserId = follower)
  */
 export function useFollowUser(currentUserId) {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (targetUserId) =>
-      fetchWithAuth(`/api/users/${currentUserId}/following`, {
+      fetchWithAuth(`/api/users/${targetUserId}/follow`, {
         method: "POST",
-        body: JSON.stringify({ followUserId: targetUserId }),
+        body: JSON.stringify({ followerId: currentUserId }),
       }),
     onSuccess: (_, targetUserId) => {
-      queryClient.invalidateQueries({
-        queryKey: userKeys.following(currentUserId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: userKeys.followers(targetUserId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: userKeys.profile(targetUserId),
-      });
+      queryClient.invalidateQueries({ queryKey: userKeys.following(currentUserId) });
+      queryClient.invalidateQueries({ queryKey: userKeys.followers(targetUserId) });
+      queryClient.invalidateQueries({ queryKey: userKeys.profile(targetUserId) });
     },
   });
 }
@@ -209,18 +205,97 @@ export function useUnfollowUser(currentUserId) {
 
   return useMutation({
     mutationFn: (targetUserId) =>
-      fetchWithAuth(`/api/users/${currentUserId}/following/${targetUserId}`, {
+      fetchWithAuth(`/api/users/${targetUserId}/follow?followerId=${currentUserId}`, {
         method: "DELETE",
       }),
     onSuccess: (_, targetUserId) => {
+      queryClient.invalidateQueries({ queryKey: userKeys.following(currentUserId) });
+      queryClient.invalidateQueries({ queryKey: userKeys.followers(targetUserId) });
+      queryClient.invalidateQueries({ queryKey: userKeys.profile(targetUserId) });
+    },
+  });
+}
+
+/**
+ * Check if current user is following target user
+ */
+export function useIsFollowing(currentUserId, targetUserId) {
+  return useQuery({
+    queryKey: [...userKeys.all, "is-following", currentUserId, targetUserId],
+    queryFn: () =>
+      fetchWithAuth(`/api/users/${currentUserId}/is-following/${targetUserId}`),
+    enabled: !!currentUserId && !!targetUserId && currentUserId !== targetUserId,
+    select: (data) => data.isFollowing,
+  });
+}
+
+/**
+ * Fetch user's public stories (for profile page)
+ */
+export function useUserStories(userId, viewerId) {
+  return useQuery({
+    queryKey: userKeys.stories(userId, viewerId),
+    queryFn: () =>
+      fetchWithAuth(
+        `/api/users/${userId}/stories?viewerId=${viewerId || ""}`
+      ),
+    enabled: !!userId,
+    select: (data) => data.stories || [],
+  });
+}
+
+/**
+ * Fetch user's followers
+ */
+export function useFollowers(userId) {
+  return useQuery({
+    queryKey: userKeys.followers(userId),
+    queryFn: () => fetchWithAuth(`/api/users/${userId}/followers`),
+    enabled: !!userId,
+    select: (data) => data.followers || [],
+  });
+}
+
+/**
+ * Fetch user's following
+ */
+export function useFollowing(userId) {
+  return useQuery({
+    queryKey: userKeys.following(userId),
+    queryFn: () => fetchWithAuth(`/api/users/${userId}/following`),
+    enabled: !!userId,
+    select: (data) => data.following || [],
+  });
+}
+
+/**
+ * Update user profile
+ */
+export function useUpdateProfile(userId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body) =>
+      fetchWithAuth(`/api/users/${userId}/profile`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: userKeys.profile(userId) });
+    },
+  });
+}
+
+/**
+ * Delete a draft
+ */
+export function useDeleteDraft() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId) =>
+      fetchWithAuth(`/api/drafts/${jobId}`, { method: "DELETE" }),
+    onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: userKeys.following(currentUserId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: userKeys.followers(targetUserId),
-      });
-      queryClient.invalidateQueries({
-        queryKey: userKeys.profile(targetUserId),
+        queryKey: ["user", "drafts"],
       });
     },
   });

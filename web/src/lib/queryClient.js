@@ -1,4 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
+import { triggerAuthFailure } from "../services/api";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,7 +36,7 @@ export function getUserId() {
   return null;
 }
 
-// Default fetch function with auth headers
+// Default fetch function with auth headers (for use with react-query)
 export async function fetchWithAuth(url, options = {}) {
   const userId = getUserId();
   const headers = {
@@ -52,10 +53,28 @@ export async function fetchWithAuth(url, options = {}) {
     headers,
   });
 
+  if (response.status === 401 && !String(url).includes("/api/auth/")) {
+    triggerAuthFailure();
+  }
+
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.error || error.message || `HTTP ${response.status}`);
   }
 
+  return response.json();
+}
+
+/** Fetch without auth header (for login, signup, forgot-password, etc.) */
+export async function fetchNoAuth(url, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+  const response = await fetch(url, { ...options, headers });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || error.message || `HTTP ${response.status}`);
+  }
   return response.json();
 }

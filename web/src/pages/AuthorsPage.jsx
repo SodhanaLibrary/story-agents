@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
@@ -13,44 +13,25 @@ import {
   Chip,
 } from "@mui/material";
 import { Search, MenuBook, Person } from "@mui/icons-material";
+import { useAuthors } from "../hooks/useAuthors";
 
 function AuthorsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const qParam = searchParams.get("q") || "";
 
-  const [authors, setAuthors] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(qParam);
 
-  const fetchAuthors = useCallback(async (search, replaceUrl = false) => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search && search.trim()) params.set("q", search.trim());
-      params.set("limit", "48");
-      const res = await fetch(`/api/authors?${params.toString()}`);
-      const data = await res.json();
-      setAuthors(data.authors || []);
-      if (replaceUrl) {
-        const next = search && search.trim() ? { q: search.trim() } : {};
-        setSearchParams(next, { replace: true });
-      }
-    } catch (err) {
-      console.error("Failed to fetch authors:", err);
-      setAuthors([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [setSearchParams]);
-
-  useEffect(() => {
-    fetchAuthors(qParam);
-  }, [qParam, fetchAuthors]);
+  const { data: authors = [], isLoading } = useAuthors({
+    q: qParam,
+    limit: 48,
+  });
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchAuthors(searchInput, true);
+    setSearchParams(searchInput.trim() ? { q: searchInput.trim() } : {}, {
+      replace: true,
+    });
   };
 
   return (
@@ -70,15 +51,19 @@ function AuthorsPage() {
         >
           Authors
         </Typography>
-        <Box component="form" onSubmit={handleSearchSubmit} sx={{ flex: 1, minWidth: 200, maxWidth: 360 }}>
-        <TextField
-          id="input-authors-search"
-          fullWidth
-          size="small"
-          placeholder="Search by name or username..."
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit(e)}
+        <Box
+          component="form"
+          onSubmit={handleSearchSubmit}
+          sx={{ flex: 1, minWidth: 200, maxWidth: 360 }}
+        >
+          <TextField
+            id="input-authors-search"
+            fullWidth
+            size="small"
+            placeholder="Search by name or username..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit(e)}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -99,18 +84,22 @@ function AuthorsPage() {
         Discover writers who have published stories on Story Agents.
       </Typography>
 
-      {loading ? (
+      {isLoading ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
           <CircularProgress sx={{ color: "primary.main" }} />
         </Box>
       ) : authors.length === 0 ? (
         <Box sx={{ textAlign: "center", py: 8 }}>
-          <Person sx={{ fontSize: 64, color: "text.secondary", opacity: 0.5, mb: 2 }} />
+          <Person
+            sx={{ fontSize: 64, color: "text.secondary", opacity: 0.5, mb: 2 }}
+          />
           <Typography variant="h6" color="text.secondary">
             No authors found
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {qParam ? "Try a different search." : "No one has published a public story yet."}
+            {qParam
+              ? "Try a different search."
+              : "No one has published a public story yet."}
           </Typography>
         </Box>
       ) : (
@@ -158,7 +147,11 @@ function AuthorsPage() {
                     {author.name || author.username || "Anonymous"}
                   </Typography>
                   {author.username && author.name && (
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 1 }}
+                    >
                       @{author.username}
                     </Typography>
                   )}

@@ -9,8 +9,6 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
   Avatar,
   Chip,
   Dialog,
@@ -21,6 +19,7 @@ import {
   Alert,
   Menu,
   MenuItem,
+  IconButton,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -32,136 +31,77 @@ import {
   AdminPanelSettings,
   Person,
 } from "@mui/icons-material";
-import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import {
+  useOrg,
+  useUpdateOrg,
+  useAddOrgMember,
+  useRemoveOrgMember,
+  useSetOrgMemberRole,
+  useLeaveOrg,
+} from "../hooks/useOrgs";
 
 export default function TeamDetailPage() {
   const { orgId } = useParams();
   const navigate = useNavigate();
   const { userId, isAuthenticated } = useAuth();
-  const [org, setOrg] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addEmail, setAddEmail] = useState("");
-  const [adding, setAdding] = useState(false);
   const [editName, setEditName] = useState("");
   const [editOpen, setEditOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [memberMenu, setMemberMenu] = useState({ anchor: null, member: null });
-  const [leaving, setLeaving] = useState(false);
 
-  const fetchOrg = async () => {
-    if (!orgId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.get(`/api/orgs/${orgId}`);
-      const data = await res.json();
-      if (res.ok) {
-        setOrg(data);
-        setEditName(data.name || "");
-      } else {
-        setError(data.error || "Failed to load team");
-      }
-    } catch (e) {
-      setError("Failed to load team");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: org, isLoading, isError, error } = useOrg(parseInt(orgId, 10));
+  const updateOrg = useUpdateOrg(orgId);
+  const addMember = useAddOrgMember(orgId);
+  const removeMember = useRemoveOrgMember(orgId);
+  const setRole = useSetOrgMemberRole(orgId);
+  const leaveOrg = useLeaveOrg(orgId);
 
   useEffect(() => {
-    if (isAuthenticated && orgId) fetchOrg();
-    else setLoading(false);
-  }, [isAuthenticated, orgId]);
+    if (org?.name) setEditName(org.name);
+  }, [org?.name]);
 
   const myRole = org?.members?.find((m) => m.user_id === userId)?.role;
   const isOwnerOrAdmin = myRole === "owner" || myRole === "admin";
 
   const handleAddMember = async () => {
     if (!addEmail.trim()) return;
-    setAdding(true);
-    setError(null);
     try {
-      const res = await api.post(`/api/orgs/${orgId}/members`, { email: addEmail.trim() });
-      const data = await res.json();
-      if (res.ok) {
-        setAddOpen(false);
-        setAddEmail("");
-        fetchOrg();
-      } else {
-        setError(data.error || "Failed to add member");
-      }
+      await addMember.mutateAsync(addEmail.trim());
+      setAddOpen(false);
+      setAddEmail("");
     } catch (e) {
-      setError(e.message || "Failed to add member");
-    } finally {
-      setAdding(false);
+      // Error shown via addMember.error
     }
   };
 
   const handleUpdateName = async () => {
-    setSaving(true);
-    setError(null);
     try {
-      const res = await api.put(`/api/orgs/${orgId}`, { name: editName.trim() });
-      if (res.ok) {
-        setEditOpen(false);
-        setOrg((o) => (o ? { ...o, name: editName.trim() } : o));
-      } else {
-        const data = await res.json();
-        setError(data.error || "Failed to update name");
-      }
-    } catch (e) {
-      setError(e.message || "Failed to update");
-    } finally {
-      setSaving(false);
-    }
+      await updateOrg.mutateAsync({ name: editName.trim() });
+      setEditOpen(false);
+    } catch (e) {}
   };
 
   const handleRemoveMember = async (memberId) => {
     setMemberMenu({ anchor: null, member: null });
     try {
-      const res = await api.del(`/api/orgs/${orgId}/members/${memberId}`);
-      if (res.ok) fetchOrg();
-      else {
-        const data = await res.json();
-        setError(data.error || "Failed to remove member");
-      }
-    } catch (e) {
-      setError(e.message || "Failed to remove member");
-    }
+      await removeMember.mutateAsync(memberId);
+    } catch (e) {}
   };
 
   const handleSetRole = async (memberId, role) => {
     setMemberMenu({ anchor: null, member: null });
     try {
-      const res = await api.put(`/api/orgs/${orgId}/members/${memberId}/role`, { role });
-      if (res.ok) fetchOrg();
-      else {
-        const data = await res.json();
-        setError(data.error || "Failed to update role");
-      }
-    } catch (e) {
-      setError(e.message || "Failed to update role");
-    }
+      await setRole.mutateAsync({ memberId, role });
+    } catch (e) {}
   };
 
   const handleLeave = async () => {
-    setLeaving(true);
-    setError(null);
     try {
-      const res = await api.post(`/api/orgs/${orgId}/leave`);
-      if (res.ok) navigate("/teams");
-      else {
-        const data = await res.json();
-        setError(data.error || "Failed to leave");
-      }
-    } catch (e) {
-      setError(e.message || "Failed to leave");
-    } finally {
-      setLeaving(false);
-    }
+      await leaveOrg.mutateAsync();
+      navigate("/teams");
+    } catch (e) {}
   };
 
   if (!isAuthenticated) {
@@ -172,7 +112,7 @@ export default function TeamDetailPage() {
     );
   }
 
-  if (loading || !org) {
+  if (isLoading || !org) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
         <CircularProgress />
@@ -198,16 +138,21 @@ export default function TeamDetailPage() {
           {org.name}
         </Typography>
         {isOwnerOrAdmin && (
-          <IconButton id="btn-team-edit-name" size="small" onClick={() => setEditOpen(true)} aria-label="Edit name">
+          <IconButton
+            id="btn-team-edit-name"
+            size="small"
+            onClick={() => setEditOpen(true)}
+            aria-label="Edit name"
+          >
             <Edit fontSize="small" />
           </IconButton>
         )}
         <Chip label={myRole} size="small" color={myRole === "owner" ? "primary" : "default"} />
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
+      {(isError || updateOrg.isError || addMember.isError || removeMember.isError || setRole.isError || leaveOrg.isError) && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {(error || updateOrg.error || addMember.error || removeMember.error || setRole.error || leaveOrg.error)?.message || "Something went wrong"}
         </Alert>
       )}
 
@@ -261,7 +206,7 @@ export default function TeamDetailPage() {
                 color="error"
                 startIcon={<Logout />}
                 onClick={handleLeave}
-                disabled={leaving}
+                disabled={leaveOrg.isPending}
               >
                 Leave
               </Button>
@@ -271,13 +216,7 @@ export default function TeamDetailPage() {
       </List>
 
       {myRole === "owner" && (
-        <Button
-          color="error"
-          startIcon={<Logout />}
-          onClick={handleLeave}
-          disabled
-          sx={{ mt: 2 }}
-        >
+        <Button color="error" startIcon={<Logout />} onClick={handleLeave} disabled sx={{ mt: 2 }}>
           Owner cannot leave
         </Button>
       )}
@@ -288,10 +227,10 @@ export default function TeamDetailPage() {
           color="error"
           startIcon={<Logout />}
           onClick={handleLeave}
-          disabled={leaving}
+          disabled={leaveOrg.isPending}
           sx={{ mt: 2 }}
         >
-          {leaving ? <CircularProgress size={20} /> : "Leave team"}
+          {leaveOrg.isPending ? <CircularProgress size={20} /> : "Leave team"}
         </Button>
       )}
 
@@ -301,13 +240,19 @@ export default function TeamDetailPage() {
         onClose={() => setMemberMenu({ anchor: null, member: null })}
       >
         {memberMenu.member?.role === "member" && (
-          <MenuItem id="menu-make-admin" onClick={() => handleSetRole(memberMenu.member.user_id, "admin")}>
+          <MenuItem
+            id="menu-make-admin"
+            onClick={() => handleSetRole(memberMenu.member.user_id, "admin")}
+          >
             <AdminPanelSettings fontSize="small" sx={{ mr: 1 }} />
             Make admin
           </MenuItem>
         )}
         {memberMenu.member?.role === "admin" && (
-          <MenuItem id="menu-make-member" onClick={() => handleSetRole(memberMenu.member.user_id, "member")}>
+          <MenuItem
+            id="menu-make-member"
+            onClick={() => handleSetRole(memberMenu.member.user_id, "member")}
+          >
             <Person fontSize="small" sx={{ mr: 1 }} />
             Make member
           </MenuItem>
@@ -322,7 +267,7 @@ export default function TeamDetailPage() {
         </MenuItem>
       </Menu>
 
-      <Dialog open={addOpen} onClose={() => !adding && setAddOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={addOpen} onClose={() => !addMember.isPending && setAddOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Add member</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -341,16 +286,21 @@ export default function TeamDetailPage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button id="btn-add-member-cancel" onClick={() => setAddOpen(false)} disabled={adding}>
+          <Button id="btn-add-member-cancel" onClick={() => setAddOpen(false)} disabled={addMember.isPending}>
             Cancel
           </Button>
-          <Button id="btn-add-member-submit" onClick={handleAddMember} variant="contained" disabled={!addEmail.trim() || adding}>
-            {adding ? <CircularProgress size={24} /> : "Add"}
+          <Button
+            id="btn-add-member-submit"
+            onClick={handleAddMember}
+            variant="contained"
+            disabled={!addEmail.trim() || addMember.isPending}
+          >
+            {addMember.isPending ? <CircularProgress size={24} /> : "Add"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog open={editOpen} onClose={() => !saving && setEditOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={editOpen} onClose={() => !updateOrg.isPending && setEditOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Edit team name</DialogTitle>
         <DialogContent>
           <TextField
@@ -365,11 +315,16 @@ export default function TeamDetailPage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button id="btn-edit-team-cancel" onClick={() => setEditOpen(false)} disabled={saving}>
+          <Button id="btn-edit-team-cancel" onClick={() => setEditOpen(false)} disabled={updateOrg.isPending}>
             Cancel
           </Button>
-          <Button id="btn-edit-team-save" onClick={handleUpdateName} variant="contained" disabled={!editName.trim() || saving}>
-            {saving ? <CircularProgress size={24} /> : "Save"}
+          <Button
+            id="btn-edit-team-save"
+            onClick={handleUpdateName}
+            variant="contained"
+            disabled={!editName.trim() || updateOrg.isPending}
+          >
+            {updateOrg.isPending ? <CircularProgress size={24} /> : "Save"}
           </Button>
         </DialogActions>
       </Dialog>

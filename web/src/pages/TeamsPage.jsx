@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -17,57 +17,31 @@ import {
   Chip,
 } from "@mui/material";
 import { Add, Groups } from "@mui/icons-material";
-import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useOrgs, useCreateOrg } from "../hooks/useOrgs";
 
 export default function TeamsPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [orgs, setOrgs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
-  const [creating, setCreating] = useState(false);
 
-  const fetchOrgs = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.get("/api/orgs");
-      const data = await res.json();
-      if (res.ok) setOrgs(data.organizations || []);
-      else setError(data.error || "Failed to load teams");
-    } catch (e) {
-      setError("Failed to load teams");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: orgs = [], isLoading, isError, error } = useOrgs({
+    enabled: isAuthenticated,
+  });
+  const createOrg = useCreateOrg();
 
-  useEffect(() => {
-    if (isAuthenticated) fetchOrgs();
-    else setLoading(false);
-  }, [isAuthenticated]);
+  const creating = createOrg.isPending;
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
-    setCreating(true);
-    setError(null);
     try {
-      const res = await api.post("/api/orgs", { name: newName.trim() });
-      const data = await res.json();
-      if (res.ok) {
-        setCreateOpen(false);
-        setNewName("");
-        navigate(`/teams/${data.id}`);
-      } else {
-        setError(data.error || "Failed to create team");
-      }
+      const data = await createOrg.mutateAsync({ name: newName.trim() });
+      setCreateOpen(false);
+      setNewName("");
+      if (data?.id) navigate(`/teams/${data.id}`);
     } catch (e) {
-      setError(e.message || "Failed to create team");
-    } finally {
-      setCreating(false);
+      // Error is available on createOrg.error
     }
   };
 
@@ -95,13 +69,18 @@ export default function TeamsPage() {
         </Button>
       </Box>
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
+      {isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error?.message || "Failed to load teams"}
+        </Alert>
+      )}
+      {createOrg.isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {createOrg.error?.message || "Failed to create team"}
         </Alert>
       )}
 
-      {loading ? (
+      {isLoading ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
           <CircularProgress />
         </Box>
@@ -115,7 +94,12 @@ export default function TeamsPage() {
             <Typography color="text.secondary" sx={{ mb: 2 }}>
               Create an organization and invite members to collaborate. Team members get shared usage.
             </Typography>
-            <Button id="btn-teams-create-empty" variant="contained" startIcon={<Add />} onClick={() => setCreateOpen(true)}>
+            <Button
+              id="btn-teams-create-empty"
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setCreateOpen(true)}
+            >
               Create team
             </Button>
           </CardContent>
@@ -133,7 +117,10 @@ export default function TeamsPage() {
                 borderColor: "divider",
               }}
             >
-              <CardActionArea id={`link-team-${org.id}`} onClick={() => navigate(`/teams/${org.id}`)}>
+              <CardActionArea
+                id={`link-team-${org.id}`}
+                onClick={() => navigate(`/teams/${org.id}`)}
+              >
                 <CardContent>
                   <Typography variant="h6" noWrap>
                     {org.name}
@@ -172,7 +159,12 @@ export default function TeamsPage() {
           <Button id="btn-create-team-cancel" onClick={() => setCreateOpen(false)} disabled={creating}>
             Cancel
           </Button>
-          <Button id="btn-create-team-submit" onClick={handleCreate} variant="contained" disabled={!newName.trim() || creating}>
+          <Button
+            id="btn-create-team-submit"
+            onClick={handleCreate}
+            variant="contained"
+            disabled={!newName.trim() || creating}
+          >
             {creating ? <CircularProgress size={24} /> : "Create"}
           </Button>
         </DialogActions>

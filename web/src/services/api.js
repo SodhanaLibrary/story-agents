@@ -54,6 +54,11 @@ function handleAuthFailure() {
   }
 }
 
+/** Call from react-query fetch layer on 401 so logout runs */
+export function triggerAuthFailure() {
+  handleAuthFailure();
+}
+
 /**
  * Wrapper around fetch that automatically includes user context
  * Also handles 401 responses by triggering logout
@@ -146,4 +151,5 @@ export default {
   postFormData,
   getUserId,
   setAuthFailureHandler,
+  triggerAuthFailure,
 };
