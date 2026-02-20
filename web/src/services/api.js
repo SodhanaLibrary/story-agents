@@ -105,6 +105,13 @@ export async function put(url, body, options = {}) {
 }
 
 /**
+ * PATCH request with user context
+ */
+export async function patch(url, options = {}) {
+  return apiFetch(url, { ...options, method: "PATCH" });
+}
+
+/**
  * DELETE request with user context
  */
 export async function del(url, options = {}) {
@@ -134,6 +141,7 @@ export default {
   get,
   post,
   put,
+  patch,
   del,
   postFormData,
   getUserId,

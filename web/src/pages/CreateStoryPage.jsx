@@ -8,6 +8,10 @@ import {
   Alert,
   Button,
   CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { ArrowBack } from "@mui/icons-material";
 import StoryInput from "../components/StoryInput";
@@ -16,6 +20,22 @@ import AvatarReview from "../components/AvatarReview";
 import PageReview from "../components/PageReview";
 import StoryViewer from "../components/StoryViewer";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
+
+const STORY_GENRES = [
+  "Real life",
+  "Fantasy",
+  "Science Fiction",
+  "Mystery",
+  "Horror",
+  "Romance",
+  "Adventure",
+  "Realistic Fiction",
+  "Historical Fiction",
+  "Comedy",
+  "Children's Stories",
+  "Biography",
+];
 
 const steps = [
   "Write Story",
@@ -33,6 +53,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
 
   const [activeStep, setActiveStep] = useState(0);
   const [story, setStory] = useState("");
+  const [genre, setGenre] = useState("");
   const [characters, setCharacters] = useState(null);
   const [selectedStyle, setSelectedStyle] = useState(null);
   const [customStyle, setCustomStyle] = useState("");
@@ -50,6 +71,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
       const { draft, jobId: resumeJobId } = draftState;
       setJobId(resumeJobId);
       setStory(draft.story || "");
+      setGenre(draft.genre || "");
       setCharacters(draft.characters || []);
       setStoryPages(draft.storyPages || []);
       if (draft.artStyleKey) {
@@ -59,6 +81,10 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
         setCustomStyle(draft.artStylePrompt);
       }
       setActiveStep(draft.currentStep || 0);
+      return;
+    }
+    if (draftState?.openSubmission) {
+      setStory(draftState.openSubmission.story || "");
     }
   }, [location.state]);
 
@@ -80,6 +106,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
       if (data.success && data.jobId) {
         setJobId(data.jobId);
         setStory(data.job.story || "");
+        setGenre(data.job.genre || "");
         setSelectedStyle(data.job.artStyleDecision?.selectedStyle);
         setGeneratedStory(data.job);
         setIsEditing(true);
@@ -108,6 +135,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             story: storyText,
+            genre: genre.trim() || null,
             phase: "art_style_selection",
             status: "draft",
             userId,
@@ -121,6 +149,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           body: JSON.stringify({
             story: storyText,
             targetAudience: "children",
+            genre: genre.trim() || null,
             userId,
           }),
         });
@@ -166,28 +195,28 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
       setActiveStep(2);
 
       if (!characters || characters.length === 0) {
-        // Start character extraction with the existing jobId
-        const response = await fetch("/api/extract-characters", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            story,
-            artStyleKey: styleKey === "auto" ? null : styleKey,
-            customArtStyle: styleKey === "custom" ? custom : null,
-            jobId, // Pass existing jobId to continue the same draft
-          }),
+        const response = await api.post("/api/extract-characters", {
+          story,
+          artStyleKey: styleKey === "auto" ? null : styleKey,
+          customArtStyle: styleKey === "custom" ? custom : null,
+          jobId,
         });
-
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 402 && data.upgradeRequired) {
+          setError("Free plan limit reached (2M tokens). Upgrade to Pro for unlimited usage.");
+          return;
+        }
+        if (!response.ok) {
+          setError(data.error || "Failed to start character extraction");
+          return;
+        }
         if (data.jobId && data.jobId !== jobId) {
-          // Update jobId if server created a new one
           setJobId(data.jobId);
         }
       }
     } catch (err) {
       console.error(err);
-      console.error("Failed to start character extraction:", err);
-      setError("Failed to start character extraction");
+      setError(err.message || "Failed to start character extraction");
     } finally {
       setSaving(false);
     }
@@ -198,15 +227,16 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
 
     if (!isEditing && (!storyPages || storyPages.length === 0)) {
       try {
-        await fetch("/api/generate/pages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            jobId,
-            targetAudience: "children",
-            generateCover: true,
-          }),
+        const res = await api.post("/api/generate/pages", {
+          jobId,
+          targetAudience: "children",
+          generateCover: true,
         });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 402 && data.upgradeRequired) {
+          setError("Free plan limit reached. Upgrade to Pro for unlimited usage.");
+          return;
+        }
       } catch (err) {
         console.error("Failed to start page generation:", err);
       }
@@ -242,7 +272,18 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
       </Button>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          onClose={() => setError(null)}
+          action={
+            error.includes("Upgrade to Pro") ? (
+              <Button id="btn-error-upgrade" color="inherit" size="small" onClick={() => navigate("/pricing")}>
+                Upgrade
+              </Button>
+            ) : null
+          }
+        >
           {error}
         </Alert>
       )}
@@ -278,11 +319,29 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
 
       {/* Step Content */}
       {activeStep === 0 && (
-        <StoryInput
-          onSubmit={handleStorySubmit}
-          saving={saving}
-          initialStory={story}
-        />
+        <Box>
+          <FormControl fullWidth sx={{ mb: 2 }} size="small">
+            <InputLabel id="create-story-genre-label">Genre</InputLabel>
+            <Select
+              labelId="create-story-genre-label"
+              label="Genre"
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+            >
+              <MenuItem value="">Select genre</MenuItem>
+              {STORY_GENRES.map((g) => (
+                <MenuItem key={g} value={g}>
+                  {g}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <StoryInput
+            onSubmit={handleStorySubmit}
+            saving={saving}
+            initialStory={story}
+          />
+        </Box>
       )}
 
       {activeStep === 1 && (

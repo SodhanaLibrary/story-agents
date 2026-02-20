@@ -107,6 +107,7 @@ export async function initializeDatabase() {
       cover_path VARCHAR(500),
       page_count INT DEFAULT 0,
       target_audience VARCHAR(100) DEFAULT 'children',
+      genre VARCHAR(100) NULL,
       status ENUM('draft', 'completed') DEFAULT 'completed',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -116,6 +117,11 @@ export async function initializeDatabase() {
       INDEX idx_created_at (created_at)
     )
   `);
+  try {
+    await pool.execute("ALTER TABLE stories ADD COLUMN genre VARCHAR(100) NULL AFTER target_audience");
+  } catch (e) {
+    if (e.code !== "ER_DUP_FIELDNAME") throw e;
+  }
 
   // Characters table
   await pool.execute(`
@@ -175,6 +181,7 @@ export async function initializeDatabase() {
       cover JSON,
       page_count INT DEFAULT 6,
       target_audience VARCHAR(100) DEFAULT 'children',
+      genre VARCHAR(100) NULL,
       current_step INT DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -183,6 +190,11 @@ export async function initializeDatabase() {
       INDEX idx_job_id (job_id)
     )
   `);
+  try {
+    await pool.execute("ALTER TABLE drafts ADD COLUMN genre VARCHAR(100) NULL AFTER target_audience");
+  } catch (e) {
+    if (e.code !== "ER_DUP_FIELDNAME") throw e;
+  }
 
   // Tags table
   await pool.execute(`
@@ -338,6 +350,206 @@ export async function initializeDatabase() {
     if (!err.message.includes("Duplicate")) {
       logger.debug("prompt_logs status migration skipped: " + err.message);
     }
+  }
+
+  // Billing: usage_type and cost on prompt_logs
+  try {
+    await pool.execute(`
+      ALTER TABLE prompt_logs
+      ADD COLUMN usage_type ENUM('free', 'included') DEFAULT 'free',
+      ADD COLUMN cost DECIMAL(10, 4) NULL
+    `);
+    logger.debug("prompt_logs usage_type and cost columns added");
+  } catch (err) {
+    if (!err.message.includes("Duplicate column")) {
+      logger.debug("prompt_logs billing migration: " + err.message);
+    }
+  }
+  try {
+    await pool.execute(`CREATE INDEX idx_user_id ON prompt_logs (user_id)`);
+    logger.debug("prompt_logs idx_user_id added");
+  } catch (err) {
+    if (!err.message.includes("Duplicate")) {
+      logger.debug("prompt_logs idx_user_id: " + err.message);
+    }
+  }
+
+  // User plan: free (2M tokens once) | pro ($19)
+  try {
+    await pool.execute(`
+      ALTER TABLE users ADD COLUMN plan ENUM('free', 'pro') DEFAULT 'free'
+    `);
+    logger.debug("users.plan column added");
+  } catch (err) {
+    if (!err.message.includes("Duplicate column")) {
+      logger.debug("users.plan migration: " + err.message);
+    }
+  }
+
+  // Email/password auth columns
+  const emailAuthColumns = [
+    { name: "password_hash", sql: "ADD COLUMN password_hash VARCHAR(255) NULL" },
+    { name: "email_verified", sql: "ADD COLUMN email_verified TINYINT(1) DEFAULT 0" },
+    { name: "email_verification_token", sql: "ADD COLUMN email_verification_token VARCHAR(255) NULL" },
+    { name: "email_verification_expires", sql: "ADD COLUMN email_verification_expires DATETIME NULL" },
+    { name: "password_reset_token", sql: "ADD COLUMN password_reset_token VARCHAR(255) NULL" },
+    { name: "password_reset_expires", sql: "ADD COLUMN password_reset_expires DATETIME NULL" },
+  ];
+  for (const col of emailAuthColumns) {
+    try {
+      const [cols] = await pool.execute(`SHOW COLUMNS FROM users LIKE '${col.name}'`);
+      if (cols.length === 0) {
+        await pool.execute(`ALTER TABLE users ${col.sql}`);
+        logger.debug("users." + col.name + " added");
+      }
+    } catch (err) {
+      if (!err.message.includes("Duplicate")) logger.debug("users." + col.name + " migration: " + err.message);
+    }
+  }
+
+  // Razorpay payments (for audit; payouts go to bank linked in Razorpay dashboard)
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS payments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      razorpay_order_id VARCHAR(100) NOT NULL,
+      razorpay_payment_id VARCHAR(100),
+      amount INT NOT NULL,
+      currency VARCHAR(10) NOT NULL,
+      status ENUM('created', 'captured', 'failed') DEFAULT 'created',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_user_id (user_id),
+      INDEX idx_razorpay_order (razorpay_order_id)
+    )
+  `);
+
+  // Organizations (for team plan): user creates org and adds members
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS organizations (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      owner_id INT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_owner_id (owner_id)
+    )
+  `);
+
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS organization_members (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      org_id INT NOT NULL,
+      user_id INT NOT NULL,
+      role ENUM('owner', 'admin', 'member') NOT NULL DEFAULT 'member',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_org_user (org_id, user_id),
+      FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_org_id (org_id),
+      INDEX idx_user_id (user_id)
+    )
+  `);
+
+  // Open story submissions: any user can submit; all can vote; premium can generate illustrations
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS open_story_submissions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      title VARCHAR(500) NOT NULL,
+      story_text LONGTEXT NOT NULL,
+      genre VARCHAR(100) NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_user_id (user_id),
+      INDEX idx_created_at (created_at)
+    )
+  `);
+  // Add genre column for existing databases
+  try {
+    await pool.execute(
+      "ALTER TABLE open_story_submissions ADD COLUMN genre VARCHAR(100) NULL AFTER story_text"
+    );
+  } catch (e) {
+    if (e.code !== "ER_DUP_FIELDNAME") throw e;
+  }
+
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS open_story_votes (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      submission_id INT NOT NULL,
+      user_id INT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_submission_user (submission_id, user_id),
+      FOREIGN KEY (submission_id) REFERENCES open_story_submissions(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_submission_id (submission_id),
+      INDEX idx_user_id (user_id)
+    )
+  `);
+
+  // P2P messages between users
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS messages (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      sender_id INT NOT NULL,
+      recipient_id INT NOT NULL,
+      body TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      read_at TIMESTAMP NULL,
+      FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_sender (sender_id),
+      INDEX idx_recipient (recipient_id),
+      INDEX idx_created_at (created_at)
+    )
+  `);
+
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS open_story_comments (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      submission_id INT NOT NULL,
+      user_id INT NOT NULL,
+      comment_text TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (submission_id) REFERENCES open_story_submissions(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_submission_id (submission_id),
+      INDEX idx_created_at (created_at)
+    )
+  `);
+
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS open_story_images (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      submission_id INT NOT NULL,
+      image_url VARCHAR(1000) NOT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (submission_id) REFERENCES open_story_submissions(id) ON DELETE CASCADE,
+      INDEX idx_submission_id (submission_id)
+    )
+  `);
+
+  // Billing config: premium included allowance and cycle
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS billing_config (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      included_limit_usd DECIMAL(10, 2) NOT NULL DEFAULT 20.00,
+      cycle_day_of_month INT NOT NULL DEFAULT 15,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+  try {
+    const [rows] = await pool.execute("SELECT 1 FROM billing_config LIMIT 1");
+    if (rows.length === 0) {
+      await pool.execute(
+        "INSERT INTO billing_config (included_limit_usd, cycle_day_of_month) VALUES (20.00, 15)"
+      );
+    }
+  } catch (e) {
+    /* ignore */
   }
 
   // Batch requests table for illustration generation

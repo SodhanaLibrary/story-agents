@@ -16,6 +16,7 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
+  Alert,
 } from "@mui/material";
 import {
   Refresh,
@@ -93,6 +94,45 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
   const [batchRequest, setBatchRequest] = useState(null);
   const [batchPolling, setBatchPolling] = useState(false);
 
+  const [finalizeError, setFinalizeError] = useState(null);
+
+  // Fetch batch list on load to detect in-progress batch for this job
+  useEffect(() => {
+    if (!jobId || !userId) return;
+
+    const checkActiveBatch = async () => {
+      try {
+        const response = await fetch("/api/batch/list", {
+          headers: { "X-User-Id": String(userId) },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        const batches = data.batches || [];
+        const active = batches.find(
+          (b) =>
+            b.job_id === jobId &&
+            ["pending", "processing"].includes(b.status || "")
+        );
+        if (active) {
+          setBatchRequest({
+            batchId: active.id,
+            status: active.status,
+            total_pages: active.total_pages ?? 0,
+            completed_pages: active.completed_pages ?? 0,
+            created_at: active.created_at,
+            error_message: active.error_message,
+          });
+          setBatchPolling(true);
+          setGeneratingIllustrations(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch batch list:", err);
+      }
+    };
+
+    checkActiveBatch();
+  }, [jobId, userId]);
+
   // Poll job status
   useEffect(() => {
     if (!jobId) return;
@@ -111,8 +151,10 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           data.status === "error"
         ) {
           setLoading(false);
-          setGeneratingIllustrations(false);
           setRegeneratingPages(false);
+          if (!batchRequest) {
+            setGeneratingIllustrations(false);
+          }
         }
       } catch (err) {
         console.error("Failed to poll job:", err);
@@ -123,7 +165,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
     const interval = setInterval(pollJob, 2000);
 
     return () => clearInterval(interval);
-  }, [jobId, setStoryPages]);
+  }, [jobId, setStoryPages, batchRequest]);
 
   // Poll batch request status
   useEffect(() => {
@@ -549,10 +591,14 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
 
       const data = await response.json();
       if (data.success) {
+        setFinalizeError(null);
         onComplete(data.result);
+      } else {
+        setFinalizeError(data.reason || data.error || "Failed to publish story.");
       }
     } catch (error) {
       console.error("Failed to finalize story:", error);
+      setFinalizeError("Failed to publish story.");
     }
   };
 
@@ -608,6 +654,10 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
   const isGeneratingIllustrations =
     generatingIllustrations ||
     (job?.status === "running" && job?.phase === "illustration_generation");
+
+  const batchInProgress =
+    batchRequest &&
+    ["pending", "processing"].includes(batchRequest.status || "");
 
   // Loading state
   if (
@@ -746,6 +796,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
                 size="small"
                 onClick={handleRegenerateWithPageCount}
                 disabled={
+                  batchInProgress ||
                   regeneratingPages ||
                   !desiredPageCount ||
                   parseInt(desiredPageCount) < 4 ||
@@ -768,6 +819,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
               variant="outlined"
               startIcon={<Add />}
               onClick={() => openTextEditDialog(null, true)}
+              disabled={batchInProgress}
             >
               Add New Page
             </Button>
@@ -794,6 +846,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
                     onApprove={handleApprove}
                     onGenerateIllustration={handleGeneratePageIllustration}
                     setApprovedPages={setApprovedPages}
+                    disableEdit={batchInProgress}
                   />
                 </Grid>
               );
@@ -814,7 +867,14 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           onApprove={handleApprove}
           onGenerateCover={handleGenerateCoverIllustration}
           setApprovedPages={setApprovedPages}
+          disableEdit={batchInProgress}
         />
+      )}
+
+      {finalizeError && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setFinalizeError(null)}>
+          {finalizeError}
+        </Alert>
       )}
 
       {/* Navigation Buttons */}
@@ -825,11 +885,11 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
         {isPromptReviewMode ? (
           <>
             <ButtonGroup variant="contained" size="large">
-              <Button
-                id="btn-generate-illustrations"
-                size="small"
-                onClick={(e) => setGenerateMenuAnchor(e.currentTarget)}
-              >
+            <Button
+              id="btn-generate-all-illustrations"
+              size="small"
+              onClick={(e) => setGenerateMenuAnchor(e.currentTarget)}
+            >
                 Generate All Illustrations <ArrowDropDown />
               </Button>
             </ButtonGroup>

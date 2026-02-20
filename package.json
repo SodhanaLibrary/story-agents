@@ -41,6 +41,7 @@
     "mysql2": "^3.16.0",
     "openai": "^4.73.0",
     "ora": "^8.1.0",
+    "razorpay": "^2.9.6",
     "uuid": "^10.0.0"
   },
   "devDependencies": {

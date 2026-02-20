@@ -71,7 +71,7 @@ export function ErrorState({ job, onBack }) {
         </Typography>
         <Typography variant="body2">{job.error}</Typography>
       </Alert>
-      <Button variant="outlined" onClick={onBack} sx={{ mt: 3 }}>
+      <Button id="btn-error-go-back" variant="outlined" onClick={onBack} sx={{ mt: 3 }}>
         Go Back
       </Button>
     </Box>
@@ -203,6 +203,7 @@ export function BatchProgressState({
           <Stack direction="row" spacing={2} justifyContent="center">
             {!isCompleted && !isFailed && !isCancelled && (
               <Button
+                id="btn-batch-cancel"
                 variant="outlined"
                 color="error"
                 onClick={onCancelBatch}
@@ -212,7 +213,7 @@ export function BatchProgressState({
               </Button>
             )}
             {(isCompleted || isFailed || isCancelled) && (
-              <Button variant="contained" onClick={onViewResults}>
+              <Button id="btn-batch-view-results" variant="contained" onClick={onViewResults}>
                 {isCompleted ? "View Results" : "Go Back"}
               </Button>
             )}

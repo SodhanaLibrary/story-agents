@@ -1,0 +1,937 @@
+[
+  {
+    "id": "560b3bda-f997-4592-a8d6-578e1e561f5f",
+    "type": "url",
+    "target": "http://localhost:3000/",
+    "time": "2026-02-20T11:44:19.858Z",
+    "value": "http://localhost:3000/"
+  },
+  {
+    "type": "replacestate-url",
+    "target": "/",
+    "time": "2026-02-20T11:44:20.450Z",
+    "value": "http://localhost:3000/",
+    "id": "016d8143-de34-4dc1-be01-61f1016e87a1"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Tara and the Lost Carrot']",
+    "time": "2026-02-20T11:44:35.173Z",
+    "value": {
+      "clientX": 621.1015625,
+      "clientY": 384.09375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Tara and the Lost Carrot']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='root']/div[1]/div/div/div[2]/div[2]/div/div/div[1]/h6"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div[2]/div[2]/div/div/div/h6"
+      }
+    ],
+    "element": {
+      "tagName": "H6",
+      "textContent": "Tara and the Lost Carrot",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "623d013e-6690-4d5d-9c92-8b631fdf2533"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/story/14",
+    "time": "2026-02-20T11:44:35.261Z",
+    "value": "http://localhost:3000/story/14",
+    "id": "f06510b8-2973-4e04-9ba4-fa857302cde0"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Next Page']",
+    "time": "2026-02-20T11:44:37.421Z",
+    "value": {
+      "clientX": 703.6953125,
+      "clientY": 683.8359375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Next Page']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='btn-next-page']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div[2]/div/div[2]/button[2]"
+      }
+    ],
+    "element": {
+      "tagName": "BUTTON",
+      "textContent": "Next Page",
+      "id": "btn-next-page",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "button",
+      "disabled": false,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "c07d161d-2150-412d-ad30-b60600231efc"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Next Page']",
+    "time": "2026-02-20T11:44:38.652Z",
+    "value": {
+      "clientX": 703.6953125,
+      "clientY": 683.8359375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Next Page']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='btn-next-page']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div[2]/div/div[2]/button[2]"
+      }
+    ],
+    "element": {
+      "tagName": "BUTTON",
+      "textContent": "Next Page",
+      "id": "btn-next-page",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "button",
+      "disabled": false,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "671e6a7a-5325-4450-a6fd-5c9da1100f5a"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Next Page']",
+    "time": "2026-02-20T11:44:39.283Z",
+    "value": {
+      "clientX": 703.6953125,
+      "clientY": 683.8359375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Next Page']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='btn-next-page']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div[2]/div/div[2]/button[2]"
+      }
+    ],
+    "element": {
+      "tagName": "BUTTON",
+      "textContent": "Next Page",
+      "id": "btn-next-page",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "button",
+      "disabled": false,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "e0fae358-7982-4bca-9f85-2b2e544ffc22"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Next Page']",
+    "time": "2026-02-20T11:44:39.969Z",
+    "value": {
+      "clientX": 703.6953125,
+      "clientY": 683.8359375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Next Page']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='btn-next-page']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div[2]/div/div[2]/button[2]"
+      }
+    ],
+    "element": {
+      "tagName": "BUTTON",
+      "textContent": "Next Page",
+      "id": "btn-next-page",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "button",
+      "disabled": false,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "83c280a2-208a-4051-a775-96e7caead594"
+  },
+  {
+    "type": "click",
+    "target": "//*[local-name()='svg'][@data-testid='MenuIcon']",
+    "time": "2026-02-20T11:44:46.480Z",
+    "value": {
+      "clientX": 32.828125,
+      "clientY": 30.70703125,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[local-name()='svg'][@data-testid='MenuIcon']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='btn-toggle-page-list']/*[local-name()='svg']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div/div/button/*[local-name()='svg']"
+      }
+    ],
+    "element": {
+      "tagName": "svg",
+      "textContent": null,
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "href": null,
+      "src": null
+    },
+    "id": "dabc1585-bab1-4963-b389-ca6b3afd31f5"
+  },
+  {
+    "type": "click",
+    "target": "//img[@src='/storage/pages/Tara and the Lost Carrot_page_1.png']",
+    "time": "2026-02-20T11:44:47.635Z",
+    "value": {
+      "clientX": 45.85546875,
+      "clientY": 257.7421875,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//img[@src='/storage/pages/Tara and the Lost Carrot_page_1.png']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='page-thumbnail-0']/img"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div[2]/div/div/div[2]/img"
+      }
+    ],
+    "element": {
+      "tagName": "IMG",
+      "textContent": null,
+      "id": "",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": "/storage/pages/Tara and the Lost Carrot_page_1.png",
+      "alt": "Page 1"
+    },
+    "id": "a850d1ca-e9ea-414d-ba97-629a8b86a1a7"
+  },
+  {
+    "type": "click",
+    "target": "//img[@src='/storage/pages/Tara and the Lost Carrot_page_2.png']",
+    "time": "2026-02-20T11:44:48.404Z",
+    "value": {
+      "clientX": 57.74609375,
+      "clientY": 381.6953125,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//img[@src='/storage/pages/Tara and the Lost Carrot_page_2.png']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='page-thumbnail-1']/img"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div[2]/div/div/div[3]/img"
+      }
+    ],
+    "element": {
+      "tagName": "IMG",
+      "textContent": null,
+      "id": "",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": "/storage/pages/Tara and the Lost Carrot_page_2.png",
+      "alt": "Page 2"
+    },
+    "id": "59c1b43d-507c-4dc6-aba8-f01c43200fd0"
+  },
+  {
+    "type": "click",
+    "target": "//img[@src='/storage/pages/Tara and the Lost Carrot_page_3.png']",
+    "time": "2026-02-20T11:44:49.012Z",
+    "value": {
+      "clientX": 57.74609375,
+      "clientY": 555.5859375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//img[@src='/storage/pages/Tara and the Lost Carrot_page_3.png']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='page-thumbnail-2']/img"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div[2]/div/div/div[4]/img"
+      }
+    ],
+    "element": {
+      "tagName": "IMG",
+      "textContent": null,
+      "id": "",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": "/storage/pages/Tara and the Lost Carrot_page_3.png",
+      "alt": "Page 3"
+    },
+    "id": "87d85ad1-197f-40fe-8617-6a446b93e291"
+  },
+  {
+    "type": "click",
+    "target": "//img[@src='/storage/pages/Tara and the Lost Carrot_page_4.png']",
+    "time": "2026-02-20T11:44:50.193Z",
+    "value": {
+      "clientX": 60.06640625,
+      "clientY": 557.21484375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//img[@src='/storage/pages/Tara and the Lost Carrot_page_4.png']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='page-thumbnail-3']/img"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div[2]/div/div/div[5]/img"
+      }
+    ],
+    "element": {
+      "tagName": "IMG",
+      "textContent": null,
+      "id": "",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": "/storage/pages/Tara and the Lost Carrot_page_4.png",
+      "alt": "Page 4"
+    },
+    "id": "b4bad3cb-5fe4-4e34-8565-4c12f2455731"
+  },
+  {
+    "type": "click",
+    "target": "//*[local-name()='svg'][@data-testid='CloseIcon']",
+    "time": "2026-02-20T11:44:52.523Z",
+    "value": {
+      "clientX": 1243.73046875,
+      "clientY": 26.3984375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[local-name()='svg'][@data-testid='CloseIcon']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='btn-close-story-view']/*[local-name()='svg']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div[2]/div[3]/div/div/div[2]/button/*[local-name()='svg']"
+      }
+    ],
+    "element": {
+      "tagName": "svg",
+      "textContent": null,
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "href": null,
+      "src": null
+    },
+    "id": "59f98145-a970-437a-9455-4a0010c133ec"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/",
+    "time": "2026-02-20T11:44:52.590Z",
+    "value": "http://localhost:3000/",
+    "id": "a8d171e8-d713-45ea-9d3a-b8d49cd1a437"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Open Stories']",
+    "time": "2026-02-20T11:44:56.618Z",
+    "value": {
+      "clientX": 672.41015625,
+      "clientY": 34.984375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Open Stories']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='tab-open-stories']/div"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/header/div/div[3]/div/div/button[2]/div"
+      }
+    ],
+    "element": {
+      "tagName": "DIV",
+      "textContent": "Open Stories",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "b8750cf7-366c-4ffa-8631-2686214a171d"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/open-stories",
+    "time": "2026-02-20T11:44:56.678Z",
+    "value": "http://localhost:3000/open-stories",
+    "id": "d5eaac0f-f0ea-4aef-a253-0f2671e65229"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='sdfsffssfsfsby Dasari Srinivassdfsdfsfsfsfsfsfsfs0Comments 0']",
+    "time": "2026-02-20T11:44:58.689Z",
+    "value": {
+      "clientX": 131.98828125,
+      "clientY": 245.29296875,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='sdfsffssfsfsby Dasari Srinivassdfsdfsfsfsfsfsfsfs0Comments 0']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='root']/div[1]/div/div/div[2]/div/div/div"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div[2]/div/div/div"
+      }
+    ],
+    "element": {
+      "tagName": "DIV",
+      "textContent": "sdfsffssfsfsby Dasari Srinivassdfsdfsfsfsfsfsfsfs0Comments 0",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "dd4182da-45b1-4833-ba5c-a12d7ddff763"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/open-stories/1",
+    "time": "2026-02-20T11:44:58.738Z",
+    "value": "http://localhost:3000/open-stories/1",
+    "id": "5b80f5fc-fe33-4196-8708-bc5979cdc34a"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Back to Open stories']",
+    "time": "2026-02-20T11:45:23.850Z",
+    "value": {
+      "clientX": 104.296875,
+      "clientY": 115.48046875,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Back to Open stories']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='root']/div[1]/div/div/button"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/button"
+      }
+    ],
+    "element": {
+      "tagName": "BUTTON",
+      "textContent": "Back to Open stories",
+      "id": "",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "button",
+      "disabled": false,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "95e185e8-c908-4ecf-8d74-e0431111706f"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/open-stories",
+    "time": "2026-02-20T11:45:23.915Z",
+    "value": "http://localhost:3000/open-stories",
+    "id": "55e148cb-4308-4f82-97ee-e0e9924c9ca3"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Authors']",
+    "time": "2026-02-20T11:45:25.150Z",
+    "value": {
+      "clientX": 818.96875,
+      "clientY": 36.27734375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Authors']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='tab-authors']/div"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/header/div/div[3]/div/div/button[3]/div"
+      }
+    ],
+    "element": {
+      "tagName": "DIV",
+      "textContent": "Authors",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "c3b1d2cb-d67b-4f21-8cf3-92cd2dec463d"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/authors",
+    "time": "2026-02-20T11:45:25.201Z",
+    "value": "http://localhost:3000/authors",
+    "id": "5c496905-9080-4d56-82f7-88cb69f126ed"
+  },
+  {
+    "type": "click",
+    "target": "//*[@id=':r45:']",
+    "time": "2026-02-20T11:45:28.003Z",
+    "value": {
+      "clientX": 240.59375,
+      "clientY": 116.5546875,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id=':r45:']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/form/div/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": ":r45:",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "text",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "Search by name or username...",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "2c636c08-8b3d-42f8-9259-620f68897a50"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='All Stories']",
+    "time": "2026-02-20T11:45:29.087Z",
+    "value": {
+      "clientX": 545.67578125,
+      "clientY": 34.84765625,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='All Stories']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='tab-all-stories']/div"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/header/div/div[3]/div/div/button/div"
+      }
+    ],
+    "element": {
+      "tagName": "DIV",
+      "textContent": "All Stories",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "be431c60-beeb-400e-9c92-15a7eac28fc2"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/",
+    "time": "2026-02-20T11:45:29.141Z",
+    "value": "http://localhost:3000/",
+    "id": "1bd80937-7c04-4880-8920-6089fa9b048d"
+  },
+  {
+    "type": "click",
+    "target": "//*[@id='header-search']",
+    "time": "2026-02-20T11:45:33.022Z",
+    "value": {
+      "clientX": 228.828125,
+      "clientY": 29.6796875,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='header-search']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/header/div/div[2]/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "header-search",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "text",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "Search stories...",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "892bdc7b-03c3-41cb-9297-51c42e216111"
+  },
+  {
+    "type": "input",
+    "target": "//*[@id='header-search']",
+    "time": "2026-02-20T11:45:34.188Z",
+    "value": "tar",
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='header-search']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/header/div/div[2]/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "header-search",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "text",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "Search stories...",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "7bfb358d-d375-49ba-9f8b-e3c956ccbfd7"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/stories",
+    "time": "2026-02-20T11:45:35.075Z",
+    "value": "http://localhost:3000/stories?q=tara",
+    "id": "5bfd5a20-cd2d-49c0-8f69-9be731a7e26e"
+  },
+  {
+    "type": "keypress",
+    "key": "Enter",
+    "code": "Enter",
+    "target": "//*[@id='header-search']",
+    "time": "2026-02-20T11:45:35.077Z",
+    "value": {
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='header-search']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/header/div/div[2]/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "header-search",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "tara",
+      "type": "text",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "Search stories...",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "966583dd-f57c-4c70-a96e-15c14a96e6aa"
+  },
+  {
+    "type": "input",
+    "target": "//*[@id='header-search']",
+    "time": "2026-02-20T11:45:35.079Z",
+    "value": "tara",
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='header-search']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/header/div/div[2]/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "header-search",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "tara",
+      "type": "text",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "Search stories...",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "1613b2ba-2711-4f09-a9eb-be705158abbf"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Search: \"tara\"']",
+    "time": "2026-02-20T11:45:39.962Z",
+    "value": {
+      "clientX": 171.40625,
+      "clientY": 112.5703125,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Search: \"tara\"']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='root']/div[1]/div/div/div[1]/h4"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/h4"
+      }
+    ],
+    "element": {
+      "tagName": "H4",
+      "textContent": "Search: \"tara\"",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "e8baba21-b0ff-4ee9-947a-800d198a273c"
+  },
+  {
+    "type": "click",
+    "target": "//*[local-name()='svg'][@data-testid='AutoStoriesIcon']",
+    "time": "2026-02-20T11:45:43.363Z",
+    "value": {
+      "clientX": 39.03515625,
+      "clientY": 35.5703125,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[local-name()='svg'][@data-testid='AutoStoriesIcon']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='header-logo']/*[local-name()='svg']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/header/div/div/*[local-name()='svg']/*[local-name()='path']"
+      }
+    ],
+    "element": {
+      "tagName": "svg",
+      "textContent": null,
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "href": null,
+      "src": null
+    },
+    "id": "75908b90-9f4a-486c-a351-e1aebe0e81f0"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/",
+    "time": "2026-02-20T11:45:43.448Z",
+    "value": "http://localhost:3000/",
+    "id": "8b1c4e1e-dd93-4858-8809-db52091ae1f6"
+  }
+]

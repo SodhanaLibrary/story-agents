@@ -1,0 +1,38 @@
+[
+  {
+    "id": "de97a153-c893-477f-85d1-94d85d60289e",
+    "name": "Super-Admin",
+    "type": "folder",
+    "parentId": null
+  },
+  {
+    "id": "19eb4b65-7bea-44ff-9b85-955856574a84",
+    "name": "Admin",
+    "type": "folder",
+    "parentId": null
+  },
+  {
+    "id": "c2b93b54-00e8-49e5-b003-28d8257121c5",
+    "name": "Premium-Users",
+    "type": "folder",
+    "parentId": null
+  },
+  {
+    "id": "f7492b6a-8b49-4562-b55a-731b4a462618",
+    "name": "Users",
+    "type": "folder",
+    "parentId": null
+  },
+  {
+    "id": "f0566876-8728-4648-8c48-6113a9884a64",
+    "name": "Public",
+    "type": "folder",
+    "parentId": null
+  },
+  {
+    "id": "73edff83-11f3-4d15-93c7-ba40bae04103",
+    "name": "Read stories",
+    "type": "testcase",
+    "parentId": "f0566876-8728-4648-8c48-6113a9884a64"
+  }
+]

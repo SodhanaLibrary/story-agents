@@ -1,0 +1,40 @@
+{
+  "url": "/api/stories?q=tara",
+  "time": "Fri Feb 20 2026 17:15:35 GMT+0530 (India Standard Time)",
+  "method": "GET",
+  "request": {
+    "headers": {
+      "accept": "*/*",
+      "referer": "http://localhost:3000/stories?q=tara",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Chromium\";v=\"139\", \"Not;A=Brand\";v=\"99\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    },
+    "queryString": [
+      {
+        "name": "q",
+        "value": "tara"
+      }
+    ],
+    "postData": null
+  },
+  "response": {
+    "file": false,
+    "status": 200,
+    "headers": {
+      "vary": "Origin",
+      "x-powered-by": "Express",
+      "access-control-allow-origin": "*",
+      "content-type": "application/json; charset=utf-8",
+      "content-length": "415",
+      "etag": "W/\"19f-I572j6yxzuqmiySpLoRa8P4+k4c\"",
+      "date": "Fri, 20 Feb 2026 11:45:35 GMT",
+      "connection": "close"
+    },
+    "content": "{\"stories\":[{\"id\":14,\"filename\":\"story_14\",\"title\":\"Tara and the Lost Carrot\",\"summary\":\"Join Tara on her adventure to help a sad bunny find its lost carrot in the garden.\",\"genre\":null,\"characterCount\":2,\"pageCount\":4,\"coverUrl\":\"/storage/pages/Tara_and the Lost Carrot_cover.png\",\"artStyle\":null,\"createdAt\":\"2025-12-28T12:03:50.000Z\",\"updatedAt\":\"2025-12-28T12:03:50.000Z\",\"isPublic\":1,\"userId\":null,\"tags\":[]}]}"
+  },
+  "id": "8187aa03-edeb-4574-aca8-c3b2bc720073",
+  "served": false,
+  "ignoreParams": []
+}

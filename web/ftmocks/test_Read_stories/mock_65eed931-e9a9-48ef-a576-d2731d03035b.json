@@ -1,0 +1,35 @@
+{
+  "url": "/api/stories/14/tags",
+  "time": "Fri Feb 20 2026 17:14:46 GMT+0530 (India Standard Time)",
+  "method": "GET",
+  "request": {
+    "headers": {
+      "accept": "*/*",
+      "referer": "http://localhost:3000/story/14",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Chromium\";v=\"139\", \"Not;A=Brand\";v=\"99\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    },
+    "queryString": [],
+    "postData": null
+  },
+  "response": {
+    "file": false,
+    "status": 200,
+    "headers": {
+      "vary": "Origin",
+      "x-powered-by": "Express",
+      "access-control-allow-origin": "*",
+      "content-type": "application/json; charset=utf-8",
+      "content-length": "11",
+      "etag": "W/\"b-hsI/cCKfmGSM41S6uHezTmNWBBQ\"",
+      "date": "Fri, 20 Feb 2026 11:44:46 GMT",
+      "connection": "close"
+    },
+    "content": "{\"tags\":[]}"
+  },
+  "id": "65eed931-e9a9-48ef-a576-d2731d03035b",
+  "served": false,
+  "ignoreParams": []
+}

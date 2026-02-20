@@ -15,6 +15,12 @@ import {
   Alert,
   Avatar,
   LinearProgress,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from "@mui/material";
 import {
   MenuBook,
@@ -133,15 +139,18 @@ function StoriesPage() {
 
   return (
     <Box className="fade-in">
-      {/* Page Title */}
-      {searchQuery && (
-        <Typography
-          variant="h4"
-          sx={{ mb: 3, fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}
-        >
-          {`Search: "${searchQuery}"`}
-        </Typography>
-      )}
+      {/* Page Title + Submit story */}
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 2, mb: 3 }}>
+        {searchQuery ? (
+          <Typography variant="h4" sx={{ fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}>
+            {`Search: "${searchQuery}"`}
+          </Typography>
+        ) : (
+          <Typography variant="h4" sx={{ fontFamily: '"Crimson Pro", serif', fontWeight: 700 }}>
+            Stories
+          </Typography>
+        )}
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
@@ -204,6 +213,7 @@ function StoriesPage() {
           ))}
         </Grid>
       )}
+
     </Box>
   );
 }
@@ -221,6 +231,7 @@ function StoryCard({
 }) {
   return (
     <Card
+      id={`card-story-${story.id}`}
       sx={{
         height: "100%",
         display: "flex",
@@ -300,6 +311,11 @@ function StoryCard({
           >
             {story.title}
           </Typography>
+          {story.genre && (
+            <Typography variant="caption" color="primary" sx={{ display: "block", mb: 0.5 }}>
+              {story.genre}
+            </Typography>
+          )}
 
           <Tooltip
             title={
@@ -349,6 +365,7 @@ function StoryCard({
         {/* Author info */}
         {story.author && (
           <Stack
+            id={`link-author-${story.id}`}
             direction="row"
             spacing={1}
             alignItems="center"

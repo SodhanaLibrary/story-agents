@@ -10,9 +10,27 @@ export const {
   findOrCreateUser,
   getUserById,
   getAllUsers,
+  searchUsersForMessaging,
+  listAuthors,
   getUserStats,
   updateUserRole,
+  updateUserPlan,
   hasRole,
+  createOrganization,
+  getOrganizationById,
+  getOrganizationsByUserId,
+  getOrgMembers,
+  getOrganizationMember,
+  isOrgOwnerOrAdmin,
+  addOrgMemberByEmail,
+  removeOrgMember,
+  updateOrgMemberRole,
+  userBelongsToAnyOrg,
+  leaveOrganization,
+  createOpenStorySubmission,
+  getOpenStorySubmissionById,
+  getOpenStorySubmissions,
+  toggleOpenStoryVote,
   createStory,
   updateStory,
   getStoryById,
@@ -51,6 +69,14 @@ export const {
   getUserProfile,
   updateUserProfile,
   getUserStoriesByUserId,
+  // Volumes
+  createVolume,
+  getVolumesByUserId,
+  getVolumeById,
+  updateVolume,
+  deleteVolume,
+  setStoryVolume,
+  getStoriesByVolumeId,
   // Followers
   followUser,
   unfollowUser,
@@ -79,6 +105,7 @@ export async function ensureStorageDirectories() {
   if (!isS3Enabled()) {
     await fs.mkdir(config.storage.avatarsPath, { recursive: true });
     await fs.mkdir(config.storage.pagesPath, { recursive: true });
+    await fs.mkdir(config.storage.openStoriesPath, { recursive: true });
   }
 }
 
@@ -88,9 +115,9 @@ export async function ensureStorageDirectories() {
  * @returns {string} - Storage directory path
  */
 export function getStoragePath(type) {
-  return type === "avatar"
-    ? config.storage.avatarsPath
-    : config.storage.pagesPath;
+  if (type === "avatar") return config.storage.avatarsPath;
+  if (type === "open_story") return config.storage.openStoriesPath;
+  return config.storage.pagesPath;
 }
 
 /**
@@ -99,9 +126,9 @@ export function getStoragePath(type) {
  * @returns {string} - S3 key prefix
  */
 function getS3Prefix(type) {
-  return type === "avatar"
-    ? config.storage.s3.avatarsPrefix
-    : config.storage.s3.pagesPrefix;
+  if (type === "avatar") return config.storage.s3.avatarsPrefix;
+  if (type === "open_story") return config.storage.s3.openStoriesPrefix;
+  return config.storage.s3.pagesPrefix;
 }
 
 /**
@@ -128,8 +155,7 @@ export async function saveImage(base64Data, type, name) {
 
   // Otherwise use local storage
   await ensureStorageDirectories();
-  const storagePath =
-    type === "avatar" ? config.storage.avatarsPath : config.storage.pagesPath;
+  const storagePath = getStoragePath(type);
   const filePath = path.join(storagePath, filename);
 
   await fs.writeFile(filePath, buffer);
@@ -166,8 +192,7 @@ export async function saveImageFromUrl(url, type, name) {
 
   // Otherwise use local storage
   await ensureStorageDirectories();
-  const storagePath =
-    type === "avatar" ? config.storage.avatarsPath : config.storage.pagesPath;
+  const storagePath = getStoragePath(type);
   const filePath = path.join(storagePath, filename);
 
   await fs.writeFile(filePath, buffer);

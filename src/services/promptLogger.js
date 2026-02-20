@@ -6,11 +6,12 @@ import { createLogger } from "../utils/logger.js";
 
 const logger = createLogger("PromptLogger");
 
-// Context for associating prompts with jobs/stories
+// Context for associating prompts with jobs/stories (usageType: 'free' | 'included' for billing)
 let currentContext = {
   jobId: null,
   storyId: null,
   userId: null,
+  usageType: null,
 };
 
 /**
@@ -25,7 +26,7 @@ export function setContext(context) {
  * Clears the current context
  */
 export function clearContext() {
-  currentContext = { jobId: null, storyId: null, userId: null };
+  currentContext = { jobId: null, storyId: null, userId: null, usageType: null };
 }
 
 /**
@@ -41,6 +42,20 @@ export function getContext() {
  */
 function toNull(value) {
   return value === undefined ? null : value;
+}
+
+/** Approximate cost per 1M tokens for billing display (USD) */
+const COST_PER_1M_TOKENS = 2.5;
+
+/**
+ * Estimate cost from token count for billing display
+ * @param {number} tokensTotal
+ * @param {string} usageType - 'free' | 'included'
+ * @returns {number|null}
+ */
+function estimateCost(tokensTotal, usageType) {
+  if (usageType === "free" || !tokensTotal) return 0;
+  return Math.round((tokensTotal / 1_000_000) * COST_PER_1M_TOKENS * 100) / 100;
 }
 
 /**
@@ -63,6 +78,8 @@ export async function logPrompt(logData) {
     status = "success",
     errorMessage,
     metadata,
+    usageType = "free",
+    cost,
     // Allow direct passing of context values (overrides global context)
     jobId,
     storyId,
@@ -75,13 +92,24 @@ export async function logPrompt(logData) {
     storyId !== undefined ? storyId : currentContext.storyId;
   const effectiveUserId = userId !== undefined ? userId : currentContext.userId;
 
+  const effectiveUsageType =
+    usageType === "included"
+      ? "included"
+      : currentContext.usageType === "included"
+        ? "included"
+        : "free";
+  const effectiveCost =
+    cost !== undefined && cost !== null
+      ? cost
+      : estimateCost(tokensTotal || 0, effectiveUsageType);
+
   try {
     const result = await query(
       `INSERT INTO prompt_logs 
        (provider, model, request_type, prompt_messages, prompt_text, response_text,
         tokens_input, tokens_output, tokens_total, duration_ms, status, error_message,
-        job_id, story_id, user_id, metadata)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        job_id, story_id, user_id, metadata, usage_type, cost)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         provider,
         model,
@@ -99,6 +127,8 @@ export async function logPrompt(logData) {
         toNull(effectiveStoryId),
         toNull(effectiveUserId),
         metadata ? JSON.stringify(metadata) : null,
+        effectiveUsageType,
+        effectiveCost,
       ],
     );
 
@@ -254,6 +284,140 @@ export async function getPromptStats(filters = {}) {
   return stats;
 }
 
+/**
+ * Get billing config (included limit, cycle day)
+ * @returns {Promise<{ includedLimitUsd: number, cycleDayOfMonth: number }>}
+ */
+export async function getBillingConfig() {
+  const rows = await query(
+    "SELECT included_limit_usd, cycle_day_of_month FROM billing_config LIMIT 1"
+  );
+  if (!rows.length) {
+    return { includedLimitUsd: 20, cycleDayOfMonth: 15 };
+  }
+  return {
+    includedLimitUsd: parseFloat(rows[0].included_limit_usd) || 20,
+    cycleDayOfMonth: parseInt(rows[0].cycle_day_of_month, 10) || 15,
+  };
+}
+
+/**
+ * Get start/end of current billing cycle (UTC date strings YYYY-MM-DD)
+ * @param {number} cycleDayOfMonth - day of month (1-28)
+ * @returns {{ start: string, end: string, resetDate: string }}
+ */
+export function getCurrentCycleBounds(cycleDayOfMonth = 15) {
+  const now = new Date();
+  const day = now.getUTCDate();
+  let start = new Date(now);
+  let end = new Date(now);
+
+  if (day >= cycleDayOfMonth) {
+    start.setUTCDate(cycleDayOfMonth);
+    start.setUTCHours(0, 0, 0, 0);
+    end.setUTCMonth(end.getUTCMonth() + 1);
+    end.setUTCDate(cycleDayOfMonth);
+    end.setUTCHours(0, 0, 0, 0);
+    end.setTime(end.getTime() - 1);
+  } else {
+    start.setUTCMonth(start.getUTCMonth() - 1);
+    start.setUTCDate(cycleDayOfMonth);
+    start.setUTCHours(0, 0, 0, 0);
+    end.setUTCDate(cycleDayOfMonth);
+    end.setUTCHours(0, 0, 0, 0);
+    end.setTime(end.getTime() - 1);
+  }
+
+  const resetDate = new Date(end);
+  resetDate.setTime(resetDate.getTime() + 1);
+  resetDate.setUTCDate(cycleDayOfMonth);
+
+  const toYmd = (d) => d.toISOString().slice(0, 10);
+  return {
+    start: toYmd(start),
+    end: toYmd(end),
+    resetDate: toYmd(resetDate),
+  };
+}
+
+/**
+ * Get usage entries for billing dashboard (with user email)
+ * @param {object} opts - { startDate, endDate, userId (optional; null = all for team) }
+ * @returns {Promise<Array<{ date: string, userEmail: string, type: string, model: string, tokens: number, cost: number }>>}
+ */
+export async function getUsageForBilling(opts = {}) {
+  const { startDate, endDate, userId } = opts;
+  let sql = `
+    SELECT pl.created_at, pl.usage_type, pl.model, pl.tokens_total, pl.cost, u.email
+    FROM prompt_logs pl
+    LEFT JOIN users u ON pl.user_id = u.id
+    WHERE pl.status = 'success'
+  `;
+  const params = [];
+  if (startDate) {
+    sql += " AND pl.created_at >= ?";
+    params.push(startDate + " 00:00:00");
+  }
+  if (endDate) {
+    sql += " AND pl.created_at <= ?";
+    params.push(endDate + " 23:59:59");
+  }
+  if (userId != null && !isNaN(parseInt(userId, 10))) {
+    sql += " AND pl.user_id = ?";
+    params.push(parseInt(userId, 10));
+  }
+  sql += " ORDER BY pl.created_at DESC LIMIT 5000";
+
+  const rows = await query(sql, params);
+  return rows.map((r) => ({
+    date: r.created_at,
+    userEmail: r.email || "—",
+    type: r.usage_type === "included" ? "Included" : "Free",
+    model: r.model || "—",
+    tokens: r.tokens_total || 0,
+    cost: parseFloat(r.cost) || 0,
+  }));
+}
+
+/**
+ * Get summed included usage (USD) for a user in a date range
+ * @param {number} userId
+ * @param {string} startDate - YYYY-MM-DD
+ * @param {string} endDate - YYYY-MM-DD
+ * @returns {Promise<number>}
+ */
+export async function getIncludedUsageSum(userId, startDate, endDate) {
+  let sql = `
+    SELECT COALESCE(SUM(cost), 0) as total
+    FROM prompt_logs
+    WHERE user_id = ? AND usage_type = 'included' AND status = 'success'
+  `;
+  const params = [userId];
+  if (startDate) {
+    sql += " AND created_at >= ?";
+    params.push(startDate + " 00:00:00");
+  }
+  if (endDate) {
+    sql += " AND created_at <= ?";
+    params.push(endDate + " 23:59:59");
+  }
+  const rows = await query(sql, params);
+  return parseFloat(rows[0]?.total) || 0;
+}
+
+/**
+ * Total tokens used by a user (lifetime). Used for free plan limit (2M once).
+ * @param {number} userId
+ * @returns {Promise<number>}
+ */
+export async function getTotalTokensUsedByUser(userId) {
+  const rows = await query(
+    "SELECT COALESCE(SUM(tokens_total), 0) as total FROM prompt_logs WHERE user_id = ? AND status = 'success'",
+    [userId]
+  );
+  return parseInt(rows[0]?.total, 10) || 0;
+}
+
 export default {
   setContext,
   clearContext,
@@ -261,4 +425,9 @@ export default {
   logPrompt,
   getPromptLogs,
   getPromptStats,
+  getBillingConfig,
+  getCurrentCycleBounds,
+  getUsageForBilling,
+  getIncludedUsageSum,
+  getTotalTokensUsedByUser,
 };

@@ -38,10 +38,14 @@ import {
   Save,
   PhotoLibrary,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
+  const navigate = useNavigate();
   const { userId, isAuthenticated } = useAuth();
+  const [upgradeAlert, setUpgradeAlert] = useState(false);
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState({});
@@ -244,20 +248,20 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
     }
 
     try {
-      const response = await fetch("/api/generate-avatar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jobId,
-          characterName: charName,
-          customDescription: useDialog
-            ? customDescription
-            : character.avatarPrompt,
-          referenceImageBase64: useDialog ? referenceImage : null,
-        }),
+      const response = await api.post("/api/generate-avatar", {
+        jobId,
+        characterName: charName,
+        customDescription: useDialog
+          ? customDescription
+          : character.avatarPrompt,
+        referenceImageBase64: useDialog ? referenceImage : null,
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
+      if (response.status === 402 && data.upgradeRequired) {
+        setUpgradeAlert(true);
+        return;
+      }
       if (data.success) {
         // Update local state with new character data
         setJob((prev) => ({
@@ -378,6 +382,20 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
 
   return (
     <Box className="fade-in">
+      {upgradeAlert && (
+        <Alert
+          severity="warning"
+          sx={{ mb: 2 }}
+          onClose={() => setUpgradeAlert(false)}
+          action={
+            <Button id="btn-avatar-upgrade" color="inherit" size="small" onClick={() => navigate("/pricing")}>
+              Upgrade to Pro
+            </Button>
+          }
+        >
+          Free plan limit reached (2M tokens). Upgrade to Pro for unlimited usage.
+        </Alert>
+      )}
       <Box sx={{ textAlign: "center", mb: 4 }}>
         <Typography variant="h2" sx={{ mb: 2, color: "primary.main" }}>
           Create Character Avatars
@@ -434,6 +452,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
         {job.characters?.map((character, index) => (
           <Grid item xs={12} sm={6} md={4} key={index}>
             <Card
+              id={`card-avatar-${index}`}
               sx={{
                 height: "100%",
                 border: approvedAvatars[character.name]
@@ -798,6 +817,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
               Reference Image (Optional)
             </Typography>
             <input
+              id="input-avatar-reference"
               ref={fileInputRef}
               type="file"
               accept="image/*"
@@ -970,6 +990,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                     across stories.
                   </Typography>
                   <Button
+                    id="btn-library-create-new"
                     variant="contained"
                     startIcon={<AutoAwesome />}
                     onClick={() => setDialogTab(1)}
@@ -983,6 +1004,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                   {savedAvatars.map((avatar) => (
                     <Grid item xs={6} sm={4} md={3} key={avatar.id}>
                       <Card
+                        id={`card-library-avatar-${avatar.id}`}
                         onClick={() => handleUseExistingAvatar(avatar)}
                         sx={{
                           cursor: "pointer",
@@ -1054,6 +1076,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                   Reference Image (Optional)
                 </Typography>
                 <input
+                  id="input-library-reference"
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
@@ -1073,6 +1096,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                       }}
                     />
                     <IconButton
+                      id="btn-library-clear-reference"
                       size="small"
                       onClick={handleClearImage}
                       sx={{
@@ -1088,6 +1112,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                   </Box>
                 ) : (
                   <Button
+                    id="btn-library-upload-reference"
                     variant="outlined"
                     startIcon={<CloudUpload />}
                     onClick={() => fileInputRef.current?.click()}
@@ -1111,6 +1136,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
                   Character Description
                 </Typography>
                 <TextField
+                  id="input-library-description"
                   fullWidth
                   multiline
                   rows={4}
@@ -1124,6 +1150,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 0 }}>
           <Button
+            id="btn-library-dialog-cancel"
             onClick={() => {
               setLibraryDialogOpen(false);
               setSelectedCharacterForLibrary(null);
@@ -1133,6 +1160,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
           </Button>
           {dialogTab === 1 && (
             <Button
+              id="btn-library-dialog-generate"
               variant="contained"
               onClick={() => {
                 setLibraryDialogOpen(false);

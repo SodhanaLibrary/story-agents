@@ -25,6 +25,8 @@ import {
   Add,
   Search,
   Close,
+  Description,
+  Person,
 } from "@mui/icons-material";
 import GoogleLoginButton from "./GoogleLoginButton";
 import { useAuth } from "../context/AuthContext";
@@ -57,10 +59,12 @@ function Header() {
   const getTabValue = () => {
     const path = location.pathname;
     if (path === "/" || path.startsWith("/stories")) return 0;
-    if (path === "/favorites") return 1;
-    if (path === "/drafts") return 2;
-    if (path === "/create") return 3;
-    return false; // No tab selected for profile, etc.
+    if (path.startsWith("/open-stories")) return 1;
+    if (path === "/authors") return 2;
+    if (path === "/favorites") return 3;
+    if (path === "/drafts") return 4;
+    if (path === "/create") return 5;
+    return false; // No tab selected for profile, messages, etc.
   };
 
   const tabValue = getTabValue();
@@ -71,12 +75,18 @@ function Header() {
         navigate("/");
         break;
       case 1:
-        navigate("/favorites");
+        navigate("/open-stories");
         break;
       case 2:
-        navigate("/drafts");
+        navigate("/authors");
         break;
       case 3:
+        navigate("/favorites");
+        break;
+      case 4:
+        navigate("/drafts");
+        break;
+      case 5:
         navigate("/create");
         break;
       default:
@@ -157,6 +167,24 @@ function Header() {
           >
             <MenuBook fontSize="small" />
             All Stories
+          </MenuItem>
+          <MenuItem
+            id="mobile-menu-open-stories"
+            onClick={() => handleMobileNavigation("/open-stories")}
+            selected={location.pathname.startsWith("/open-stories")}
+            sx={{ gap: 1.5 }}
+          >
+            <Description fontSize="small" />
+            Open Stories
+          </MenuItem>
+          <MenuItem
+            id="mobile-menu-authors"
+            onClick={() => handleMobileNavigation("/authors")}
+            selected={location.pathname === "/authors"}
+            sx={{ gap: 1.5 }}
+          >
+            <Person fontSize="small" />
+            Authors
           </MenuItem>
           {isAuthenticated && (
             <MenuItem
@@ -262,6 +290,18 @@ function Header() {
               icon={<MenuBook sx={{ fontSize: 18 }} />}
               iconPosition="start"
               label={<Box sx={{ display: { xs: "none", md: "block" } }}>All Stories</Box>}
+            />
+            <Tab
+              id="tab-open-stories"
+              icon={<Description sx={{ fontSize: 18 }} />}
+              iconPosition="start"
+              label={<Box sx={{ display: { xs: "none", md: "block" } }}>Open Stories</Box>}
+            />
+            <Tab
+              id="tab-authors"
+              icon={<Person sx={{ fontSize: 18 }} />}
+              iconPosition="start"
+              label={<Box sx={{ display: { xs: "none", md: "block" } }}>Authors</Box>}
             />
             {isAuthenticated && (
               <Tab

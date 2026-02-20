@@ -248,6 +248,7 @@ function StoryLibrary({
 
     return (
       <Card
+        id={`card-library-story-${story.id || story.filename}`}
         sx={{
           height: "100%",
           display: "flex",
@@ -327,6 +328,11 @@ function StoryLibrary({
             >
               {story.title}
             </Typography>
+            {story.genre && (
+              <Typography variant="caption" color="primary" sx={{ display: "block", mb: 0.5 }}>
+                {story.genre}
+              </Typography>
+            )}
 
             <Tooltip
               title={
@@ -338,6 +344,7 @@ function StoryLibrary({
               }
             >
               <IconButton
+                id={`btn-library-favorite-${story.id || story.filename}`}
                 size="small"
                 onClick={(e) => handleFavoriteClick(story, e)}
                 sx={{
@@ -375,6 +382,7 @@ function StoryLibrary({
           {/* Author info */}
           {story.author && (
             <Stack
+              id={`link-library-author-${story.id || story.filename}`}
               direction="row"
               spacing={1}
               alignItems="center"
@@ -479,6 +487,7 @@ function StoryLibrary({
             <Stack direction="row" spacing={0.5}>
               <Tooltip title="Read Story">
                 <IconButton
+                  id={`btn-library-view-${story.id || story.filename}`}
                   size="small"
                   sx={{ color: "primary.main" }}
                   onClick={(e) => {
@@ -493,6 +502,7 @@ function StoryLibrary({
               {showDelete && (
                 <Tooltip title="Delete">
                   <IconButton
+                    id={`btn-library-delete-${story.id || story.filename}`}
                     size="small"
                     sx={{ color: "error.main" }}
                     onClick={(e) => {
@@ -518,6 +528,7 @@ function StoryLibrary({
   // Draft card component
   const DraftCard = ({ draft }) => (
     <Card
+      id={`card-library-draft-${draft.jobId}`}
       sx={{
         display: "flex",
         bgcolor: "rgba(30, 30, 50, 0.6)",

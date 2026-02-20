@@ -42,6 +42,10 @@ export const config = {
       process.env.STORAGE_PATH || path.join(__dirname, "..", "storage"),
       "pages"
     ),
+    openStoriesPath: path.join(
+      process.env.STORAGE_PATH || path.join(__dirname, "..", "storage"),
+      "open-stories"
+    ),
     // S3 configuration
     s3: {
       bucket: process.env.S3_BUCKET || "",
@@ -53,6 +57,7 @@ export const config = {
       // S3 key prefixes
       avatarsPrefix: process.env.S3_AVATARS_PREFIX || "avatars",
       pagesPrefix: process.env.S3_PAGES_PREFIX || "pages",
+      openStoriesPrefix: process.env.S3_OPEN_STORIES_PREFIX || "open-stories",
     },
   },
   image: {
@@ -62,6 +67,16 @@ export const config = {
   },
   logging: {
     level: process.env.LOG_LEVEL || "info", // debug, info, warn, error, silent
+  },
+  // Plans: free = 2M tokens once; pro = $19 (Razorpay)
+  plans: {
+    freeTokenLimit: parseInt(process.env.PLAN_FREE_TOKEN_LIMIT || "2000000", 10),
+    proPriceCents: parseInt(process.env.RAZORPAY_PRO_AMOUNT_CENTS || "1900", 10), // $19 = 1900 cents
+    proCurrency: process.env.RAZORPAY_CURRENCY || "USD",
+  },
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID || "",
+    keySecret: process.env.RAZORPAY_KEY_SECRET || "",
   },
 };
 

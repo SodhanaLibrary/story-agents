@@ -2,12 +2,27 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Box, Container, CircularProgress, Typography } from "@mui/material";
 import Header from "./components/Header";
 import StoriesPage from "./pages/StoriesPage";
+import OpenStoriesPage from "./pages/OpenStoriesPage";
+import OpenStoryDetailPage from "./pages/OpenStoryDetailPage";
+import AuthorsPage from "./pages/AuthorsPage";
+import MessagesPage from "./pages/MessagesPage";
 import FavoritesPage from "./pages/FavoritesPage";
 import DraftsPage from "./pages/DraftsPage";
 import CreateStoryPage from "./pages/CreateStoryPage";
 import StoryViewPage from "./pages/StoryViewPage";
 import UserProfilePage from "./pages/UserProfilePage";
+import AccountPage from "./pages/AccountPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import VolumeDetailPage from "./pages/VolumeDetailPage";
 import PromptLogsPage from "./pages/PromptLogsPage";
+import UsageDashboardPage from "./pages/UsageDashboardPage";
+import PricingPage from "./pages/PricingPage";
+import TeamsPage from "./pages/TeamsPage";
+import TeamDetailPage from "./pages/TeamDetailPage";
 import AppLogsPage from "./pages/AppLogsPage";
 import S3ResourcesPage from "./pages/S3ResourcesPage";
 import UserManagementPage from "./pages/UserManagementPage";
@@ -15,7 +30,7 @@ import BatchRequestsPage from "./pages/BatchRequestsPage";
 import { useAuth } from "./context/AuthContext";
 
 function AppContent() {
-  const { loading: authLoading, isAuthenticated } = useAuth();
+  const { loading: authLoading, isAuthenticated, isAdmin } = useAuth();
 
   if (authLoading) {
     return (
@@ -43,10 +58,25 @@ function AppContent() {
           {/* Public routes */}
           <Route path="/" element={<StoriesPage />} />
           <Route path="/stories" element={<StoriesPage />} />
+          <Route path="/open-stories" element={<OpenStoriesPage />} />
+          <Route path="/open-stories/:id" element={<OpenStoryDetailPage />} />
+          <Route path="/authors" element={<AuthorsPage />} />
           <Route path="/story/:storyId" element={<StoryViewPage />} />
           <Route path="/profile/:userId" element={<UserProfilePage />} />
+          <Route path="/volume/:volumeId" element={<VolumeDetailPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Protected routes */}
+          <Route
+            path="/messages"
+            element={
+              isAuthenticated ? <MessagesPage /> : <Navigate to="/" replace />
+            }
+          />
           <Route
             path="/favorites"
             element={
@@ -86,27 +116,53 @@ function AppContent() {
             }
           />
           <Route
+            path="/usage-dashboard"
+            element={
+              isAuthenticated ? <UsageDashboardPage /> : <Navigate to="/" replace />
+            }
+          />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route
+            path="/teams"
+            element={
+              isAuthenticated ? <TeamsPage /> : <Navigate to="/" replace />
+            }
+          />
+          <Route
+            path="/teams/:orgId"
+            element={
+              isAuthenticated ? <TeamDetailPage /> : <Navigate to="/" replace />
+            }
+          />
+          {/* Admin-only routes */}
+          <Route
             path="/server-logs"
             element={
-              isAuthenticated ? <AppLogsPage /> : <Navigate to="/" replace />
+              isAuthenticated && isAdmin ? <AppLogsPage /> : <Navigate to="/" replace />
             }
           />
           <Route
             path="/s3-resources"
             element={
-              isAuthenticated ? <S3ResourcesPage /> : <Navigate to="/" replace />
+              isAuthenticated && isAdmin ? <S3ResourcesPage /> : <Navigate to="/" replace />
             }
           />
           <Route
             path="/user-management"
             element={
-              isAuthenticated ? <UserManagementPage /> : <Navigate to="/" replace />
+              isAuthenticated && isAdmin ? <UserManagementPage /> : <Navigate to="/" replace />
             }
           />
           <Route
             path="/batch-requests"
             element={
               isAuthenticated ? <BatchRequestsPage /> : <Navigate to="/" replace />
+            }
+          />
+          <Route
+            path="/account"
+            element={
+              isAuthenticated ? <AccountPage /> : <Navigate to="/login" replace />
             }
           />
 

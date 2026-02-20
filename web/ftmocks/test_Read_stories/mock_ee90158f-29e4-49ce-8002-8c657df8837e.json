@@ -1,0 +1,35 @@
+{
+  "url": "/api/stories",
+  "time": "Fri Feb 20 2026 17:14:20 GMT+0530 (India Standard Time)",
+  "method": "GET",
+  "request": {
+    "headers": {
+      "accept": "*/*",
+      "referer": "http://localhost:3000/",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
+      "sec-ch-ua": "\"Chromium\";v=\"139\", \"Not;A=Brand\";v=\"99\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\""
+    },
+    "queryString": [],
+    "postData": null
+  },
+  "response": {
+    "file": false,
+    "status": 200,
+    "headers": {
+      "vary": "Origin",
+      "x-powered-by": "Express",
+      "access-control-allow-origin": "*",
+      "content-type": "application/json; charset=utf-8",
+      "content-length": "4699",
+      "etag": "W/\"125b-VTeIw+XKMMXCi2P0x9YVaGP+++w\"",
+      "date": "Fri, 20 Feb 2026 11:44:20 GMT",
+      "connection": "close"
+    },
+    "content": "{\"stories\":[{\"id\":15,\"filename\":\"story_15\",\"title\":\"Maple and Oliver's Magical Adventure\",\"summary\":\"Join Maple, a curious little rabbit, and her best friend Oliver, a cheerful bluebird, as they embark on a journey to discover a hidden garden filled with glowing flowers.\",\"genre\":null,\"characterCount\":2,\"pageCount\":4,\"coverUrl\":\"/storage/pages/Maple_and Oliver's Magical Adventure_cover.png\",\"artStyle\":null,\"createdAt\":\"2026-01-05T10:55:58.000Z\",\"updatedAt\":\"2026-01-05T10:55:58.000Z\",\"userId\":null,\"author\":null,\"tags\":[]},{\"id\":14,\"filename\":\"story_14\",\"title\":\"Tara and the Lost Carrot\",\"summary\":\"Join Tara on her adventure to help a sad bunny find its lost carrot in the garden.\",\"genre\":null,\"characterCount\":2,\"pageCount\":4,\"coverUrl\":\"/storage/pages/Tara_and the Lost Carrot_cover.png\",\"artStyle\":null,\"createdAt\":\"2025-12-28T12:03:50.000Z\",\"updatedAt\":\"2025-12-28T12:03:50.000Z\",\"userId\":null,\"author\":null,\"tags\":[]},{\"id\":13,\"filename\":\"story_13\",\"title\":\"Princess Ember and the Lost Dragon\",\"summary\":\"A heartwarming tale of Princess Ember who helps a lost dragon named Sage find his family, leading to a magical adventure under the stars.\",\"genre\":null,\"characterCount\":2,\"pageCount\":4,\"coverUrl\":\"/storage/pages/Princess_Ember and the Lost Dragon_cover.png\",\"artStyle\":null,\"createdAt\":\"2025-12-28T10:31:10.000Z\",\"updatedAt\":\"2025-12-28T10:31:10.000Z\",\"userId\":null,\"author\":null,\"tags\":[]},{\"id\":8,\"filename\":\"story_8\",\"title\":\"The Honest Woodcutter\",\"summary\":\"A tale of honesty and kindness, where a woodcutter loses his axe in a river but remains truthful, leading to a magical reward from a river spirit.\",\"genre\":null,\"characterCount\":2,\"pageCount\":4,\"coverUrl\":\"/storage/pages/The Honest Woodcutter_cover.png\",\"artStyle\":\"illustration\",\"createdAt\":\"2025-12-24T17:18:47.000Z\",\"updatedAt\":\"2025-12-24T17:18:47.000Z\",\"userId\":null,\"author\":null,\"tags\":[]},{\"id\":7,\"filename\":\"story_7\",\"title\":\"The Honest Woodcutter\",\"summary\":\"A humble woodcutter loses his axe in a river and, through his honesty, is rewarded by a mystical river spirit.\",\"genre\":null,\"characterCount\":2,\"pageCount\":4,\"coverUrl\":\"/storage/pages/the_honest_woodcutter_cover_3b180ca4.png\",\"artStyle\":\"illustration\",\"createdAt\":\"2025-12-24T15:29:36.000Z\",\"updatedAt\":\"2025-12-24T15:29:36.000Z\",\"userId\":null,\"author\":null,\"tags\":[]},{\"id\":5,\"filename\":\"story_5\",\"title\":\"Princess Ember and the Gentle Dragon\",\"summary\":\"Princess Ember discovers a small dragon named Sage during a stormy night and helps him find his way home, forging a lifelong friendship.\",\"genre\":null,\"characterCount\":2,\"pageCount\":4,\"coverUrl\":\"/storage/pages/princess_ember_and_the_gentle_dragon_cover_fbeeffcc.png\",\"artStyle\":\"illustration\",\"createdAt\":\"2025-12-22T17:25:09.000Z\",\"updatedAt\":\"2025-12-22T17:25:09.000Z\",\"userId\":null,\"author\":null,\"tags\":[]},{\"id\":4,\"filename\":\"story_4\",\"title\":\"The Wise Sparrow\",\"summary\":\"A clever sparrow finds a new home after a farmer's complaints about her nest on his roof.\",\"genre\":null,\"characterCount\":2,\"pageCount\":4,\"coverUrl\":\"/storage/pages/the_wise_sparrow_cover_fafc9299.png\",\"artStyle\":\"illustration\",\"createdAt\":\"2025-12-22T16:22:08.000Z\",\"updatedAt\":\"2025-12-22T16:22:08.000Z\",\"userId\":null,\"author\":null,\"tags\":[]},{\"id\":3,\"filename\":\"story_3\",\"title\":\"Maple and Oliver's Magical Adventure\",\"summary\":\"Join Maple the curious rabbit and her best friend Oliver the bluebird as they embark on a journey to discover a hidden garden filled with glowing flowers.\",\"genre\":null,\"characterCount\":2,\"pageCount\":4,\"coverUrl\":\"/storage/pages/maple_and_oliver_s_magical_adventure_cover_79d03aa7.png\",\"artStyle\":\"illustration\",\"createdAt\":\"2025-12-22T16:03:55.000Z\",\"updatedAt\":\"2025-12-22T16:03:55.000Z\",\"userId\":null,\"author\":null,\"tags\":[]},{\"id\":2,\"filename\":\"story_2\",\"title\":\"The Sparrow's Quest for More\",\"summary\":\"A sparrow's journey teaches him the value of being content with what he has.\",\"genre\":null,\"characterCount\":4,\"pageCount\":4,\"coverUrl\":\"/storage/pages/the_sparrow_s_quest_for_more_cover_1c28b23a.png\",\"artStyle\":\"illustration\",\"createdAt\":\"2025-12-22T14:31:43.000Z\",\"updatedAt\":\"2025-12-22T14:31:43.000Z\",\"userId\":null,\"author\":null,\"tags\":[]},{\"id\":1,\"filename\":\"story_1\",\"title\":\"Luna's Cosmic Symphony\",\"summary\":\"Join twelve-year-old Luna and her robot companion, Spark, as they embark on an adventure through the cosmos, discovering a world of living crystals that sing and teach her the music of the universe.\",\"genre\":null,\"characterCount\":3,\"pageCount\":4,\"coverUrl\":\"/storage/pages/luna_s_cosmic_symphony_cover_4d63a7db.png\",\"artStyle\":\"anime\",\"createdAt\":\"2025-12-22T04:05:47.000Z\",\"updatedAt\":\"2025-12-22T04:05:47.000Z\",\"userId\":null,\"author\":null,\"tags\":[\"space\"]}]}"
+  },
+  "id": "ee90158f-29e4-49ce-8002-8c657df8837e",
+  "served": false,
+  "ignoreParams": []
+}

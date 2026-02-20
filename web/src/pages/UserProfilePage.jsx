@@ -19,6 +19,10 @@ import {
   DialogContent,
   DialogActions,
   IconButton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import {
   Edit,
@@ -28,8 +32,13 @@ import {
   People,
   Close,
   ArrowBack,
+  Message as MessageIcon,
+  Add,
+  Folder,
+  Delete,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 function UserProfilePage() {
   const { userId } = useParams();
@@ -38,6 +47,7 @@ function UserProfilePage() {
   
   const [profile, setProfile] = useState(null);
   const [stories, setStories] = useState([]);
+  const [volumes, setVolumes] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,28 +56,36 @@ function UserProfilePage() {
   const [tabValue, setTabValue] = useState(0);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({ name: "", username: "", bio: "" });
+  const [volumeDialogOpen, setVolumeDialogOpen] = useState(false);
+  const [volumeEditId, setVolumeEditId] = useState(null);
+  const [volumeForm, setVolumeForm] = useState({ title: "", description: "" });
+  const [volumeSaving, setVolumeSaving] = useState(false);
+  const [storyVolumeAssign, setStoryVolumeAssign] = useState(null);
 
   const isOwnProfile = currentUserId === parseInt(userId);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
     try {
-      const [profileRes, storiesRes, followersRes, followingRes] = await Promise.all([
+      const [profileRes, storiesRes, volumesRes, followersRes, followingRes] = await Promise.all([
         fetch(`/api/users/${userId}/profile`),
         fetch(`/api/users/${userId}/stories?viewerId=${currentUserId || ""}`),
+        fetch(`/api/users/${userId}/volumes`),
         fetch(`/api/users/${userId}/followers`),
         fetch(`/api/users/${userId}/following`),
       ]);
 
-      const [profileData, storiesData, followersData, followingData] = await Promise.all([
+      const [profileData, storiesData, volumesData, followersData, followingData] = await Promise.all([
         profileRes.json(),
         storiesRes.json(),
+        volumesRes.json(),
         followersRes.json(),
         followingRes.json(),
       ]);
 
       setProfile(profileData.profile);
       setStories(storiesData.stories || []);
+      setVolumes(volumesData.volumes || []);
       setFollowers(followersData.followers || []);
       setFollowing(followingData.following || []);
 
@@ -133,6 +151,55 @@ function UserProfilePage() {
       bio: profile?.bio || "",
     });
     setEditDialogOpen(true);
+  };
+
+  const openVolumeDialog = (volume = null) => {
+    setVolumeEditId(volume?.id ?? null);
+    setVolumeForm({ title: volume?.title ?? "", description: volume?.description ?? "" });
+    setVolumeDialogOpen(true);
+  };
+
+  const handleSaveVolume = async () => {
+    if (!volumeForm.title.trim()) return;
+    setVolumeSaving(true);
+    try {
+      if (volumeEditId) {
+        await api.put(`/api/volumes/${volumeEditId}`, volumeForm);
+      } else {
+        await api.post(`/api/users/${userId}/volumes`, volumeForm);
+      }
+      setVolumeDialogOpen(false);
+      const volRes = await fetch(`/api/users/${userId}/volumes`);
+      const volData = await volRes.json();
+      setVolumes(volData.volumes || []);
+    } catch (err) {
+      console.error("Failed to save volume:", err);
+    } finally {
+      setVolumeSaving(false);
+    }
+  };
+
+  const handleDeleteVolume = async (vol) => {
+    if (!window.confirm(`Delete volume "${vol.title}"? Stories will be unassigned.`)) return;
+    try {
+      await api.delete(`/api/volumes/${vol.id}`);
+      setVolumes((prev) => prev.filter((v) => v.id !== vol.id));
+    } catch (err) {
+      console.error("Failed to delete volume:", err);
+    }
+  };
+
+  const handleStoryVolumeChange = async (storyId, volumeId) => {
+    try {
+      await api.put(`/api/stories/${storyId}/volume`, { volumeId: volumeId || null });
+      setStories((prev) => prev.map((s) => (s.id === storyId ? { ...s, volumeId: volumeId || null } : s)));
+      setStoryVolumeAssign(null);
+      const volRes = await fetch(`/api/users/${userId}/volumes`);
+      const volData = await volRes.json();
+      setVolumes(volData.volumes || []);
+    } catch (err) {
+      console.error("Failed to update story volume:", err);
+    }
   };
 
   if (loading) {
@@ -215,23 +282,38 @@ function UserProfilePage() {
               </Stack>
             </Box>
 
-            <Stack spacing={1}>
+            <Stack spacing={1} direction="row" flexWrap="wrap">
               {isOwnProfile ? (
                 <Button id="btn-edit-profile" variant="outlined" startIcon={<Edit />} onClick={openEditDialog} sx={{ borderColor: "primary.main", color: "primary.main" }}>
                   Edit Profile
                 </Button>
-              ) : isAuthenticated ? (
-                <Button
-                  id="btn-follow-user"
-                  variant={isFollowing ? "outlined" : "contained"}
-                  startIcon={isFollowing ? <PersonRemove /> : <PersonAdd />}
-                  onClick={handleFollow}
-                  disabled={followLoading}
-                  sx={isFollowing ? { borderColor: "error.main", color: "error.main" } : {}}
-                >
-                  {followLoading ? <CircularProgress size={20} /> : isFollowing ? "Unfollow" : "Follow"}
-                </Button>
-              ) : null}
+              ) : (
+                <>
+                  {isAuthenticated && (
+                    <Button
+                      id="btn-message-user"
+                      variant="outlined"
+                      startIcon={<MessageIcon />}
+                      onClick={() => navigate(`/messages?with=${userId}`)}
+                      sx={{ borderColor: "primary.main", color: "primary.main" }}
+                    >
+                      Message
+                    </Button>
+                  )}
+                  {isAuthenticated && (
+                    <Button
+                      id="btn-follow-user"
+                      variant={isFollowing ? "outlined" : "contained"}
+                      startIcon={isFollowing ? <PersonRemove /> : <PersonAdd />}
+                      onClick={handleFollow}
+                      disabled={followLoading}
+                      sx={isFollowing ? { borderColor: "error.main", color: "error.main" } : {}}
+                    >
+                      {followLoading ? <CircularProgress size={20} /> : isFollowing ? "Unfollow" : "Follow"}
+                    </Button>
+                  )}
+                </>
+              )}
             </Stack>
           </Stack>
         </CardContent>
@@ -250,6 +332,7 @@ function UserProfilePage() {
         }}
       >
         <Tab id="profile-tab-stories" icon={<MenuBook sx={{ fontSize: 18 }} />} iconPosition="start" label={`Stories (${stories.length})`} />
+        <Tab id="profile-tab-volumes" icon={<Folder sx={{ fontSize: 18 }} />} iconPosition="start" label={`Volumes (${volumes.length})`} />
         <Tab id="profile-tab-followers" icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Followers (${followers.length})`} />
         <Tab id="profile-tab-following" icon={<People sx={{ fontSize: 18 }} />} iconPosition="start" label={`Following (${following.length})`} />
       </Tabs>
@@ -267,27 +350,47 @@ function UserProfilePage() {
             stories.map((story) => (
               <Grid item xs={12} sm={6} md={4} key={story.id}>
                 <Card
-                  onClick={() => navigate(`/story/${story.id}`)}
                   sx={{
-                    cursor: "pointer",
                     bgcolor: "rgba(30, 30, 50, 0.6)",
                     border: "1px solid rgba(232, 184, 109, 0.15)",
                     transition: "all 0.3s ease",
-                    "&:hover": { transform: "translateY(-4px)", boxShadow: "0 8px 32px rgba(232, 184, 109, 0.15)" },
+                    "&:hover": { boxShadow: "0 8px 32px rgba(232, 184, 109, 0.15)" },
                   }}
                 >
-                  {story.coverUrl && (
-                    <Box component="img" src={story.coverUrl} alt={story.title} sx={{ width: "100%", height: 160, objectFit: "cover" }} />
-                  )}
-                  <CardContent>
-                    <Typography variant="h6" sx={{ fontFamily: '"Crimson Pro", serif' }}>{story.title}</Typography>
-                    {story.summary && (
-                      <Typography variant="body2" sx={{ color: "text.secondary", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-                        {story.summary}
-                      </Typography>
+                  <Box id={`card-story-link-${story.id}`} onClick={() => navigate(`/story/${story.id}`)} sx={{ cursor: "pointer" }}>
+                    {story.coverUrl && (
+                      <Box component="img" src={story.coverUrl} alt={story.title} sx={{ width: "100%", height: 160, objectFit: "cover" }} />
                     )}
-                    <Chip label={story.artStyle} size="small" sx={{ mt: 1, fontSize: "0.7rem", bgcolor: "rgba(232, 184, 109, 0.15)" }} />
-                  </CardContent>
+                    <CardContent>
+                      <Typography variant="h6" sx={{ fontFamily: '"Crimson Pro", serif' }}>{story.title}</Typography>
+                      {story.summary && (
+                        <Typography variant="body2" sx={{ color: "text.secondary", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                          {story.summary}
+                        </Typography>
+                      )}
+                      <Chip label={story.artStyle} size="small" sx={{ mt: 1, fontSize: "0.7rem", bgcolor: "rgba(232, 184, 109, 0.15)" }} />
+                    </CardContent>
+                  </Box>
+                  {isOwnProfile && (
+                    <Box id={`story-volume-select-wrap-${story.id}`} sx={{ px: 2, pb: 2 }} onClick={(e) => e.stopPropagation()}>
+                      <FormControl size="small" fullWidth>
+                        <InputLabel>Volume</InputLabel>
+                        <Select
+                          id={`select-story-volume-${story.id}`}
+                          label="Volume"
+                          value={story.volumeId ?? ""}
+                          onChange={(e) => handleStoryVolumeChange(story.id, e.target.value || null)}
+                          onOpen={() => setStoryVolumeAssign(story.id)}
+                          onClose={() => setStoryVolumeAssign(null)}
+                        >
+                          <MenuItem value="">No volume</MenuItem>
+                          {volumes.map((v) => (
+                            <MenuItem key={v.id} value={v.id}>{v.title}</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  )}
                 </Card>
               </Grid>
             ))
@@ -295,8 +398,64 @@ function UserProfilePage() {
         </Grid>
       )}
 
-      {/* Followers Tab */}
+      {/* Volumes Tab */}
       {tabValue === 1 && (
+        <Box>
+          {isOwnProfile && (
+            <Button
+              id="btn-create-volume"
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={() => openVolumeDialog()}
+              sx={{ mb: 2, borderColor: "primary.main", color: "primary.main" }}
+            >
+              Create volume
+            </Button>
+          )}
+          {volumes.length === 0 ? (
+            <Box sx={{ textAlign: "center", py: 4 }}>
+              <Folder sx={{ fontSize: 48, color: "text.secondary", opacity: 0.5, mb: 1 }} />
+              <Typography sx={{ color: "text.secondary" }}>
+                {isOwnProfile ? "No volumes yet. Create a volume to group your stories." : "No volumes yet."}
+              </Typography>
+            </Box>
+          ) : (
+            <Grid container spacing={2}>
+              {volumes.map((vol) => (
+                <Grid item xs={12} sm={6} md={4} key={vol.id}>
+                  <Card
+                    id={`card-volume-${vol.id}`}
+                    onClick={() => navigate(`/volume/${vol.id}`)}
+                    sx={{
+                      cursor: "pointer",
+                      bgcolor: "rgba(30, 30, 50, 0.6)",
+                      border: "1px solid rgba(232, 184, 109, 0.15)",
+                      "&:hover": { borderColor: "rgba(232, 184, 109, 0.4)" },
+                    }}
+                  >
+                    <CardContent>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{vol.title}</Typography>
+                      {vol.description && (
+                        <Typography variant="body2" color="text.secondary" noWrap>{vol.description}</Typography>
+                      )}
+                      <Typography variant="caption" color="text.secondary">{vol.storyCount ?? 0} stories</Typography>
+                      {isOwnProfile && (
+                        <Stack direction="row" spacing={1} sx={{ mt: 1 }} onClick={(e) => e.stopPropagation()}>
+                          <Button id={`btn-edit-volume-${vol.id}`} size="small" startIcon={<Edit />} onClick={() => openVolumeDialog(vol)}>Edit</Button>
+                          <Button id={`btn-delete-volume-${vol.id}`} size="small" color="error" startIcon={<Delete />} onClick={() => handleDeleteVolume(vol)}>Delete</Button>
+                        </Stack>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
+        </Box>
+      )}
+
+      {/* Followers Tab */}
+      {tabValue === 2 && (
         <Stack spacing={2}>
           {followers.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 4 }}>
@@ -306,6 +465,7 @@ function UserProfilePage() {
             followers.map((user) => (
               <Card
                 key={user.id}
+                id={`card-follower-${user.id}`}
                 onClick={() => navigate(`/profile/${user.id}`)}
                 sx={{ cursor: "pointer", bgcolor: "rgba(30, 30, 50, 0.6)", border: "1px solid rgba(232, 184, 109, 0.1)", "&:hover": { borderColor: "rgba(232, 184, 109, 0.3)" } }}
               >
@@ -325,7 +485,7 @@ function UserProfilePage() {
       )}
 
       {/* Following Tab */}
-      {tabValue === 2 && (
+      {tabValue === 3 && (
         <Stack spacing={2}>
           {following.length === 0 ? (
             <Box sx={{ textAlign: "center", py: 4 }}>
@@ -335,6 +495,7 @@ function UserProfilePage() {
             following.map((user) => (
               <Card
                 key={user.id}
+                id={`card-following-${user.id}`}
                 onClick={() => navigate(`/profile/${user.id}`)}
                 sx={{ cursor: "pointer", bgcolor: "rgba(30, 30, 50, 0.6)", border: "1px solid rgba(232, 184, 109, 0.1)", "&:hover": { borderColor: "rgba(232, 184, 109, 0.3)" } }}
               >
@@ -371,6 +532,38 @@ function UserProfilePage() {
         <DialogActions>
           <Button id="btn-cancel-edit-profile" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
           <Button id="btn-save-profile" variant="contained" onClick={handleEditProfile}>Save Changes</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Create / Edit Volume Dialog */}
+      <Dialog open={volumeDialogOpen} onClose={() => setVolumeDialogOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { bgcolor: "background.paper" } }}>
+        <DialogTitle>{volumeEditId ? "Edit volume" : "Create volume"}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              id="input-volume-title"
+              label="Title"
+              value={volumeForm.title}
+              onChange={(e) => setVolumeForm((prev) => ({ ...prev, title: e.target.value }))}
+              fullWidth
+              required
+            />
+            <TextField
+              id="input-volume-description"
+              label="Description"
+              value={volumeForm.description}
+              onChange={(e) => setVolumeForm((prev) => ({ ...prev, description: e.target.value }))}
+              fullWidth
+              multiline
+              rows={2}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button id="btn-volume-dialog-cancel" onClick={() => setVolumeDialogOpen(false)}>Cancel</Button>
+          <Button id="btn-volume-dialog-save" variant="contained" onClick={handleSaveVolume} disabled={!volumeForm.title.trim() || volumeSaving}>
+            {volumeSaving ? "Saving..." : volumeEditId ? "Save" : "Create"}
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

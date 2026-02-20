@@ -27,6 +27,7 @@ function CoverCard({
   onApprove,
   onGenerateCover,
   setApprovedPages,
+  disableEdit = false,
 }) {
   return (
     <Box sx={{ display: "flex", justifyContent: "center", mb: 4 }}>
@@ -134,6 +135,7 @@ function CoverCard({
               <IconButton
                 id="btn-edit-cover"
                 onClick={() => onEditDialog(job.cover, true)}
+                disabled={disableEdit}
                 sx={{
                   bgcolor: "rgba(255,255,255,0.2)",
                   "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
@@ -170,7 +172,7 @@ function CoverCard({
                     size="small"
                     startIcon={<Check />}
                     onClick={() => onApprove("cover")}
-                    disabled={regenerating.cover}
+                    disabled={disableEdit || regenerating.cover}
                     sx={{ flex: 1 }}
                   >
                     Approve Cover
@@ -181,7 +183,7 @@ function CoverCard({
                     size="small"
                     startIcon={<Edit />}
                     onClick={() => onEditDialog(job.cover, true)}
-                    disabled={regenerating.cover}
+                    disabled={disableEdit || regenerating.cover}
                   >
                     Edit
                   </Button>
@@ -196,6 +198,7 @@ function CoverCard({
                   onClick={() =>
                     setApprovedPages((prev) => ({ ...prev, cover: false }))
                   }
+                  disabled={disableEdit}
                   fullWidth
                 >
                   Approved
@@ -214,7 +217,7 @@ function CoverCard({
                 variant="contained"
                 startIcon={<AutoAwesome />}
                 onClick={onGenerateCover}
-                disabled={regenerating.cover}
+                disabled={disableEdit || regenerating.cover}
                 fullWidth
               >
                 Generate Cover

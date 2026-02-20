@@ -59,6 +59,7 @@ export function EditDialog({
             Reference Image (Optional)
           </Typography>
           <input
+            id="input-reference-image"
             ref={fileInputRef}
             type="file"
             accept="image/*"

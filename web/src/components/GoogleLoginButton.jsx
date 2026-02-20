@@ -1,4 +1,3 @@
-import { GoogleLogin } from "@react-oauth/google";
 import {
   Box,
   Typography,
@@ -11,30 +10,28 @@ import {
   useTheme,
 } from "@mui/material";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Logout, Timeline, BatchPrediction, Storage, CloudQueue, Group } from "@mui/icons-material";
+import { useNavigate, Link } from "react-router-dom";
+import {
+  Logout,
+  Timeline,
+  BatchPrediction,
+  Storage,
+  CloudQueue,
+  Group,
+  Assessment,
+  Star,
+  Groups,
+  Message as MessageIcon,
+} from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
 export default function GoogleLoginButton() {
-  const { user, isAuthenticated, login, logout } = useAuth();
+  const { user, isAuthenticated, logout, isAdmin, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-  const handleSuccess = async (credentialResponse) => {
-    try {
-      // Pass the raw credential to AuthContext - it will decode and call backend
-      await login(credentialResponse.credential);
-    } catch (error) {
-      console.error("Failed to login with Google:", error);
-    }
-  };
-
-  const handleError = () => {
-    console.error("Google Login Failed");
-  };
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -51,6 +48,21 @@ export default function GoogleLoginButton() {
 
   const handlePromptLogs = () => {
     navigate("/prompt-logs");
+    handleMenuClose();
+  };
+
+  const handleUsageDashboard = () => {
+    navigate("/usage-dashboard");
+    handleMenuClose();
+  };
+
+  const handlePricing = () => {
+    navigate("/pricing");
+    handleMenuClose();
+  };
+
+  const handleTeams = () => {
+    navigate("/teams");
     handleMenuClose();
   };
 
@@ -71,6 +83,11 @@ export default function GoogleLoginButton() {
 
   const handleUserManagement = () => {
     navigate("/user-management");
+    handleMenuClose();
+  };
+
+  const handleMessages = () => {
+    navigate("/messages");
     handleMenuClose();
   };
 
@@ -143,6 +160,25 @@ export default function GoogleLoginButton() {
           </Box>
           <Divider />
           <MenuItem
+            id="menu-account"
+            onClick={() => {
+              navigate("/account");
+              handleMenuClose();
+            }}
+            sx={{ gap: 1.5 }}
+          >
+            <Person fontSize="small" />
+            Account
+          </MenuItem>
+          <MenuItem
+            id="menu-messages"
+            onClick={handleMessages}
+            sx={{ gap: 1.5 }}
+          >
+            <MessageIcon fontSize="small" />
+            Messages
+          </MenuItem>
+          <MenuItem
             id="menu-batch-requests"
             onClick={handleBatchRequests}
             sx={{ gap: 1.5 }}
@@ -159,29 +195,54 @@ export default function GoogleLoginButton() {
             AI Prompt Logs
           </MenuItem>
           <MenuItem
-            id="menu-server-logs"
-            onClick={handleServerLogs}
+            id="menu-usage-dashboard"
+            onClick={handleUsageDashboard}
             sx={{ gap: 1.5 }}
           >
-            <Storage fontSize="small" />
-            Server Logs
+            <Assessment fontSize="small" />
+            Usage Dashboard
           </MenuItem>
           <MenuItem
-            id="menu-s3-resources"
-            onClick={handleS3Resources}
-            sx={{ gap: 1.5 }}
+            id="menu-pricing"
+            onClick={handlePricing}
+            sx={{ gap: 1.5, color: "primary.main" }}
           >
-            <CloudQueue fontSize="small" />
-            S3 Resources
+            <Star fontSize="small" />
+            Plans & Upgrade
           </MenuItem>
-          <MenuItem
-            id="menu-user-management"
-            onClick={handleUserManagement}
-            sx={{ gap: 1.5 }}
-          >
-            <Group fontSize="small" />
-            User Management
+          <MenuItem id="menu-teams" onClick={handleTeams} sx={{ gap: 1.5 }}>
+            <Groups fontSize="small" />
+            Teams
           </MenuItem>
+          {/* Admin-only menu items */}
+          {isAdmin && (
+            <>
+              <MenuItem
+                id="menu-server-logs"
+                onClick={handleServerLogs}
+                sx={{ gap: 1.5 }}
+              >
+                <Storage fontSize="small" />
+                Server Logs
+              </MenuItem>
+              <MenuItem
+                id="menu-s3-resources"
+                onClick={handleS3Resources}
+                sx={{ gap: 1.5 }}
+              >
+                <CloudQueue fontSize="small" />
+                S3 Resources
+              </MenuItem>
+              <MenuItem
+                id="menu-user-management"
+                onClick={handleUserManagement}
+                sx={{ gap: 1.5 }}
+              >
+                <Group fontSize="small" />
+                User Management
+              </MenuItem>
+            </>
+          )}
           <Divider />
           <MenuItem
             id="menu-logout"
@@ -197,17 +258,15 @@ export default function GoogleLoginButton() {
   }
 
   return (
-    <Box sx={{ display: "flex", alignItems: "center" }}>
-      <GoogleLogin
-        onSuccess={handleSuccess}
-        onError={handleError}
-        useOneTap
-        theme="filled_black"
-        shape="pill"
-        size={isMobile ? "small" : "medium"}
-        text={isMobile ? "signin" : "signin_with"}
-        locale="en"
-      />
-    </Box>
+    <Button
+      id="header-login"
+      component={Link}
+      to="/login"
+      variant="text"
+      size={isMobile ? "small" : "medium"}
+      sx={{ textTransform: "none" }}
+    >
+      Log in
+    </Button>
   );
 }

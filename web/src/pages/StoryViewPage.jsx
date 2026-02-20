@@ -149,6 +149,11 @@ function StoryViewPage() {
           >
             {story?.storyPages?.title}
           </Typography>
+          {story?.metadata?.genre && (
+            <Typography variant="body2" color="primary" sx={{ mt: 0.5 }}>
+              {story.metadata.genre}
+            </Typography>
+          )}
         </Box>
         <Box>
           <IconButton

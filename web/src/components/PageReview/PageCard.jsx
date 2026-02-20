@@ -34,6 +34,7 @@ function PageCard({
   onApprove,
   onGenerateIllustration,
   setApprovedPages,
+  disableEdit = false,
 }) {
   const hasIllustration = page.illustrationGenerated || page.illustrationUrl;
   const isGeneratingThis = generatingPage === page.pageNumber;
@@ -109,6 +110,7 @@ function PageCard({
               size="small"
               startIcon={<AutoAwesome />}
               onClick={() => onGenerateIllustration(page.pageNumber)}
+              disabled={disableEdit}
             >
               Generate
             </Button>
@@ -147,6 +149,7 @@ function PageCard({
             <IconButton
               id={`btn-edit-page-${page.pageNumber}`}
               onClick={() => onEditDialog(page, false)}
+              disabled={disableEdit}
               sx={{
                 bgcolor: "rgba(255,255,255,0.2)",
                 "&:hover": { bgcolor: "rgba(255,255,255,0.3)" },
@@ -168,7 +171,7 @@ function PageCard({
             bgcolor: "rgba(0,0,0,0.6)",
           }}
         />
-        {approvedPages[pageKey] && (
+        {approvedPages[pageKey] ? (
           <Chip
             icon={<Check />}
             label="Approved"
@@ -176,8 +179,8 @@ function PageCard({
             size="small"
             sx={{ position: "absolute", top: 8, right: 8 }}
           />
-        )}
-        {page.regenerated && (
+        ) : null}
+        {page.regenerated ? (
           <Chip
             icon={<Refresh />}
             label="Edited"
@@ -189,10 +192,10 @@ function PageCard({
               bgcolor: "rgba(123, 104, 238, 0.8)",
             }}
           />
-        )}
+        ) : null}
 
         {/* Edit/Delete buttons - top right when no approval badge */}
-        {!approvedPages[pageKey] && (
+        {!approvedPages[pageKey] ? (
           <Box
             sx={{
               position: "absolute",
@@ -206,6 +209,7 @@ function PageCard({
               id={`btn-edit-text-page-${page.pageNumber}`}
               size="small"
               onClick={() => onTextEditDialog(page, false)}
+              disabled={disableEdit}
               sx={{
                 bgcolor: "rgba(0,0,0,0.6)",
                 "&:hover": { bgcolor: "rgba(0,0,0,0.8)" },
@@ -219,6 +223,7 @@ function PageCard({
                 id={`btn-delete-page-${page.pageNumber}`}
                 size="small"
                 onClick={() => onDeleteDialog(page)}
+                disabled={disableEdit}
                 sx={{
                   bgcolor: "rgba(0,0,0,0.6)",
                   color: "error.main",
@@ -230,7 +235,7 @@ function PageCard({
               </IconButton>
             )}
           </Box>
-        )}
+        ) : null}
       </Box>
 
       <CardContent>
@@ -248,7 +253,7 @@ function PageCard({
             WebkitBoxOrient: "vertical",
           }}
         >
-          {page.text}
+          {page.text || ""}
         </Typography>
 
         {/* Show image description/prompt when no illustration */}
@@ -300,7 +305,7 @@ function PageCard({
                   size="small"
                   startIcon={<Check />}
                   onClick={() => onApprove(pageKey)}
-                  disabled={regenerating[pageKey]}
+                  disabled={disableEdit || regenerating[pageKey]}
                   sx={{ flex: 1 }}
                 >
                   Approve
@@ -311,7 +316,7 @@ function PageCard({
                   size="small"
                   startIcon={<Edit />}
                   onClick={() => onEditDialog(page, false)}
-                  disabled={regenerating[pageKey]}
+                  disabled={disableEdit || regenerating[pageKey]}
                 >
                   Edit
                 </Button>
@@ -329,6 +334,7 @@ function PageCard({
                     [pageKey]: false,
                   }))
                 }
+                disabled={disableEdit}
                 fullWidth
               >
                 Approved
@@ -341,7 +347,7 @@ function PageCard({
               size="small"
               startIcon={<AutoAwesome />}
               onClick={() => onGenerateIllustration(page.pageNumber)}
-              disabled={isGeneratingThis}
+              disabled={disableEdit || isGeneratingThis}
               fullWidth
             >
               Generate Illustration

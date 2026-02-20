@@ -1,5 +1,7 @@
+import crypto from "crypto";
 import { query, insert } from "./database.js";
 import { createLogger } from "../utils/logger.js";
+import { hashPassword, verifyPassword } from "../utils/password.js";
 
 const logger = createLogger("StoryRepo");
 
@@ -29,18 +31,161 @@ export async function findOrCreateUser(googleUser) {
     return updated[0];
   }
 
-  // Create new user with default role 'user'
+  // Create new user with default role 'user' and plan 'free'
   const userId = await insert(
-    "INSERT INTO users (google_id, email, name, picture, role) VALUES (?, ?, ?, ?, 'user')",
+    "INSERT INTO users (google_id, email, name, picture, role, plan) VALUES (?, ?, ?, ?, 'user', 'free')",
     [googleId, email, name, picture],
   );
 
-  return { id: userId, google_id: googleId, email, name, picture, role: 'user' };
+  return { id: userId, google_id: googleId, email, name, picture, role: 'user', plan: 'free' };
 }
 
 export async function getUserById(userId) {
   const rows = await query("SELECT * FROM users WHERE id = ?", [userId]);
   return rows[0] || null;
+}
+
+/** Get user by email (for login). Returns user without password_hash in safe object. */
+export async function getUserByEmail(email) {
+  if (!email || typeof email !== "string") return null;
+  const rows = await query(
+    "SELECT id, google_id, email, name, picture, role, plan, password_hash, email_verified, created_at, updated_at FROM users WHERE email = ?",
+    [email.trim().toLowerCase()],
+  );
+  return rows[0] || null;
+}
+
+/** Create user with email and password. Fails if email exists. Returns user without password_hash. */
+export async function createUserWithEmail({ email, name, password }) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const existing = await query("SELECT id FROM users WHERE email = ?", [normalizedEmail]);
+  if (existing.length > 0) return { error: "EMAIL_EXISTS" };
+
+  const passwordHash = hashPassword(password);
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
+  const userId = await insert(
+    `INSERT INTO users (email, name, password_hash, email_verified, email_verification_token, email_verification_expires, role, plan)
+     VALUES (?, ?, ?, 0, ?, ?, 'user', 'free')`,
+    [normalizedEmail, (name || "").trim() || null, passwordHash, verificationToken, expires],
+  );
+
+  const user = await query(
+    "SELECT id, email, name, picture, role, plan, email_verified, created_at FROM users WHERE id = ?",
+    [userId],
+  );
+  return { user: user[0], verificationToken };
+}
+
+/** Verify email by token; returns updated user or null. */
+export async function verifyEmailByToken(token) {
+  if (!token) return null;
+  const rows = await query(
+    "SELECT id, email, name, picture, role, plan FROM users WHERE email_verification_token = ? AND email_verification_expires > NOW()",
+    [token],
+  );
+  if (rows.length === 0) return null;
+  await query(
+    "UPDATE users SET email_verified = 1, email_verification_token = NULL, email_verification_expires = NULL WHERE id = ?",
+    [rows[0].id],
+  );
+  return await getUserById(rows[0].id);
+}
+
+/** Set password for user (for change-password and reset-password). */
+export async function setUserPassword(userId, newPassword) {
+  const hash = hashPassword(newPassword);
+  await query("UPDATE users SET password_hash = ? WHERE id = ?", [hash, userId]);
+}
+
+/** Check password for user. */
+export function checkUserPassword(user, password) {
+  return user && user.password_hash && verifyPassword(password, user.password_hash);
+}
+
+/** Create password reset token for email. Returns token and expires. */
+export async function createPasswordResetToken(email) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const rows = await query("SELECT id FROM users WHERE email = ?", [normalizedEmail]);
+  if (rows.length === 0) return { error: "USER_NOT_FOUND" };
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1h
+  await query(
+    "UPDATE users SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?",
+    [token, expires, rows[0].id],
+  );
+  return { token, expires };
+}
+
+/** Get user by valid password reset token; clear token after use. */
+export async function getUserByPasswordResetToken(token) {
+  if (!token) return null;
+  const rows = await query(
+    "SELECT id, email, name, picture, role, plan FROM users WHERE password_reset_token = ? AND password_reset_expires > NOW()",
+    [token],
+  );
+  if (rows.length === 0) return null;
+  await query(
+    "UPDATE users SET password_reset_token = NULL, password_reset_expires = NULL WHERE id = ?",
+    [rows[0].id],
+  );
+  return rows[0];
+}
+
+/**
+ * Search users by name or username (for messaging). Excludes current user.
+ * Returns only safe fields: id, name, username, picture.
+ */
+export async function searchUsersForMessaging(searchQuery, currentUserId, limit = 20) {
+  const limitInt = Math.min(parseInt(limit, 10) || 20, 50);
+  if (!searchQuery || typeof searchQuery !== "string") {
+    const rows = await query(
+      `SELECT id, name, username, picture FROM users WHERE id != ? ORDER BY name ASC LIMIT ${limitInt}`,
+      [currentUserId],
+    );
+    return rows;
+  }
+  const term = `%${searchQuery.trim()}%`;
+  const rows = await query(
+    `SELECT id, name, username, picture FROM users WHERE id != ? AND (name LIKE ? OR (username IS NOT NULL AND username LIKE ?)) ORDER BY name ASC LIMIT ${limitInt}`,
+    [currentUserId, term, term],
+  );
+  return rows;
+}
+
+/**
+ * List authors: users who have at least one completed public story.
+ * Returns id, name, username, picture, story_count. Optional search by name/username.
+ */
+export async function listAuthors(options = {}) {
+  const { search, limit = 48, offset = 0 } = options;
+  const limitInt = Math.min(parseInt(limit, 10) || 48, 100);
+  const offsetInt = parseInt(offset, 10) || 0;
+
+  let sql = `
+    SELECT u.id, u.name, u.username, u.picture, COUNT(s.id) AS story_count
+    FROM users u
+    INNER JOIN stories s ON s.user_id = u.id AND s.status = 'completed' AND s.is_public = TRUE
+  `;
+  const params = [];
+
+  if (search && typeof search === "string" && search.trim()) {
+    const term = `%${search.trim()}%`;
+    sql += " WHERE (u.name LIKE ? OR (u.username IS NOT NULL AND u.username LIKE ?))";
+    params.push(term, term);
+  }
+  sql += ` GROUP BY u.id, u.name, u.username, u.picture ORDER BY story_count DESC, u.name ASC LIMIT ${limitInt} OFFSET ${offsetInt}`;
+
+  const rows = await query(sql, params);
+  return rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    username: r.username,
+    picture: r.picture,
+    story_count: r.story_count,
+  }));
 }
 
 /**
@@ -117,6 +262,19 @@ export async function updateUserRole(userId, newRole) {
 }
 
 /**
+ * Update user plan (free | pro). Used after successful Razorpay payment.
+ */
+export async function updateUserPlan(userId, newPlan) {
+  const validPlans = ['free', 'pro'];
+  if (!validPlans.includes(newPlan)) {
+    throw new Error(`Invalid plan: ${newPlan}`);
+  }
+  await query("UPDATE users SET plan = ? WHERE id = ?", [newPlan, userId]);
+  const rows = await query("SELECT * FROM users WHERE id = ?", [userId]);
+  return rows[0] || null;
+}
+
+/**
  * Check if user has required role
  */
 export function hasRole(userRole, requiredRole) {
@@ -128,6 +286,354 @@ export function hasRole(userRole, requiredRole) {
   };
   
   return (roleHierarchy[userRole] || 0) >= (roleHierarchy[requiredRole] || 0);
+}
+
+// ==================== ORGANIZATIONS (TEAM PLAN) ====================
+
+export async function createOrganization(name, ownerId) {
+  const orgId = await insert(
+    "INSERT INTO organizations (name, owner_id) VALUES (?, ?)",
+    [name.trim(), ownerId]
+  );
+  await query(
+    "INSERT INTO organization_members (org_id, user_id, role) VALUES (?, ?, 'owner')",
+    [orgId, ownerId]
+  );
+  return getOrganizationById(orgId);
+}
+
+export async function getOrganizationById(orgId) {
+  const rows = await query(
+    `SELECT o.*, u.name as owner_name, u.email as owner_email
+     FROM organizations o
+     LEFT JOIN users u ON o.owner_id = u.id
+     WHERE o.id = ?`,
+    [orgId]
+  );
+  return rows[0] || null;
+}
+
+export async function getOrganizationsByUserId(userId) {
+  return query(
+    `SELECT o.*, m.role as my_role,
+        (SELECT COUNT(*) FROM organization_members WHERE org_id = o.id) as member_count
+     FROM organizations o
+     INNER JOIN organization_members m ON m.org_id = o.id AND m.user_id = ?
+     ORDER BY o.updated_at DESC`,
+    [userId]
+  );
+}
+
+export async function getOrgMembers(orgId) {
+  return query(
+    `SELECT m.id, m.org_id, m.user_id, m.role, m.created_at,
+        u.email, u.name, u.picture
+     FROM organization_members m
+     INNER JOIN users u ON u.id = m.user_id
+     WHERE m.org_id = ?
+     ORDER BY m.role = 'owner' DESC, m.role = 'admin' DESC, u.name ASC`,
+    [orgId]
+  );
+}
+
+export async function getOrganizationMember(orgId, userId) {
+  const rows = await query(
+    "SELECT * FROM organization_members WHERE org_id = ? AND user_id = ?",
+    [orgId, userId]
+  );
+  return rows[0] || null;
+}
+
+export async function isOrgOwnerOrAdmin(orgId, userId) {
+  const m = await getOrganizationMember(orgId, userId);
+  return m && (m.role === "owner" || m.role === "admin");
+}
+
+export async function addOrgMemberByEmail(orgId, email, inviterId) {
+  const inviter = await getOrganizationMember(orgId, inviterId);
+  if (!inviter || (inviter.role !== "owner" && inviter.role !== "admin")) {
+    throw new Error("Only owners and admins can add members");
+  }
+  const users = await query("SELECT id FROM users WHERE email = ?", [email.trim()]);
+  if (!users.length) {
+    throw new Error("No user found with that email");
+  }
+  const userId = users[0].id;
+  try {
+    await query(
+      "INSERT INTO organization_members (org_id, user_id, role) VALUES (?, ?, 'member')",
+      [orgId, userId]
+    );
+  } catch (err) {
+    if (err.message?.includes("Duplicate") || err.code === "ER_DUP_ENTRY") {
+      throw new Error("User is already a member");
+    }
+    throw err;
+  }
+  return getUserById(userId);
+}
+
+export async function removeOrgMember(orgId, userId, actorId) {
+  const actor = await getOrganizationMember(orgId, actorId);
+  const target = await getOrganizationMember(orgId, userId);
+  if (!target) {
+    throw new Error("User is not a member of this organization");
+  }
+  if (target.role === "owner") {
+    throw new Error("Cannot remove the organization owner");
+  }
+  if (userId !== actorId && (!actor || (actor.role !== "owner" && actor.role !== "admin"))) {
+    throw new Error("Only owners and admins can remove other members");
+  }
+  await query("DELETE FROM organization_members WHERE org_id = ? AND user_id = ?", [orgId, userId]);
+  return true;
+}
+
+export async function updateOrgMemberRole(orgId, userId, newRole, actorId) {
+  const actor = await getOrganizationMember(orgId, actorId);
+  if (!actor || actor.role !== "owner") {
+    throw new Error("Only the owner can change member roles");
+  }
+  const target = await getOrganizationMember(orgId, userId);
+  if (!target) throw new Error("User is not a member");
+  if (target.role === "owner") throw new Error("Cannot change owner role");
+  const validRoles = ["admin", "member"];
+  if (!validRoles.includes(newRole)) throw new Error(`Invalid role: ${newRole}`);
+  await query("UPDATE organization_members SET role = ? WHERE org_id = ? AND user_id = ?", [
+    newRole,
+    orgId,
+    userId,
+  ]);
+  return getOrgMembers(orgId);
+}
+
+/** Returns true if user is in at least one organization (team plan benefit) */
+export async function userBelongsToAnyOrg(userId) {
+  const rows = await query(
+    "SELECT 1 FROM organization_members WHERE user_id = ? LIMIT 1",
+    [userId]
+  );
+  return rows.length > 0;
+}
+
+export async function leaveOrganization(orgId, userId) {
+  const m = await getOrganizationMember(orgId, userId);
+  if (!m) throw new Error("You are not a member of this organization");
+  if (m.role === "owner") throw new Error("Owner cannot leave; transfer ownership or delete the organization first");
+  await query("DELETE FROM organization_members WHERE org_id = ? AND user_id = ?", [orgId, userId]);
+  return true;
+}
+
+// ==================== OPEN STORY SUBMISSIONS ====================
+
+export async function createOpenStorySubmission(userId, title, storyText, genre = null) {
+  const genreVal = genre != null && String(genre).trim() ? String(genre).trim() : null;
+  const id = await insert(
+    "INSERT INTO open_story_submissions (user_id, title, story_text, genre) VALUES (?, ?, ?, ?)",
+    [userId, title.trim(), storyText.trim(), genreVal]
+  );
+  return getOpenStorySubmissionById(id);
+}
+
+export async function getOpenStorySubmissionById(id) {
+  const rows = await query(
+    `SELECT s.*, u.name as author_name, u.email as author_email
+     FROM open_story_submissions s
+     LEFT JOIN users u ON s.user_id = u.id
+     WHERE s.id = ?`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+/**
+ * Hacker News–style ranking: score = (votes - 1) / (age_hours + 2)^gravity
+ * So newer and more upvoted stories rank higher.
+ * @see https://news.ycombinator.com/
+ */
+const OPEN_STORY_RANK_GRAVITY = 1.8;
+
+export async function getOpenStorySubmissions(currentUserId = null) {
+  const rows = await query(
+    `SELECT s.*, u.name as author_name, u.email as author_email,
+        (SELECT COUNT(*) FROM open_story_votes v WHERE v.submission_id = s.id) as vote_count,
+        (SELECT COUNT(*) FROM open_story_comments c WHERE c.submission_id = s.id) as comment_count
+     FROM open_story_submissions s
+     LEFT JOIN users u ON s.user_id = u.id
+     ORDER BY (
+       (SELECT COUNT(*) FROM open_story_votes v WHERE v.submission_id = s.id) - 1
+     ) / POWER(TIMESTAMPDIFF(HOUR, s.created_at, NOW()) + 2, ?) DESC`,
+    [OPEN_STORY_RANK_GRAVITY]
+  );
+  const list = rows.map((r) => ({
+    id: r.id,
+    user_id: r.user_id,
+    title: r.title,
+    story_text: r.story_text,
+    genre: r.genre || null,
+    created_at: r.created_at,
+    author_name: r.author_name,
+    author_email: r.author_email,
+    vote_count: parseInt(r.vote_count, 10) || 0,
+    comment_count: parseInt(r.comment_count, 10) || 0,
+  }));
+
+  if (currentUserId) {
+    const voted = await query(
+      "SELECT submission_id FROM open_story_votes WHERE user_id = ?",
+      [currentUserId]
+    );
+    const votedSet = new Set(voted.map((v) => v.submission_id));
+    list.forEach((s) => {
+      s.user_has_voted = votedSet.has(s.id);
+    });
+  } else {
+    list.forEach((s) => {
+      s.user_has_voted = false;
+    });
+  }
+  return list;
+}
+
+export async function toggleOpenStoryVote(submissionId, userId) {
+  const existing = await query(
+    "SELECT id FROM open_story_votes WHERE submission_id = ? AND user_id = ?",
+    [submissionId, userId]
+  );
+  if (existing.length > 0) {
+    await query("DELETE FROM open_story_votes WHERE submission_id = ? AND user_id = ?", [
+      submissionId,
+      userId,
+    ]);
+    return { voted: false };
+  }
+  await query("INSERT INTO open_story_votes (submission_id, user_id) VALUES (?, ?)", [
+    submissionId,
+    userId,
+  ]);
+  return { voted: true };
+}
+
+export async function getOpenStoryComments(submissionId) {
+  const rows = await query(
+    `SELECT c.id, c.submission_id, c.user_id, c.comment_text, c.created_at,
+        u.name as author_name, u.email as author_email
+     FROM open_story_comments c
+     LEFT JOIN users u ON c.user_id = u.id
+     WHERE c.submission_id = ?
+     ORDER BY c.created_at ASC`,
+    [submissionId]
+  );
+  return rows.map((r) => ({
+    id: r.id,
+    submission_id: r.submission_id,
+    user_id: r.user_id,
+    comment_text: r.comment_text,
+    created_at: r.created_at,
+    author_name: r.author_name,
+    author_email: r.author_email,
+  }));
+}
+
+export async function createOpenStoryComment(submissionId, userId, commentText) {
+  const text = String(commentText).trim();
+  if (!text) throw new Error("Comment text is required");
+  const id = await insert(
+    "INSERT INTO open_story_comments (submission_id, user_id, comment_text) VALUES (?, ?, ?)",
+    [submissionId, userId, text]
+  );
+  const rows = await query(
+    `SELECT c.id, c.submission_id, c.user_id, c.comment_text, c.created_at,
+        u.name as author_name, u.email as author_email
+     FROM open_story_comments c
+     LEFT JOIN users u ON c.user_id = u.id
+     WHERE c.id = ?`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
+export async function updateOpenStorySubmission(id, userId, { title, storyText, genre }) {
+  const sub = await getOpenStorySubmissionById(id);
+  if (!sub || sub.user_id !== userId) return null;
+  const newTitle = title != null ? String(title).trim() : sub.title;
+  const newStory = storyText != null ? String(storyText).trim() : sub.story_text;
+  const newGenre = genre !== undefined ? (genre != null && String(genre).trim() ? String(genre).trim() : null) : sub.genre;
+  if (!newTitle || !newStory) return null;
+  await query(
+    "UPDATE open_story_submissions SET title = ?, story_text = ?, genre = ? WHERE id = ? AND user_id = ?",
+    [newTitle, newStory, newGenre, id, userId]
+  );
+  return getOpenStorySubmissionById(id);
+}
+
+export async function deleteOpenStorySubmission(id, userId) {
+  const sub = await getOpenStorySubmissionById(id);
+  if (!sub || sub.user_id !== userId) return false;
+  await query("DELETE FROM open_story_submissions WHERE id = ? AND user_id = ?", [id, userId]);
+  return true;
+}
+
+export async function getOpenStoryCommentById(commentId) {
+  const rows = await query(
+    `SELECT c.id, c.submission_id, c.user_id, c.comment_text, c.created_at,
+        u.name as author_name, u.email as author_email
+     FROM open_story_comments c
+     LEFT JOIN users u ON c.user_id = u.id
+     WHERE c.id = ?`,
+    [commentId]
+  );
+  return rows[0] || null;
+}
+
+export async function updateOpenStoryComment(commentId, userId, commentText) {
+  const comment = await getOpenStoryCommentById(commentId);
+  if (!comment || comment.user_id !== userId) return null;
+  const text = String(commentText).trim();
+  if (!text) return null;
+  await query(
+    "UPDATE open_story_comments SET comment_text = ? WHERE id = ? AND user_id = ?",
+    [text, commentId, userId]
+  );
+  return getOpenStoryCommentById(commentId);
+}
+
+export async function deleteOpenStoryComment(commentId, userId) {
+  const comment = await getOpenStoryCommentById(commentId);
+  if (!comment || comment.user_id !== userId) return false;
+  await query("DELETE FROM open_story_comments WHERE id = ? AND user_id = ?", [commentId, userId]);
+  return true;
+}
+
+export async function createOpenStoryImage(submissionId, imageUrl, sortOrder = 0) {
+  const id = await insert(
+    "INSERT INTO open_story_images (submission_id, image_url, sort_order) VALUES (?, ?, ?)",
+    [submissionId, imageUrl, sortOrder]
+  );
+  const rows = await query("SELECT * FROM open_story_images WHERE id = ?", [id]);
+  return rows[0] || null;
+}
+
+export async function getOpenStoryImages(submissionId) {
+  const rows = await query(
+    "SELECT id, submission_id, image_url, sort_order, created_at FROM open_story_images WHERE submission_id = ? ORDER BY sort_order ASC, id ASC",
+    [submissionId]
+  );
+  return rows;
+}
+
+export async function getOpenStoryImageById(imageId) {
+  const rows = await query("SELECT * FROM open_story_images WHERE id = ?", [imageId]);
+  return rows[0] || null;
+}
+
+export async function deleteOpenStoryImage(imageId, userId) {
+  const img = await getOpenStoryImageById(imageId);
+  if (!img) return false;
+  const submission = await getOpenStorySubmissionById(img.submission_id);
+  if (!submission || submission.user_id !== userId) return false;
+  await query("DELETE FROM open_story_images WHERE id = ?", [imageId]);
+  return true;
 }
 
 // ==================== STORIES ====================
@@ -144,13 +650,14 @@ export async function createStory(storyData, userId = null) {
     coverPath,
     pageCount,
     targetAudience,
+    genre,
   } = storyData;
 
   const storyId = await insert(
     `INSERT INTO stories 
      (user_id, title, summary, original_story, art_style_key, art_style_prompt, 
-      art_style_reasoning, cover_url, cover_path, page_count, target_audience, status) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
+      art_style_reasoning, cover_url, cover_path, page_count, target_audience, genre, status) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed')`,
     [
       userId ?? null,
       title ?? null,
@@ -163,6 +670,7 @@ export async function createStory(storyData, userId = null) {
       coverPath ?? null,
       pageCount ?? 0,
       targetAudience ?? "children",
+      genre != null && String(genre).trim() ? String(genre).trim() : null,
     ],
   );
 
@@ -183,6 +691,9 @@ export async function updateStory(storyId, updates) {
     coverUrl: "cover_url",
     coverPath: "cover_path",
     pageCount: "page_count",
+    genre: "genre",
+    volumeId: "volume_id",
+    volumeSortOrder: "volume_sort_order",
   };
 
   for (const [key, column] of Object.entries(fieldMap)) {
@@ -248,6 +759,7 @@ export async function listStories(userId = null) {
     filename: `story_${s.id}`, // For compatibility with old API
     title: s.title,
     summary: s.summary,
+    genre: s.genre || null,
     characterCount: s.character_count,
     pageCount: s.actual_page_count || s.page_count,
     coverUrl: s.cover_url,
@@ -480,6 +992,7 @@ export async function saveDraft(jobId, draftData, userId = null) {
   const cover = draftData.cover ?? null;
   const pageCount = draftData.pageCount ?? 6;
   const targetAudience = draftData.targetAudience ?? "children";
+  const genre = draftData.genre != null ? draftData.genre : null;
 
   // Determine current step based on phase
   let currentStep = 0;
@@ -515,7 +1028,7 @@ export async function saveDraft(jobId, draftData, userId = null) {
        story_text = ?, status = ?, phase = ?, progress = ?, message = ?,
        art_style_key = ?, art_style_prompt = ?, art_style_decision = ?,
        characters = ?, story_pages = ?, cover = ?, page_count = ?,
-       target_audience = ?, current_step = ?, user_id = COALESCE(?, user_id)
+       target_audience = ?, genre = ?, current_step = ?, user_id = COALESCE(?, user_id)
        WHERE job_id = ?`,
       [
         story,
@@ -531,6 +1044,7 @@ export async function saveDraft(jobId, draftData, userId = null) {
         JSON.stringify(cover),
         pageCount || 6,
         targetAudience || "children",
+        genre,
         currentStep,
         userId,
         jobId,
@@ -541,8 +1055,8 @@ export async function saveDraft(jobId, draftData, userId = null) {
       `INSERT INTO drafts 
        (job_id, user_id, story_text, status, phase, progress, message,
         art_style_key, art_style_prompt, art_style_decision,
-        characters, story_pages, cover, page_count, target_audience, current_step)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        characters, story_pages, cover, page_count, target_audience, genre, current_step)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         jobId,
         userId,
@@ -559,6 +1073,7 @@ export async function saveDraft(jobId, draftData, userId = null) {
         JSON.stringify(cover),
         pageCount || 6,
         targetAudience || "children",
+        genre,
         currentStep,
       ],
     );
@@ -687,6 +1202,7 @@ export async function saveCompleteStory(result, userId = null) {
       coverPath: cover?.illustrationPath,
       pageCount: storyPages?.pages?.length || 0,
       targetAudience: metadata?.targetAudience,
+      genre: metadata?.genre || null,
     },
     userId,
   );
@@ -750,6 +1266,7 @@ export async function updateCompleteStory(storyId, result) {
       cover_path = ?,
       page_count = ?,
       target_audience = ?,
+      genre = ?,
       updated_at = NOW()
     WHERE id = ?`,
     [
@@ -763,6 +1280,7 @@ export async function updateCompleteStory(storyId, result) {
       cover?.illustrationPath,
       storyPages?.pages?.length || 0,
       metadata?.targetAudience,
+      metadata?.genre != null ? metadata.genre : null,
       storyId,
     ],
   );
@@ -918,6 +1436,7 @@ export async function searchStories(searchQuery, options = {}) {
     filename: `story_${s.id}`,
     title: s.title,
     summary: s.summary,
+    genre: s.genre || null,
     characterCount: s.character_count,
     pageCount: s.actual_page_count || s.page_count,
     coverUrl: s.cover_url,
@@ -1253,7 +1772,134 @@ export async function getUserStoriesByUserId(userId, viewerId = null) {
     artStyle: s.art_style_key,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
+    volumeId: s.volume_id,
+    volumeSortOrder: s.volume_sort_order,
   }));
+}
+
+// ==================== VOLUMES ====================
+
+export async function createVolume(userId, { title, description }) {
+  if (!title || !String(title).trim()) throw new Error("Volume title is required");
+  const id = await insert(
+    "INSERT INTO volumes (user_id, title, description) VALUES (?, ?, ?)",
+    [userId, String(title).trim(), description ? String(description).trim() : null],
+  );
+  return id;
+}
+
+export async function getVolumesByUserId(userId) {
+  const rows = await query(
+    `SELECT v.*, (SELECT COUNT(*) FROM stories s WHERE s.volume_id = v.id) as story_count
+     FROM volumes v WHERE v.user_id = ? ORDER BY v.created_at DESC`,
+    [userId],
+  );
+  return rows.map((v) => ({
+    id: v.id,
+    userId: v.user_id,
+    title: v.title,
+    description: v.description,
+    createdAt: v.created_at,
+    updatedAt: v.updated_at,
+    storyCount: v.story_count ?? 0,
+  }));
+}
+
+export async function getVolumeById(volumeId, viewerId = null) {
+  const rows = await query(
+    `SELECT v.*, u.name as author_name, u.username as author_username, u.picture as author_picture
+     FROM volumes v
+     LEFT JOIN users u ON v.user_id = u.id
+     WHERE v.id = ?`,
+    [volumeId],
+  );
+  if (rows.length === 0) return null;
+  const v = rows[0];
+  return {
+    id: v.id,
+    userId: v.user_id,
+    title: v.title,
+    description: v.description,
+    createdAt: v.created_at,
+    updatedAt: v.updated_at,
+    author: v.author_name ? { id: v.user_id, name: v.author_name, username: v.author_username, picture: v.author_picture } : null,
+  };
+}
+
+export async function updateVolume(volumeId, userId, { title, description }) {
+  const updates = [];
+  const values = [];
+  if (title !== undefined) {
+    updates.push("title = ?");
+    values.push(String(title).trim());
+  }
+  if (description !== undefined) {
+    updates.push("description = ?");
+    values.push(description === null || description === "" ? null : String(description).trim());
+  }
+  if (updates.length === 0) return;
+  values.push(volumeId, userId);
+  await query(
+    `UPDATE volumes SET ${updates.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
+    values,
+  );
+}
+
+export async function deleteVolume(volumeId, userId) {
+  await query("UPDATE stories SET volume_id = NULL, volume_sort_order = 0 WHERE volume_id = ?", [volumeId]);
+  await query("DELETE FROM volumes WHERE id = ? AND user_id = ?", [volumeId, userId]);
+}
+
+export async function setStoryVolume(storyId, userId, volumeId) {
+  const story = await query("SELECT id, user_id FROM stories WHERE id = ?", [storyId]);
+  if (story.length === 0) throw new Error("Story not found");
+  if (story[0].user_id !== userId) throw new Error("Not authorized to change this story's volume");
+  if (volumeId !== null) {
+    const vol = await query("SELECT id, user_id FROM volumes WHERE id = ?", [volumeId]);
+    if (vol.length === 0) throw new Error("Volume not found");
+    if (vol[0].user_id !== userId) throw new Error("Not authorized to add stories to this volume");
+  }
+  const nextOrder = volumeId
+    ? await query("SELECT COALESCE(MAX(volume_sort_order), 0) + 1 as next FROM stories WHERE volume_id = ?", [volumeId])
+    : [{ next: 0 }];
+  await query("UPDATE stories SET volume_id = ?, volume_sort_order = ? WHERE id = ?", [
+    volumeId,
+    volumeId ? nextOrder[0].next : 0,
+    storyId,
+  ]);
+}
+
+export async function getStoriesByVolumeId(volumeId, viewerId = null) {
+  const vol = await getVolumeById(volumeId, viewerId);
+  if (!vol) return null;
+  let sql = `
+    SELECT s.*,
+           (SELECT COUNT(*) FROM characters WHERE story_id = s.id) as character_count,
+           (SELECT COUNT(*) FROM pages WHERE story_id = s.id) as actual_page_count
+    FROM stories s
+    WHERE s.volume_id = ? AND s.status = 'completed'
+  `;
+  const params = [volumeId];
+  if (viewerId !== vol.userId) {
+    sql += " AND s.is_public = TRUE";
+  }
+  sql += " ORDER BY s.volume_sort_order ASC, s.created_at ASC";
+  const stories = await query(sql, params);
+  return {
+    volume: vol,
+    stories: stories.map((s) => ({
+      id: s.id,
+      filename: `story_${s.id}`,
+      title: s.title,
+      summary: s.summary,
+      characterCount: s.character_count,
+      pageCount: s.actual_page_count || s.page_count,
+      coverUrl: s.cover_url,
+      artStyle: s.art_style_key,
+      createdAt: s.created_at,
+      volumeSortOrder: s.volume_sort_order,
+    })),
+  };
 }
 
 // ==================== FOLLOWERS ====================
@@ -1323,6 +1969,99 @@ export async function getFollowingIds(userId) {
     [userId],
   );
   return rows.map((r) => r.following_id);
+}
+
+// ==================== MESSAGES (P2P) ====================
+
+export async function createMessage(senderId, recipientId, body) {
+  const text = String(body).trim();
+  if (!text) throw new Error("Message body is required");
+  if (senderId === recipientId) throw new Error("Cannot message yourself");
+  const id = await insert(
+    "INSERT INTO messages (sender_id, recipient_id, body) VALUES (?, ?, ?)",
+    [senderId, recipientId, text],
+  );
+  const rows = await query(
+    `SELECT m.*, u.name as sender_name, u.picture as sender_picture
+     FROM messages m
+     LEFT JOIN users u ON m.sender_id = u.id
+     WHERE m.id = ?`,
+    [id],
+  );
+  return rows[0] || null;
+}
+
+/** List conversations for a user: other user + last message + unread count */
+export async function getConversationsForUser(userId) {
+  const peerRows = await query(
+    `SELECT DISTINCT
+        CASE WHEN m.sender_id = ? THEN m.recipient_id ELSE m.sender_id END as peer_id
+     FROM messages m
+     WHERE m.sender_id = ? OR m.recipient_id = ?`,
+    [userId, userId, userId],
+  );
+  if (peerRows.length === 0) return [];
+
+  const conversations = [];
+  for (const row of peerRows) {
+    const peerId = row.peer_id;
+    const lastMsg = await query(
+      `SELECT m.id, m.body, m.sender_id, m.created_at, m.read_at
+       FROM messages m
+       WHERE (m.sender_id = ? AND m.recipient_id = ?) OR (m.sender_id = ? AND m.recipient_id = ?)
+       ORDER BY m.created_at DESC
+       LIMIT 1`,
+      [userId, peerId, peerId, userId],
+    );
+    const unread = await query(
+      "SELECT COUNT(*) as c FROM messages WHERE recipient_id = ? AND sender_id = ? AND read_at IS NULL",
+      [userId, peerId],
+    );
+    const userRow = await query(
+      "SELECT id, name, username, picture FROM users WHERE id = ?",
+      [peerId],
+    );
+    const u = userRow[0];
+    conversations.push({
+      other_id: u.id,
+      other_name: u.name,
+      other_username: u.username,
+      other_picture: u.picture,
+      last_message_id: lastMsg[0]?.id,
+      last_body: lastMsg[0]?.body,
+      last_sender_id: lastMsg[0]?.sender_id,
+      last_created_at: lastMsg[0]?.created_at,
+      last_read_at: lastMsg[0]?.read_at,
+      unread_count: parseInt(unread[0]?.c || 0, 10),
+    });
+  }
+  conversations.sort((a, b) => new Date(b.last_created_at || 0) - new Date(a.last_created_at || 0));
+  return conversations;
+}
+
+export async function getMessagesBetween(userId, otherUserId, limit = 50, beforeId = null) {
+  const limitInt = Math.min(parseInt(limit, 10) || 50, 100);
+  let sql = `
+    SELECT m.*, u.name as sender_name, u.picture as sender_picture
+    FROM messages m
+    LEFT JOIN users u ON m.sender_id = u.id
+    WHERE ((m.sender_id = ? AND m.recipient_id = ?) OR (m.sender_id = ? AND m.recipient_id = ?))
+  `;
+  const params = [userId, otherUserId, otherUserId, userId];
+  if (beforeId) {
+    sql += " AND m.id < ?";
+    params.push(beforeId);
+  }
+  sql += ` ORDER BY m.created_at DESC LIMIT ${limitInt}`;
+  const rows = await query(sql, params);
+  return rows.reverse();
+}
+
+export async function markMessagesAsRead(recipientUserId, senderUserId) {
+  await query(
+    "UPDATE messages SET read_at = COALESCE(read_at, NOW()) WHERE recipient_id = ? AND sender_id = ? AND read_at IS NULL",
+    [recipientUserId, senderUserId],
+  );
 }
 
 // ==================== PERSONALIZED FEED ====================
@@ -1790,6 +2529,7 @@ function formatStoryOutput(story, characters, pages) {
       timestamp: story.created_at,
       pageCount: story.page_count,
       targetAudience: story.target_audience,
+      genre: story.genre || null,
       lastEdited: story.updated_at,
     },
     userId: story.user_id,
@@ -1844,6 +2584,7 @@ function formatDraftOutput(draft) {
     cover: draft.cover,
     pageCount: draft.page_count,
     targetAudience: draft.target_audience,
+    genre: draft.genre || null,
     currentStep,
     stepLabel,
     savedAt: draft.updated_at,
@@ -1903,6 +2644,14 @@ export default {
   getUserProfile,
   updateUserProfile,
   getUserStoriesByUserId,
+  // Volumes
+  createVolume,
+  getVolumesByUserId,
+  getVolumeById,
+  updateVolume,
+  deleteVolume,
+  setStoryVolume,
+  getStoriesByVolumeId,
   // Followers
   followUser,
   unfollowUser,
