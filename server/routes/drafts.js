@@ -17,7 +17,7 @@ const logger = createLogger("DraftsRoutes");
 export function registerDraftsRoutes(app, deps) {
   const { activeJobs } = deps;
 
-  app.get("/api/drafts", async (req, res) => {
+  app.get("/api/v1/drafts", async (req, res) => {
     try {
       const { userId } = req.query;
       const drafts = await listDrafts(userId ? parseInt(userId, 10) : null);
@@ -28,7 +28,7 @@ export function registerDraftsRoutes(app, deps) {
     }
   });
 
-  app.get("/api/drafts/:jobId", async (req, res) => {
+  app.get("/api/v1/drafts/:jobId", async (req, res) => {
     try {
       const { jobId } = req.params;
       const draft = await loadDraft(jobId);
@@ -43,7 +43,7 @@ export function registerDraftsRoutes(app, deps) {
     }
   });
 
-  app.post("/api/drafts", async (req, res) => {
+  app.post("/api/v1/drafts", async (req, res) => {
     try {
       const { story, targetAudience, genre, userId } = req.body;
 
@@ -103,7 +103,7 @@ export function registerDraftsRoutes(app, deps) {
     }
   });
 
-  app.put("/api/drafts/:jobId", async (req, res) => {
+  app.put("/api/v1/drafts/:jobId", async (req, res) => {
     try {
       const { jobId } = req.params;
       const updates = req.body;
@@ -152,7 +152,7 @@ export function registerDraftsRoutes(app, deps) {
     }
   });
 
-  app.post("/api/drafts/:jobId/resume", async (req, res) => {
+  app.post("/api/v1/drafts/:jobId/resume", async (req, res) => {
     try {
       const { jobId } = req.params;
       const draft = await loadDraft(jobId);
@@ -178,7 +178,7 @@ export function registerDraftsRoutes(app, deps) {
     }
   });
 
-  app.delete("/api/drafts/:jobId", async (req, res) => {
+  app.delete("/api/v1/drafts/:jobId", async (req, res) => {
     try {
       const { jobId } = req.params;
       const success = await deleteDraft(jobId);
@@ -195,7 +195,7 @@ export function registerDraftsRoutes(app, deps) {
     }
   });
 
-  app.post("/api/drafts/save", async (req, res) => {
+  app.post("/api/v1/drafts/save", async (req, res) => {
     try {
       const { jobId } = req.body;
 

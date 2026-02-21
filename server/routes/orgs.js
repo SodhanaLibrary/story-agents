@@ -20,7 +20,7 @@ const logger = createLogger("OrgsRoutes");
  * @param {import('express').Application} app
  */
 export function registerOrgsRoutes(app) {
-  app.get("/api/orgs", async (req, res) => {
+  app.get("/api/v1/orgs", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -33,7 +33,7 @@ export function registerOrgsRoutes(app) {
     }
   });
 
-  app.post("/api/orgs", async (req, res) => {
+  app.post("/api/v1/orgs", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -52,7 +52,7 @@ export function registerOrgsRoutes(app) {
     }
   });
 
-  app.get("/api/orgs/:orgId", async (req, res) => {
+  app.get("/api/v1/orgs/:orgId", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -75,7 +75,7 @@ export function registerOrgsRoutes(app) {
     }
   });
 
-  app.put("/api/orgs/:orgId", async (req, res) => {
+  app.put("/api/v1/orgs/:orgId", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -108,7 +108,7 @@ export function registerOrgsRoutes(app) {
     }
   });
 
-  app.get("/api/orgs/:orgId/members", async (req, res) => {
+  app.get("/api/v1/orgs/:orgId/members", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -128,7 +128,7 @@ export function registerOrgsRoutes(app) {
     }
   });
 
-  app.post("/api/orgs/:orgId/members", async (req, res) => {
+  app.post("/api/v1/orgs/:orgId/members", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -160,7 +160,7 @@ export function registerOrgsRoutes(app) {
     }
   });
 
-  app.delete("/api/orgs/:orgId/members/:memberId", async (req, res) => {
+  app.delete("/api/v1/orgs/:orgId/members/:memberId", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -186,7 +186,7 @@ export function registerOrgsRoutes(app) {
     }
   });
 
-  app.put("/api/orgs/:orgId/members/:memberId/role", async (req, res) => {
+  app.put("/api/v1/orgs/:orgId/members/:memberId/role", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -218,7 +218,7 @@ export function registerOrgsRoutes(app) {
     }
   });
 
-  app.post("/api/orgs/:orgId/leave", async (req, res) => {
+  app.post("/api/v1/orgs/:orgId/leave", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)

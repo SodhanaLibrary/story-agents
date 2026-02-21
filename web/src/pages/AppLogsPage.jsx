@@ -85,7 +85,7 @@ function AppLogsPage() {
       if (contextFilter) params.append("context", contextFilter);
       if (searchFilter) params.append("search", searchFilter);
 
-      const response = await api.get(`/api/app-logs?${params}`);
+      const response = await api.get(`/api/v1/app-logs?${params}`);
       const data = await response.json();
 
       if (data.logs) {
@@ -106,7 +106,7 @@ function AppLogsPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get("/api/app-logs/stats");
+      const response = await api.get("/api/v1/app-logs/stats");
       const data = await response.json();
       if (data.stats) {
         setStats(data.stats);
@@ -150,7 +150,7 @@ function AppLogsPage() {
   const handleClearLogs = async () => {
     setClearing(true);
     try {
-      const response = await api.del(`/api/app-logs/clear?daysOld=${clearDays}`);
+      const response = await api.del(`/api/v1/app-logs/clear?daysOld=${clearDays}`);
       const data = await response.json();
       if (data.success) {
         setClearDialogOpen(false);

@@ -35,7 +35,7 @@ function GenerationProgress({ jobId, phase, onComplete, onError }) {
 
     const pollJob = async () => {
       try {
-        const response = await fetch(`/api/job/${jobId}`);
+        const response = await fetch(`/api/v1/job/${jobId}`);
         const data = await response.json();
         setJob(data);
 

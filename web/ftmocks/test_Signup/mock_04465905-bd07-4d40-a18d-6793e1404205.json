@@ -1,11 +1,12 @@
 {
-  "url": "/api/stories/14/tags",
-  "time": "Fri Feb 20 2026 17:14:46 GMT+0530 (India Standard Time)",
+  "url": "/api/v1/stories",
+  "time": "Fri Feb 20 2026 20:15:46 GMT+0530 (India Standard Time)",
   "method": "GET",
   "request": {
     "headers": {
       "accept": "*/*",
-      "referer": "http://localhost:3000/story/14",
+      "content-type": "application/json",
+      "referer": "http://localhost:3000/",
       "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36",
       "sec-ch-ua": "\"Chromium\";v=\"139\", \"Not;A=Brand\";v=\"99\"",
       "sec-ch-ua-mobile": "?0",
@@ -22,14 +23,14 @@
       "x-powered-by": "Express",
       "access-control-allow-origin": "*",
       "content-type": "application/json; charset=utf-8",
-      "content-length": "11",
-      "etag": "W/\"b-hsI/cCKfmGSM41S6uHezTmNWBBQ\"",
-      "date": "Fri, 20 Feb 2026 11:44:46 GMT",
+      "content-length": "14",
+      "etag": "W/\"e-a7GqTagRsT+QyCG9MGxRIvVnfj0\"",
+      "date": "Fri, 20 Feb 2026 14:45:46 GMT",
       "connection": "close"
     },
-    "content": "{\"tags\":[]}"
+    "content": "{\"stories\":[]}"
   },
-  "id": "8235e05a-e26b-4228-ada4-3d11509cc97d",
-  "served": false,
+  "id": "04465905-bd07-4d40-a18d-6793e1404205",
+  "served": true,
   "ignoreParams": []
 }

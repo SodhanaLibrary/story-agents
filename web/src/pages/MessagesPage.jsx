@@ -49,7 +49,7 @@ function MessagesPage() {
     if (!userId) return;
     setLoadingConversations(true);
     try {
-      const res = await api.get("/api/messages/conversations");
+      const res = await api.get("/api/v1/messages/conversations");
       const data = await res.json();
       setConversations(data.conversations || []);
     } catch (err) {
@@ -64,10 +64,10 @@ function MessagesPage() {
       if (!userId || !otherId) return;
       setLoadingMessages(true);
       try {
-        const res = await api.get(`/api/messages/with/${otherId}`);
+        const res = await api.get(`/api/v1/messages/with/${otherId}`);
         const data = await res.json();
         setMessages(data.messages || []);
-        await api.patch(`/api/messages/with/${otherId}/read`);
+        await api.patch(`/api/v1/messages/with/${otherId}/read`);
         setConversations((prev) =>
           prev.map((c) =>
             c.other_id === otherId ? { ...c, unread_count: 0 } : c,
@@ -91,7 +91,7 @@ function MessagesPage() {
     setUserSearchLoading(true);
     try {
       const res = await api.get(
-        `/api/users/search?q=${encodeURIComponent(query || "")}&limit=20`,
+        `/api/v1/users/search?q=${encodeURIComponent(query || "")}&limit=20`,
       );
       const data = await res.json();
       setUserSearchResults(data.users || []);
@@ -127,7 +127,7 @@ function MessagesPage() {
       return;
     }
     if (conversations.length >= 0 && id !== userId) {
-      fetch(`/api/users/${id}/profile`)
+      fetch(`/api/v1/users/${id}/profile`)
         .then((r) => r.json())
         .then((data) => {
           if (data.profile)
@@ -176,7 +176,7 @@ function MessagesPage() {
     if (!replyText.trim() || !selectedOther || sending) return;
     setSending(true);
     try {
-      const res = await api.post("/api/messages", {
+      const res = await api.post("/api/v1/messages", {
         recipientId: selectedOther.other_id,
         body: replyText.trim(),
       });

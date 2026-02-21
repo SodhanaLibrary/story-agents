@@ -92,6 +92,31 @@ export async function deleteFromS3(key) {
 }
 
 /**
+ * Get a readable stream for an S3 object (e.g. for piping to HTTP response)
+ * @param {string} key - S3 object key
+ * @returns {Promise<{ Body: import('stream').Readable, ContentType?: string }|null>} - Stream and optional content type, or null if not found
+ */
+export async function getS3ObjectStream(key) {
+  try {
+    const client = getS3Client();
+    if (!client) return null;
+    const s3Config = config.storage.s3;
+    const command = new GetObjectCommand({
+      Bucket: s3Config.bucket,
+      Key: key,
+    });
+    const response = await client.send(command);
+    return {
+      Body: response.Body,
+      ContentType: response.ContentType || "image/png",
+    };
+  } catch (err) {
+    logger.warn(`Failed to get S3 object stream ${key}: ${err.message}`);
+    return null;
+  }
+}
+
+/**
  * Get a pre-signed URL for an S3 object
  * @param {string} key - S3 object key
  * @param {number} expiresIn - URL expiration in seconds (default 1 hour)

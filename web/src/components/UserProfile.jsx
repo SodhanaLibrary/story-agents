@@ -51,10 +51,10 @@ function UserProfile({ userId, onClose, onViewStory }) {
     setLoading(true);
     try {
       const [profileRes, storiesRes, followersRes, followingRes] = await Promise.all([
-        fetch(`/api/users/${userId}/profile`),
-        fetch(`/api/users/${userId}/stories?viewerId=${currentUserId || ""}`),
-        fetch(`/api/users/${userId}/followers`),
-        fetch(`/api/users/${userId}/following`),
+        fetch(`/api/v1/users/${userId}/profile`),
+        fetch(`/api/v1/users/${userId}/stories?viewerId=${currentUserId || ""}`),
+        fetch(`/api/v1/users/${userId}/followers`),
+        fetch(`/api/v1/users/${userId}/following`),
       ]);
 
       const [profileData, storiesData, followersData, followingData] = await Promise.all([
@@ -71,7 +71,7 @@ function UserProfile({ userId, onClose, onViewStory }) {
 
       // Check if current user is following
       if (currentUserId && !isOwnProfile) {
-        const followRes = await fetch(`/api/users/${currentUserId}/is-following/${userId}`);
+        const followRes = await fetch(`/api/v1/users/${currentUserId}/is-following/${userId}`);
         const followData = await followRes.json();
         setIsFollowing(followData.isFollowing);
       }
@@ -92,13 +92,13 @@ function UserProfile({ userId, onClose, onViewStory }) {
     setFollowLoading(true);
     try {
       if (isFollowing) {
-        await fetch(`/api/users/${userId}/follow?followerId=${currentUserId}`, {
+        await fetch(`/api/v1/users/${userId}/follow?followerId=${currentUserId}`, {
           method: "DELETE",
         });
         setIsFollowing(false);
         setProfile((prev) => ({ ...prev, followerCount: prev.followerCount - 1 }));
       } else {
-        await fetch(`/api/users/${userId}/follow`, {
+        await fetch(`/api/v1/users/${userId}/follow`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ followerId: currentUserId }),
@@ -115,7 +115,7 @@ function UserProfile({ userId, onClose, onViewStory }) {
 
   const handleEditProfile = async () => {
     try {
-      await fetch(`/api/users/${userId}/profile`, {
+      await fetch(`/api/v1/users/${userId}/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
@@ -189,6 +189,13 @@ function UserProfile({ userId, onClose, onViewStory }) {
                 <Typography variant="body1" sx={{ color: "text.secondary" }}>
                   @{profile.username}
                 </Typography>
+              )}
+              {profile.role && (
+                <Chip
+                  label={profile.role === "admin" ? "Admin" : profile.role === "super-admin" ? "Super Admin" : profile.role.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                  size="small"
+                  sx={{ mt: 0.5, fontWeight: 600, bgcolor: "primary.main", color: "primary.contrastText" }}
+                />
               )}
               {profile.bio && (
                 <Typography variant="body2" sx={{ mt: 1, color: "text.secondary" }}>

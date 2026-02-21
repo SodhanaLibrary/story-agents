@@ -8,7 +8,7 @@ const logger = createLogger("MeRoutes");
  * @param {import('express').Application} app
  */
 export function registerMeRoutes(app) {
-  app.get("/api/users/me", async (req, res) => {
+  app.get("/api/v1/users/me", async (req, res) => {
     try {
       if (!req.userId) {
         return res.status(401).json({ error: "Authentication required" });

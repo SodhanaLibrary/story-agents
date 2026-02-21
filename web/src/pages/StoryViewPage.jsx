@@ -10,14 +10,22 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  IconButton,
+  Snackbar,
+  useMediaQuery,
+  useTheme,
+  Tooltip,
 } from "@mui/material";
-import { Close, Menu } from "@mui/icons-material";
-import IconButton from "@mui/material/IconButton";
+import { Close, Menu, PictureAsPdf, Share } from "@mui/icons-material";
 import StoryViewer from "../components/StoryViewer";
 import { useAuth } from "../context/AuthContext";
+import { downloadStoryPdf } from "../lib/downloadStoryPdf";
 
 function StoryViewPage() {
-  const { userId } = useAuth();
+  const { userId, isPremium, isAdmin, isSuperAdmin } = useAuth();
+  const canDownloadPdf = isPremium || isAdmin || isSuperAdmin;
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const { storyId } = useParams();
   const navigate = useNavigate();
   const [story, setStory] = useState(null);
@@ -26,12 +34,15 @@ function StoryViewPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showPageList, setShowPageList] = useState(false);
+  const [pdfGenerating, setPdfGenerating] = useState(false);
+  const [pdfProgress, setPdfProgress] = useState("");
+  const [shareSnackbar, setShareSnackbar] = useState(false);
 
   useEffect(() => {
     const fetchStory = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/stories/${storyId}`);
+        const res = await fetch(`/api/v1/stories/${storyId}`);
         if (!res.ok) {
           throw new Error("Story not found");
         }
@@ -58,6 +69,53 @@ function StoryViewPage() {
     setDeleteDialogOpen(true);
   };
 
+  const handleDownloadPdf = async () => {
+    if (!canDownloadPdf) {
+      navigate("/pricing");
+      return;
+    }
+    if (!story || pdfGenerating) return;
+    setPdfGenerating(true);
+    setPdfProgress("Preparing...");
+    try {
+      await downloadStoryPdf(story, {
+        onProgress: setPdfProgress,
+      });
+    } catch (err) {
+      console.error("Failed to generate PDF:", err);
+      setError("Failed to generate PDF");
+    } finally {
+      setPdfGenerating(false);
+      setPdfProgress("");
+    }
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/story/${storyId}`;
+    const title = story?.storyPages?.title || "Story";
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title,
+          url,
+          text: `Check out "${title}"`,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareSnackbar(true);
+      }
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        try {
+          await navigator.clipboard.writeText(url);
+          setShareSnackbar(true);
+        } catch {
+          setError("Could not share or copy link");
+        }
+      }
+    }
+  };
+
   const confirmDelete = async () => {
     setDeleting(true);
     try {
@@ -65,7 +123,7 @@ function StoryViewPage() {
       if (userId) {
         headers["X-User-Id"] = userId;
       }
-      const res = await fetch(`/api/stories/${storyId}`, {
+      const res = await fetch(`/api/v1/stories/${storyId}`, {
         method: "DELETE",
         headers,
       });
@@ -155,11 +213,62 @@ function StoryViewPage() {
             </Typography>
           )}
         </Box>
-        <Box>
+        <Box display="flex" alignItems="center" gap={1}>
+          <Tooltip title="Share story">
+            <span>
+              {isMobile ? (
+                <IconButton
+                  id="btn-share-story"
+                  color="inherit"
+                  onClick={handleShare}
+                  aria-label="Share story"
+                >
+                  <Share />
+                </IconButton>
+              ) : (
+                <Button
+                  id="btn-share-story"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<Share />}
+                  onClick={handleShare}
+                >
+                  Share
+                </Button>
+              )}
+            </span>
+          </Tooltip>
+          <Tooltip title={canDownloadPdf ? (pdfGenerating ? pdfProgress || "Generating PDF…" : "Download PDF") : "Upgrade to Premium to download PDF"}>
+            <span>
+              {isMobile ? (
+                <IconButton
+                  id="btn-download-story-pdf"
+                  color="inherit"
+                  onClick={handleDownloadPdf}
+                  disabled={pdfGenerating}
+                  aria-label={canDownloadPdf ? "Download PDF" : "Upgrade to download PDF"}
+                >
+                  <PictureAsPdf />
+                </IconButton>
+              ) : (
+                <Button
+                  id="btn-download-story-pdf"
+                  variant="outlined"
+                  size="small"
+                  startIcon={<PictureAsPdf />}
+                  onClick={handleDownloadPdf}
+                  disabled={pdfGenerating}
+                >
+                  {pdfGenerating ? pdfProgress || "Generating PDF…" : "Download PDF"}
+                </Button>
+              )}
+            </span>
+          </Tooltip>
           <IconButton
             id="btn-close-story-view"
             onClick={() => navigate("/")}
             sx={{ bgcolor: "rgba(0,0,0,0.5)" }}
+            aria-label="Close"
           >
             <Close />
           </IconButton>
@@ -202,6 +311,13 @@ function StoryViewPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      <Snackbar
+        open={shareSnackbar}
+        autoHideDuration={3000}
+        onClose={() => setShareSnackbar(false)}
+        message="Link copied to clipboard"
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
     </Dialog>
   );
 }

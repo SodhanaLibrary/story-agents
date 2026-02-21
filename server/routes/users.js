@@ -24,7 +24,7 @@ const logger = createLogger("UsersRoutes");
  * @param {import('express').Application} app
  */
 export function registerUsersRoutes(app) {
-  app.get("/api/users/search", async (req, res) => {
+  app.get("/api/v1/users/search", async (req, res) => {
     try {
       const currentUserId = req.userId;
       if (!currentUserId) {
@@ -40,7 +40,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.get("/api/users/:userId/avatars", async (req, res) => {
+  app.get("/api/v1/users/:userId/avatars", async (req, res) => {
     try {
       const { userId } = req.params;
       const avatars = await getUserAvatars(parseInt(userId, 10));
@@ -51,7 +51,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.post("/api/users/:userId/avatars", async (req, res) => {
+  app.post("/api/v1/users/:userId/avatars", async (req, res) => {
     try {
       const { userId } = req.params;
       const {
@@ -84,7 +84,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.get("/api/users/:userId/avatars/:avatarId", async (req, res) => {
+  app.get("/api/v1/users/:userId/avatars/:avatarId", async (req, res) => {
     try {
       const { avatarId } = req.params;
       const avatar = await getUserAvatarById(parseInt(avatarId, 10));
@@ -100,7 +100,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.delete("/api/users/:userId/avatars/:avatarId", async (req, res) => {
+  app.delete("/api/v1/users/:userId/avatars/:avatarId", async (req, res) => {
     try {
       const { userId, avatarId } = req.params;
       await deleteUserAvatar(parseInt(userId, 10), parseInt(avatarId, 10));
@@ -111,7 +111,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.get("/api/users/:userId/profile", async (req, res) => {
+  app.get("/api/v1/users/:userId/profile", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const profile = await getUserProfile(userId);
@@ -127,7 +127,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.put("/api/users/:userId/profile", async (req, res) => {
+  app.put("/api/v1/users/:userId/profile", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const { name, username, bio, isPublic } = req.body;
@@ -142,7 +142,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.get("/api/users/:userId/stories", async (req, res) => {
+  app.get("/api/v1/users/:userId/stories", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const viewerId = req.query.viewerId
@@ -156,7 +156,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.get("/api/users/:userId/followers", async (req, res) => {
+  app.get("/api/v1/users/:userId/followers", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const followers = await getFollowers(userId);
@@ -167,7 +167,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.get("/api/users/:userId/following", async (req, res) => {
+  app.get("/api/v1/users/:userId/following", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const following = await getFollowing(userId);
@@ -178,7 +178,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.post("/api/users/:userId/follow", async (req, res) => {
+  app.post("/api/v1/users/:userId/follow", async (req, res) => {
     try {
       const followingId = parseInt(req.params.userId);
       const { followerId } = req.body;
@@ -195,7 +195,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.delete("/api/users/:userId/follow", async (req, res) => {
+  app.delete("/api/v1/users/:userId/follow", async (req, res) => {
     try {
       const followingId = parseInt(req.params.userId);
       const followerId = parseInt(req.query.followerId);
@@ -212,7 +212,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.get("/api/users/:userId/is-following/:targetId", async (req, res) => {
+  app.get("/api/v1/users/:userId/is-following/:targetId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const targetId = parseInt(req.params.targetId);
@@ -224,7 +224,7 @@ export function registerUsersRoutes(app) {
     }
   });
 
-  app.get("/api/feed", async (req, res) => {
+  app.get("/api/v1/feed", async (req, res) => {
     try {
       const userId = req.query.userId
         ? parseInt(req.query.userId)

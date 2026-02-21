@@ -78,19 +78,29 @@ export async function createUserWithEmail({ email, name, password }) {
   return { user: user[0], verificationToken };
 }
 
-/** Verify email by token; returns updated user or null. */
+/** Verify email by token. Returns { user } on success, { error: 'expired' | 'invalid' } otherwise. */
 export async function verifyEmailByToken(token) {
-  if (!token) return null;
+  const t = typeof token === "string" ? token.trim() : "";
+  if (!t) return { error: "invalid" };
+  const now = new Date();
   const rows = await query(
-    "SELECT id, email, name, picture, role, plan FROM users WHERE email_verification_token = ? AND email_verification_expires > NOW()",
-    [token],
+    "SELECT id, email, name, picture, role, plan, email_verification_expires FROM users WHERE email_verification_token = ? AND email_verification_expires > ?",
+    [t, now],
   );
-  if (rows.length === 0) return null;
-  await query(
-    "UPDATE users SET email_verified = 1, email_verification_token = NULL, email_verification_expires = NULL WHERE id = ?",
-    [rows[0].id],
+  if (rows.length > 0) {
+    await query(
+      "UPDATE users SET email_verified = 1, email_verification_token = NULL, email_verification_expires = NULL WHERE id = ?",
+      [rows[0].id],
+    );
+    const user = await getUserById(rows[0].id);
+    return { user };
+  }
+  const expiredRows = await query(
+    "SELECT id FROM users WHERE email_verification_token = ?",
+    [t],
   );
-  return await getUserById(rows[0].id);
+  if (expiredRows.length > 0) return { error: "expired" };
+  return { error: "invalid" };
 }
 
 /** Set password for user (for change-password and reset-password). */
@@ -907,6 +917,11 @@ export async function getCharactersByStoryId(storyId) {
   return await query("SELECT * FROM characters WHERE story_id = ?", [storyId]);
 }
 
+export async function getCharacterById(characterId) {
+  const rows = await query("SELECT * FROM characters WHERE id = ?", [characterId]);
+  return rows[0] || null;
+}
+
 // ==================== PAGES ====================
 
 export async function createPage(storyId, pageData) {
@@ -969,6 +984,11 @@ export async function getPagesByStoryId(storyId) {
     "SELECT * FROM pages WHERE story_id = ? ORDER BY page_number",
     [storyId],
   );
+}
+
+export async function getPageById(pageId) {
+  const rows = await query("SELECT * FROM pages WHERE id = ?", [pageId]);
+  return rows[0] || null;
 }
 
 // ==================== DRAFTS ====================
@@ -1709,6 +1729,7 @@ export async function getUserProfile(userId) {
     username: user.username,
     picture: user.picture,
     bio: user.bio,
+    role: user.role || "user",
     isPublic: user.is_public,
     followerCount: user.follower_count,
     followingCount: user.following_count,

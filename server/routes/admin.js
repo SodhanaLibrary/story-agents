@@ -14,7 +14,7 @@ const logger = createLogger("AdminRoutes");
  * @param {import('express').Application} app
  */
 export function registerAdminRoutes(app) {
-  app.get("/api/admin/users", requireRole("admin"), async (req, res) => {
+  app.get("/api/v1/admin/users", requireRole("admin"), async (req, res) => {
     try {
       const { search, role, limit, offset } = req.query;
 
@@ -43,7 +43,7 @@ export function registerAdminRoutes(app) {
     }
   });
 
-  app.get("/api/admin/users/stats", requireRole("admin"), async (req, res) => {
+  app.get("/api/v1/admin/users/stats", requireRole("admin"), async (req, res) => {
     try {
       const stats = await getUserStats();
       res.json(stats);
@@ -54,7 +54,7 @@ export function registerAdminRoutes(app) {
   });
 
   app.put(
-    "/api/admin/users/:userId/role",
+    "/api/v1/admin/users/:userId/role",
     requireRole("super-admin"),
     async (req, res) => {
       try {

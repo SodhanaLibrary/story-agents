@@ -6,6 +6,6 @@ export const planKeys = { all: ["plans"], status: () => [...planKeys.all, "statu
 export function usePlansStatus() {
   return useQuery({
     queryKey: planKeys.status(),
-    queryFn: () => fetchWithAuth("/api/plans/status"),
+    queryFn: () => fetchWithAuth("/api/v1/plans/status"),
   });
 }

@@ -37,7 +37,7 @@ function DraftsPage() {
       
       setLoading(true);
       try {
-        const res = await fetch(`/api/drafts?userId=${userId}`);
+        const res = await fetch(`/api/v1/drafts?userId=${userId}`);
         const data = await res.json();
         setDrafts(data.drafts || []);
       } catch (err) {
@@ -53,7 +53,7 @@ function DraftsPage() {
 
   const handleResumeDraft = async (draft) => {
     try {
-      const response = await fetch(`/api/drafts/${draft.jobId}/resume`, {
+      const response = await fetch(`/api/v1/drafts/${draft.jobId}/resume`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -76,7 +76,7 @@ function DraftsPage() {
 
     setDeleting(true);
     try {
-      const res = await fetch(`/api/drafts/${deleteDialog.draft.jobId}`, { method: "DELETE" });
+      const res = await fetch(`/api/v1/drafts/${deleteDialog.draft.jobId}`, { method: "DELETE" });
       if (res.ok) {
         setDrafts((prev) => prev.filter((d) => d.jobId !== deleteDialog.draft.jobId));
         setDeleteDialog({ open: false, draft: null });

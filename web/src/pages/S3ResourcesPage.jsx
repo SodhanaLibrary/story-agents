@@ -98,7 +98,7 @@ function S3ResourcesPage() {
       const params = new URLSearchParams();
       if (prefixFilter) params.append("prefix", prefixFilter);
 
-      const response = await api.get(`/api/s3/objects?${params}`);
+      const response = await api.get(`/api/v1/s3/objects?${params}`);
       const data = await response.json();
 
       if (data.objects) {
@@ -165,7 +165,7 @@ function S3ResourcesPage() {
     setDeleting(true);
     setDeleteResult(null);
     try {
-      const response = await api.fetch("/api/s3/objects", {
+      const response = await api.fetch("/api/v1/s3/objects", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keys: Array.from(selected) }),
@@ -189,7 +189,7 @@ function S3ResourcesPage() {
       const params = new URLSearchParams();
       if (prefixFilter) params.append("prefix", prefixFilter);
 
-      const response = await api.del(`/api/s3/orphans?${params}`);
+      const response = await api.del(`/api/v1/s3/orphans?${params}`);
       const data = await response.json();
       setDeleteResult(data);
       setDeleteAllOrphansDialogOpen(false);

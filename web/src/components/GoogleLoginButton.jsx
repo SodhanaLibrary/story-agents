@@ -23,6 +23,7 @@ import {
   Groups,
   Message as MessageIcon,
 } from "@mui/icons-material";
+import { Person } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 
 export default function GoogleLoginButton() {

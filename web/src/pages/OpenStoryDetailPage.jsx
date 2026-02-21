@@ -29,20 +29,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
-const OPEN_STORY_GENRES = [
-  "Real life",
-  "Fantasy",
-  "Science Fiction",
-  "Mystery",
-  "Horror",
-  "Romance",
-  "Adventure",
-  "Realistic Fiction",
-  "Historical Fiction",
-  "Comedy",
-  "Children's Stories",
-  "Biography",
-];
+import { STORY_GENRES } from "../constants/genres";
 
 function OpenStoryDetailPage() {
   const { id } = useParams();
@@ -87,7 +74,7 @@ function OpenStoryDetailPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await api.get(`/api/open-stories/${id}`);
+        const res = await api.get(`/api/v1/open-stories/${id}`);
         const data = await res.json().catch(() => ({}));
         if (cancelled) return;
         if (!res.ok) {
@@ -111,7 +98,7 @@ function OpenStoryDetailPage() {
   useEffect(() => {
     if (!submission?.id) return;
     setCommentsLoading(true);
-    fetch(`/api/open-stories/${submission.id}/comments`)
+    fetch(`/api/v1/open-stories/${submission.id}/comments`)
       .then((res) => res.json())
       .then((data) => setComments(data.comments || []))
       .catch(() => setComments([]))
@@ -120,7 +107,7 @@ function OpenStoryDetailPage() {
 
   useEffect(() => {
     if (!isAuthenticated || !userId) return;
-    api.get("/api/plans/status").then((res) => res.json()).then(setPlansStatus).catch(() => setPlansStatus(null));
+    api.get("/api/v1/plans/status").then((res) => res.json()).then(setPlansStatus).catch(() => setPlansStatus(null));
   }, [isAuthenticated, userId]);
 
   const formatDate = (dateStr) => {
@@ -136,7 +123,7 @@ function OpenStoryDetailPage() {
     if (!isAuthenticated || !submission) return;
     setVoting(true);
     try {
-      const res = await api.post(`/api/open-stories/${submission.id}/vote`);
+      const res = await api.post(`/api/v1/open-stories/${submission.id}/vote`);
       const data = await res.json();
       setSubmission((prev) =>
         prev
@@ -158,7 +145,7 @@ function OpenStoryDetailPage() {
     if (!submission || !commentText.trim() || !isAuthenticated || submittingComment) return;
     setSubmittingComment(true);
     try {
-      const res = await api.post(`/api/open-stories/${submission.id}/comments`, {
+      const res = await api.post(`/api/v1/open-stories/${submission.id}/comments`, {
         comment: commentText.trim(),
       });
       const created = await res.json();
@@ -195,7 +182,7 @@ function OpenStoryDetailPage() {
     if (!submission || !editTitle.trim() || !editStory.trim()) return;
     setSavingStory(true);
     try {
-      const res = await api.put(`/api/open-stories/${submission.id}`, {
+      const res = await api.put(`/api/v1/open-stories/${submission.id}`, {
         title: editTitle.trim(),
         story: editStory.trim(),
         genre: editGenre.trim() || null,
@@ -216,7 +203,7 @@ function OpenStoryDetailPage() {
     if (!submission) return;
     setDeletingStory(true);
     try {
-      const res = await api.del(`/api/open-stories/${submission.id}`);
+      const res = await api.del(`/api/v1/open-stories/${submission.id}`);
       if (res.ok) {
         navigate("/open-stories");
       }
@@ -242,7 +229,7 @@ function OpenStoryDetailPage() {
     setSavingCommentEdit(true);
     try {
       const res = await api.put(
-        `/api/open-stories/${submission.id}/comments/${editingCommentId}`,
+        `/api/v1/open-stories/${submission.id}/comments/${editingCommentId}`,
         { comment: editingCommentText.trim() },
       );
       if (res.ok) {
@@ -264,7 +251,7 @@ function OpenStoryDetailPage() {
     setDeletingCommentId(c.id);
     try {
       const res = await api.del(
-        `/api/open-stories/${submission.id}/comments/${c.id}`,
+        `/api/v1/open-stories/${submission.id}/comments/${c.id}`,
       );
       if (res.ok) {
         setComments((prev) => prev.filter((x) => x.id !== c.id));
@@ -289,7 +276,7 @@ function OpenStoryDetailPage() {
       const dataUrl = reader.result;
       setUploadingImage(true);
       try {
-        const res = await api.post(`/api/open-stories/${submission.id}/images`, { image: dataUrl });
+        const res = await api.post(`/api/v1/open-stories/${submission.id}/images`, { image: dataUrl });
         if (res.ok) {
           const created = await res.json();
           setSubmission((prev) => (prev ? { ...prev, images: [...(prev.images || []), created] } : null));
@@ -308,7 +295,7 @@ function OpenStoryDetailPage() {
     if (!submission || !window.confirm("Remove this image?")) return;
     setDeletingImageId(img.id);
     try {
-      const res = await api.del(`/api/open-stories/${submission.id}/images/${img.id}`);
+      const res = await api.del(`/api/v1/open-stories/${submission.id}/images/${img.id}`);
       if (res.ok) {
         setSubmission((prev) => (prev ? { ...prev, images: (prev.images || []).filter((i) => i.id !== img.id) } : null));
       }
@@ -527,7 +514,7 @@ function OpenStoryDetailPage() {
               onChange={(e) => setEditGenre(e.target.value)}
             >
               <MenuItem value="">Select genre</MenuItem>
-              {OPEN_STORY_GENRES.map((g) => (
+              {STORY_GENRES.map((g) => (
                 <MenuItem key={g} value={g}>
                   {g}
                 </MenuItem>

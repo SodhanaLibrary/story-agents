@@ -149,7 +149,7 @@ export function registerBatchRoutes(app, deps) {
     }
   }
 
-  app.post("/api/batch/create", async (req, res) => {
+  app.post("/api/v1/batch/create", async (req, res) => {
     try {
       const { jobId } = req.body;
       const userId = req.userId;
@@ -193,7 +193,7 @@ export function registerBatchRoutes(app, deps) {
     }
   });
 
-  app.get("/api/batch/list", async (req, res) => {
+  app.get("/api/v1/batch/list", async (req, res) => {
     try {
       const userId = req.userId;
 
@@ -216,7 +216,7 @@ export function registerBatchRoutes(app, deps) {
     }
   });
 
-  app.get("/api/batch/:batchId", async (req, res) => {
+  app.get("/api/v1/batch/:batchId", async (req, res) => {
     try {
       const { batchId } = req.params;
       const userId = req.userId;
@@ -242,7 +242,7 @@ export function registerBatchRoutes(app, deps) {
     }
   });
 
-  app.post("/api/batch/:batchId/cancel", async (req, res) => {
+  app.post("/api/v1/batch/:batchId/cancel", async (req, res) => {
     try {
       const { batchId } = req.params;
       const userId = req.userId;

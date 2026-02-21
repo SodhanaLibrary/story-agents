@@ -196,6 +196,40 @@ export async function initializeDatabase() {
     if (e.code !== "ER_DUP_FIELDNAME") throw e;
   }
 
+  // Volumes table (collections of stories by author)
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS volumes (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      title VARCHAR(500) NOT NULL,
+      description TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      INDEX idx_user_id (user_id)
+    )
+  `);
+  try {
+    await pool.execute("ALTER TABLE stories ADD COLUMN volume_id INT NULL");
+  } catch (e) {
+    if (e.code !== "ER_DUP_FIELDNAME") throw e;
+  }
+  try {
+    await pool.execute("ALTER TABLE stories ADD COLUMN volume_sort_order INT DEFAULT 0");
+  } catch (e) {
+    if (e.code !== "ER_DUP_FIELDNAME") throw e;
+  }
+  try {
+    await pool.execute("ALTER TABLE stories ADD INDEX idx_volume_id (volume_id)");
+  } catch (e) {
+    if (e.code !== "ER_DUP_KEYNAME" && e.code !== "ER_DUP_INDEX") throw e;
+  }
+  try {
+    await pool.execute("ALTER TABLE stories ADD CONSTRAINT fk_stories_volume FOREIGN KEY (volume_id) REFERENCES volumes(id) ON DELETE SET NULL");
+  } catch (e) {
+    if (e.code !== "ER_DUP_KEYNAME" && e.code !== "ER_FK_DUP_NAME") throw e;
+  }
+
   // Tags table
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS tags (
@@ -374,7 +408,7 @@ export async function initializeDatabase() {
     }
   }
 
-  // User plan: free (2M tokens once) | pro ($19)
+  // User plan: free (1M tokens once) | pro ($19/month)
   try {
     await pool.execute(`
       ALTER TABLE users ADD COLUMN plan ENUM('free', 'pro') DEFAULT 'free'

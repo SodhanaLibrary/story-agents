@@ -10,7 +10,7 @@ export function useLoginGoogle() {
       const base64Url = credential.split(".")[1];
       const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
       const payload = JSON.parse(atob(base64));
-      const data = await fetchNoAuth("/api/auth/google", {
+      const data = await fetchNoAuth("/api/v1/auth/google", {
         method: "POST",
         body: JSON.stringify({ credential }),
       });
@@ -26,7 +26,7 @@ export function useLoginEmail() {
   return useMutation({
     mutationKey: [...authKeys.all, "login"],
     mutationFn: async ({ email, password }) => {
-      const data = await fetchNoAuth("/api/auth/login", {
+      const data = await fetchNoAuth("/api/v1/auth/login", {
         method: "POST",
         body: JSON.stringify({ email: email.trim(), password }),
       });
@@ -41,7 +41,7 @@ export function useSignup() {
   return useMutation({
     mutationKey: [...authKeys.all, "signup"],
     mutationFn: ({ email, name, password }) =>
-      fetchNoAuth("/api/auth/signup", {
+      fetchNoAuth("/api/v1/auth/signup", {
         method: "POST",
         body: JSON.stringify({ email: email.trim(), name: (name || "").trim() || undefined, password }),
       }),
@@ -52,7 +52,7 @@ export function useVerifyEmail() {
   return useMutation({
     mutationKey: [...authKeys.all, "verifyEmail"],
     mutationFn: (token) =>
-      fetchNoAuth(`/api/auth/verify-email?token=${encodeURIComponent(token)}`),
+      fetchNoAuth(`/api/v1/auth/verify-email?token=${encodeURIComponent(token)}`),
   });
 }
 
@@ -60,7 +60,7 @@ export function useForgotPassword() {
   return useMutation({
     mutationKey: [...authKeys.all, "forgotPassword"],
     mutationFn: (email) =>
-      fetchNoAuth("/api/auth/forgot-password", {
+      fetchNoAuth("/api/v1/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({ email: email.trim() }),
       }),
@@ -71,7 +71,7 @@ export function useResetPassword() {
   return useMutation({
     mutationKey: [...authKeys.all, "resetPassword"],
     mutationFn: ({ token, newPassword }) =>
-      fetchNoAuth("/api/auth/reset-password", {
+      fetchNoAuth("/api/v1/auth/reset-password", {
         method: "POST",
         body: JSON.stringify({ token, newPassword }),
       }),
@@ -82,7 +82,7 @@ export function useChangePassword() {
   return useMutation({
     mutationKey: [...authKeys.all, "changePassword"],
     mutationFn: ({ currentPassword, newPassword }) =>
-      fetchWithAuth("/api/auth/change-password", {
+      fetchWithAuth("/api/v1/auth/change-password", {
         method: "POST",
         body: JSON.stringify({ currentPassword, newPassword }),
       }),

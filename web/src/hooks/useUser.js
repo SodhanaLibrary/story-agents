@@ -20,7 +20,7 @@ export const userKeys = {
 export function useUserProfile(userId) {
   return useQuery({
     queryKey: userKeys.profile(userId),
-    queryFn: () => fetchWithAuth(`/api/users/${userId}/profile`),
+    queryFn: () => fetchWithAuth(`/api/v1/users/${userId}/profile`),
     enabled: !!userId,
     select: (data) => data.profile,
   });
@@ -32,7 +32,7 @@ export function useUserProfile(userId) {
 export function useFavorites(userId) {
   return useQuery({
     queryKey: userKeys.favorites(userId),
-    queryFn: () => fetchWithAuth(`/api/users/${userId}/favorites`),
+    queryFn: () => fetchWithAuth(`/api/v1/users/${userId}/favorites`),
     enabled: !!userId,
     select: (data) => data.favorites || [],
   });
@@ -44,7 +44,7 @@ export function useFavorites(userId) {
 export function useFavoriteIds(userId) {
   return useQuery({
     queryKey: userKeys.favoriteIds(userId),
-    queryFn: () => fetchWithAuth(`/api/users/${userId}/favorite-ids`),
+    queryFn: () => fetchWithAuth(`/api/v1/users/${userId}/favorite-ids`),
     enabled: !!userId,
     select: (data) => new Set(data.favoriteIds || []),
   });
@@ -56,7 +56,7 @@ export function useFavoriteIds(userId) {
 export function useCurrentlyReading(userId) {
   return useQuery({
     queryKey: userKeys.reading(userId),
-    queryFn: () => fetchWithAuth(`/api/users/${userId}/reading`),
+    queryFn: () => fetchWithAuth(`/api/v1/users/${userId}/reading`),
     enabled: !!userId,
     select: (data) => data.reading || [],
   });
@@ -70,7 +70,7 @@ export function useAddFavorite(userId) {
 
   return useMutation({
     mutationFn: (storyId) =>
-      fetchWithAuth(`/api/users/${userId}/favorites`, {
+      fetchWithAuth(`/api/v1/users/${userId}/favorites`, {
         method: "POST",
         body: JSON.stringify({ storyId }),
       }),
@@ -115,7 +115,7 @@ export function useRemoveFavorite(userId) {
 
   return useMutation({
     mutationFn: (storyId) =>
-      fetchWithAuth(`/api/users/${userId}/favorites/${storyId}`, {
+      fetchWithAuth(`/api/v1/users/${userId}/favorites/${storyId}`, {
         method: "DELETE",
       }),
     onMutate: async (storyId) => {
@@ -155,7 +155,7 @@ export function useUpdateReadingProgress(userId) {
 
   return useMutation({
     mutationFn: ({ storyId, progress, currentPage }) =>
-      fetchWithAuth(`/api/users/${userId}/reading/${storyId}`, {
+      fetchWithAuth(`/api/v1/users/${userId}/reading/${storyId}`, {
         method: "PUT",
         body: JSON.stringify({ progress, currentPage }),
       }),
@@ -171,7 +171,7 @@ export function useUpdateReadingProgress(userId) {
 export function useDrafts(userId) {
   return useQuery({
     queryKey: userKeys.drafts(userId),
-    queryFn: () => fetchWithAuth(`/api/drafts?userId=${userId}`),
+    queryFn: () => fetchWithAuth(`/api/v1/drafts?userId=${userId}`),
     enabled: !!userId,
     select: (data) => data.drafts || [],
   });
@@ -185,7 +185,7 @@ export function useFollowUser(currentUserId) {
 
   return useMutation({
     mutationFn: (targetUserId) =>
-      fetchWithAuth(`/api/users/${targetUserId}/follow`, {
+      fetchWithAuth(`/api/v1/users/${targetUserId}/follow`, {
         method: "POST",
         body: JSON.stringify({ followerId: currentUserId }),
       }),
@@ -205,7 +205,7 @@ export function useUnfollowUser(currentUserId) {
 
   return useMutation({
     mutationFn: (targetUserId) =>
-      fetchWithAuth(`/api/users/${targetUserId}/follow?followerId=${currentUserId}`, {
+      fetchWithAuth(`/api/v1/users/${targetUserId}/follow?followerId=${currentUserId}`, {
         method: "DELETE",
       }),
     onSuccess: (_, targetUserId) => {
@@ -223,7 +223,7 @@ export function useIsFollowing(currentUserId, targetUserId) {
   return useQuery({
     queryKey: [...userKeys.all, "is-following", currentUserId, targetUserId],
     queryFn: () =>
-      fetchWithAuth(`/api/users/${currentUserId}/is-following/${targetUserId}`),
+      fetchWithAuth(`/api/v1/users/${currentUserId}/is-following/${targetUserId}`),
     enabled: !!currentUserId && !!targetUserId && currentUserId !== targetUserId,
     select: (data) => data.isFollowing,
   });
@@ -237,7 +237,7 @@ export function useUserStories(userId, viewerId) {
     queryKey: userKeys.stories(userId, viewerId),
     queryFn: () =>
       fetchWithAuth(
-        `/api/users/${userId}/stories?viewerId=${viewerId || ""}`
+        `/api/v1/users/${userId}/stories?viewerId=${viewerId || ""}`
       ),
     enabled: !!userId,
     select: (data) => data.stories || [],
@@ -250,7 +250,7 @@ export function useUserStories(userId, viewerId) {
 export function useFollowers(userId) {
   return useQuery({
     queryKey: userKeys.followers(userId),
-    queryFn: () => fetchWithAuth(`/api/users/${userId}/followers`),
+    queryFn: () => fetchWithAuth(`/api/v1/users/${userId}/followers`),
     enabled: !!userId,
     select: (data) => data.followers || [],
   });
@@ -262,7 +262,7 @@ export function useFollowers(userId) {
 export function useFollowing(userId) {
   return useQuery({
     queryKey: userKeys.following(userId),
-    queryFn: () => fetchWithAuth(`/api/users/${userId}/following`),
+    queryFn: () => fetchWithAuth(`/api/v1/users/${userId}/following`),
     enabled: !!userId,
     select: (data) => data.following || [],
   });
@@ -275,7 +275,7 @@ export function useUpdateProfile(userId) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body) =>
-      fetchWithAuth(`/api/users/${userId}/profile`, {
+      fetchWithAuth(`/api/v1/users/${userId}/profile`, {
         method: "PUT",
         body: JSON.stringify(body),
       }),
@@ -292,7 +292,7 @@ export function useDeleteDraft() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (jobId) =>
-      fetchWithAuth(`/api/drafts/${jobId}`, { method: "DELETE" }),
+      fetchWithAuth(`/api/v1/drafts/${jobId}`, { method: "DELETE" }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["user", "drafts"],

@@ -19,23 +19,12 @@ import StyleSelector from "../components/StyleSelector";
 import AvatarReview from "../components/AvatarReview";
 import PageReview from "../components/PageReview";
 import StoryViewer from "../components/StoryViewer";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import { storyKeys } from "../hooks/useStories";
 
-const STORY_GENRES = [
-  "Real life",
-  "Fantasy",
-  "Science Fiction",
-  "Mystery",
-  "Horror",
-  "Romance",
-  "Adventure",
-  "Realistic Fiction",
-  "Historical Fiction",
-  "Comedy",
-  "Children's Stories",
-  "Biography",
-];
+import { STORY_GENRES } from "../constants/genres";
 
 const steps = [
   "Write Story",
@@ -48,6 +37,7 @@ const steps = [
 function CreateStoryPage({ isEditing: isEditingProp = false }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { storyId } = useParams();
   const { userId } = useAuth();
 
@@ -97,7 +87,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
 
   const loadStoryForEdit = async () => {
     try {
-      const response = await fetch(`/api/stories/${storyId}/edit`, {
+      const response = await fetch(`/api/v1/stories/${storyId}/edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -130,7 +120,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
       // Create or update draft in database
       if (jobId) {
         // Update existing draft
-        await fetch(`/api/drafts/${jobId}`, {
+        await fetch(`/api/v1/drafts/${jobId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -143,7 +133,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
         });
       } else {
         // Create new draft
-        const response = await fetch("/api/drafts", {
+        const response = await fetch("/api/v1/drafts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -180,7 +170,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
     try {
       // Update draft with style selection
       if (jobId) {
-        await fetch(`/api/drafts/${jobId}`, {
+        await fetch(`/api/v1/drafts/${jobId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -195,7 +185,7 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
       setActiveStep(2);
 
       if (!characters || characters.length === 0) {
-        const response = await api.post("/api/extract-characters", {
+        const response = await api.post("/api/v1/extract-characters", {
           story,
           artStyleKey: styleKey === "auto" ? null : styleKey,
           customArtStyle: styleKey === "custom" ? custom : null,
@@ -203,7 +193,9 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
         });
         const data = await response.json().catch(() => ({}));
         if (response.status === 402 && data.upgradeRequired) {
-          setError("Free plan limit reached (2M tokens). Upgrade to Pro for unlimited usage.");
+          setError(
+            "Free plan limit reached (1M tokens). Upgrade to Pro for unlimited usage.",
+          );
           return;
         }
         if (!response.ok) {
@@ -227,14 +219,16 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
 
     if (!isEditing && (!storyPages || storyPages.length === 0)) {
       try {
-        const res = await api.post("/api/generate/pages", {
+        const res = await api.post("/api/v1/generate/pages", {
           jobId,
           targetAudience: "children",
           generateCover: true,
         });
         const data = await res.json().catch(() => ({}));
         if (res.status === 402 && data.upgradeRequired) {
-          setError("Free plan limit reached. Upgrade to Pro for unlimited usage.");
+          setError(
+            "Free plan limit reached. Upgrade to Pro for unlimited usage.",
+          );
           return;
         }
       } catch (err) {
@@ -246,11 +240,13 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
   const handlePagesApproved = async (finalStory) => {
     setGeneratedStory(finalStory);
     setActiveStep(4);
+    queryClient.invalidateQueries({ queryKey: storyKeys.lists() });
   };
 
   const handleGenerationComplete = (result) => {
     setGeneratedStory(result);
     setActiveStep(4);
+    queryClient.invalidateQueries({ queryKey: storyKeys.lists() });
   };
 
   const getStepCompleted = (stepIndex) => {
@@ -278,7 +274,12 @@ function CreateStoryPage({ isEditing: isEditingProp = false }) {
           onClose={() => setError(null)}
           action={
             error.includes("Upgrade to Pro") ? (
-              <Button id="btn-error-upgrade" color="inherit" size="small" onClick={() => navigate("/pricing")}>
+              <Button
+                id="btn-error-upgrade"
+                color="inherit"
+                size="small"
+                onClick={() => navigate("/pricing")}
+              >
                 Upgrade
               </Button>
             ) : null

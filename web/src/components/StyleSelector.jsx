@@ -58,7 +58,7 @@ function StyleSelector({
 
   const fetchStyles = async () => {
     try {
-      const response = await fetch("/api/styles");
+      const response = await fetch("/api/v1/styles");
       const data = await response.json();
       setStyles(data.styles);
     } catch (error) {
@@ -71,7 +71,7 @@ function StyleSelector({
   const analyzeStory = async () => {
     setAnalyzing(true);
     try {
-      const response = await fetch("/api/analyze-style", {
+      const response = await fetch("/api/v1/analyze-style", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ story }),

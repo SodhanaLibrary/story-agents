@@ -77,8 +77,8 @@ function StoryLibrary({
       // Use personalized feed for authenticated users
       const feedUrl =
         isAuthenticated && userId
-          ? `/api/feed?userId=${userId}`
-          : "/api/stories";
+          ? `/api/v1/feed?userId=${userId}`
+          : "/api/v1/stories";
       const storiesRes = await fetch(feedUrl);
       const storiesData = await storiesRes.json();
       setStories(storiesData.stories || []);
@@ -87,10 +87,10 @@ function StoryLibrary({
       if (isAuthenticated && userId) {
         const [draftsRes, favoritesRes, readingRes, favoriteIdsRes] =
           await Promise.all([
-            fetch("/api/drafts"),
-            fetch(`/api/users/${userId}/favorites`),
-            fetch(`/api/users/${userId}/reading`),
-            fetch(`/api/users/${userId}/favorite-ids`),
+            fetch("/api/v1/drafts"),
+            fetch(`/api/v1/users/${userId}/favorites`),
+            fetch(`/api/v1/users/${userId}/reading`),
+            fetch(`/api/v1/users/${userId}/favorite-ids`),
           ]);
 
         const [draftsData, favoritesData, readingData, favoriteIdsData] =
@@ -134,7 +134,7 @@ function StoryLibrary({
       setSearching(true);
       try {
         const res = await fetch(
-          `/api/stories?q=${encodeURIComponent(searchQuery)}`,
+          `/api/v1/stories?q=${encodeURIComponent(searchQuery)}`,
         );
         const data = await res.json();
         setSearchResults(data.stories || []);
@@ -161,7 +161,7 @@ function StoryLibrary({
 
     try {
       if (isFav) {
-        await fetch(`/api/users/${userId}/favorites/${storyId}`, {
+        await fetch(`/api/v1/users/${userId}/favorites/${storyId}`, {
           method: "DELETE",
         });
         setFavoriteIds((prev) => {
@@ -171,7 +171,7 @@ function StoryLibrary({
         });
         setFavorites((prev) => prev.filter((f) => f.id !== story.id));
       } else {
-        await fetch(`/api/users/${userId}/favorites`, {
+        await fetch(`/api/v1/users/${userId}/favorites`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ storyId }),
@@ -191,8 +191,8 @@ function StoryLibrary({
       const storyIdentifier =
         deleteDialog.item.id || deleteDialog.item.filename;
       const endpoint = deleteDialog.isDraft
-        ? `/api/drafts/${deleteDialog.item.jobId}`
-        : `/api/stories/${storyIdentifier}`;
+        ? `/api/v1/drafts/${deleteDialog.item.jobId}`
+        : `/api/v1/stories/${storyIdentifier}`;
 
       const response = await fetch(endpoint, { method: "DELETE" });
 
@@ -223,7 +223,7 @@ function StoryLibrary({
   const handleViewStory = async (story) => {
     try {
       const storyIdentifier = story.id || story.filename;
-      const response = await fetch(`/api/stories/${storyIdentifier}`);
+      const response = await fetch(`/api/v1/stories/${storyIdentifier}`);
       const data = await response.json();
       onSelectStory(data.story, storyIdentifier);
     } catch (err) {

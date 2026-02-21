@@ -10,7 +10,7 @@ export const orgKeys = {
 export function useOrgs(options = {}) {
   return useQuery({
     queryKey: orgKeys.list(),
-    queryFn: () => fetchWithAuth("/api/orgs"),
+    queryFn: () => fetchWithAuth("/api/v1/orgs"),
     select: (data) => data.organizations || [],
     enabled: options.enabled !== false,
   });
@@ -19,7 +19,7 @@ export function useOrgs(options = {}) {
 export function useOrg(orgId) {
   return useQuery({
     queryKey: orgKeys.detail(orgId),
-    queryFn: () => fetchWithAuth(`/api/orgs/${orgId}`),
+    queryFn: () => fetchWithAuth(`/api/v1/orgs/${orgId}`),
     enabled: !!orgId,
   });
 }
@@ -28,7 +28,7 @@ export function useCreateOrg() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body) =>
-      fetchWithAuth("/api/orgs", {
+      fetchWithAuth("/api/v1/orgs", {
         method: "POST",
         body: JSON.stringify(body),
       }),
@@ -42,7 +42,7 @@ export function useUpdateOrg(orgId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body) =>
-      fetchWithAuth(`/api/orgs/${orgId}`, {
+      fetchWithAuth(`/api/v1/orgs/${orgId}`, {
         method: "PUT",
         body: JSON.stringify(body),
       }),
@@ -57,7 +57,7 @@ export function useAddOrgMember(orgId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (email) =>
-      fetchWithAuth(`/api/orgs/${orgId}/members`, {
+      fetchWithAuth(`/api/v1/orgs/${orgId}/members`, {
         method: "POST",
         body: JSON.stringify({ email: email.trim() }),
       }),
@@ -71,7 +71,7 @@ export function useRemoveOrgMember(orgId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (memberId) =>
-      fetchWithAuth(`/api/orgs/${orgId}/members/${memberId}`, {
+      fetchWithAuth(`/api/v1/orgs/${orgId}/members/${memberId}`, {
         method: "DELETE",
       }),
     onSuccess: () => {
@@ -84,7 +84,7 @@ export function useSetOrgMemberRole(orgId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ memberId, role }) =>
-      fetchWithAuth(`/api/orgs/${orgId}/members/${memberId}/role`, {
+      fetchWithAuth(`/api/v1/orgs/${orgId}/members/${memberId}/role`, {
         method: "PUT",
         body: JSON.stringify({ role }),
       }),
@@ -98,7 +98,7 @@ export function useLeaveOrg(orgId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      fetchWithAuth(`/api/orgs/${orgId}/leave`, { method: "POST" }),
+      fetchWithAuth(`/api/v1/orgs/${orgId}/leave`, { method: "POST" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: orgKeys.list() });
     },

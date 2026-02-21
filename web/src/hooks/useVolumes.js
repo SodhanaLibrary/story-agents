@@ -12,7 +12,7 @@ export const volumeKeys = {
 export function useVolumes(userId) {
   return useQuery({
     queryKey: volumeKeys.byUser(userId),
-    queryFn: () => fetchWithAuth(`/api/users/${userId}/volumes`),
+    queryFn: () => fetchWithAuth(`/api/v1/users/${userId}/volumes`),
     enabled: !!userId,
     select: (data) => data.volumes || [],
   });
@@ -21,7 +21,7 @@ export function useVolumes(userId) {
 export function useVolume(volumeId) {
   return useQuery({
     queryKey: volumeKeys.detail(volumeId),
-    queryFn: () => fetchWithAuth(`/api/volumes/${volumeId}`),
+    queryFn: () => fetchWithAuth(`/api/v1/volumes/${volumeId}`),
     enabled: !!volumeId,
   });
 }
@@ -29,7 +29,7 @@ export function useVolume(volumeId) {
 export function useVolumeStories(volumeId) {
   return useQuery({
     queryKey: volumeKeys.stories(volumeId),
-    queryFn: () => fetchWithAuth(`/api/volumes/${volumeId}/stories`),
+    queryFn: () => fetchWithAuth(`/api/v1/volumes/${volumeId}/stories`),
     enabled: !!volumeId,
     select: (data) => data.stories || [],
   });
@@ -39,7 +39,7 @@ export function useCreateVolume(userId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body) =>
-      fetchWithAuth(`/api/users/${userId}/volumes`, {
+      fetchWithAuth(`/api/v1/users/${userId}/volumes`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
@@ -53,7 +53,7 @@ export function useUpdateVolume(userId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ volumeId, ...body }) =>
-      fetchWithAuth(`/api/volumes/${volumeId}`, {
+      fetchWithAuth(`/api/v1/volumes/${volumeId}`, {
         method: "PUT",
         body: JSON.stringify(body),
       }),
@@ -67,7 +67,7 @@ export function useDeleteVolume(userId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (volumeId) =>
-      fetchWithAuth(`/api/volumes/${volumeId}`, { method: "DELETE" }),
+      fetchWithAuth(`/api/v1/volumes/${volumeId}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: volumeKeys.byUser(userId) });
     },

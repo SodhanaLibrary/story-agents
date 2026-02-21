@@ -20,14 +20,14 @@ import { createLogger } from "../../src/utils/logger.js";
 
 const logger = createLogger("BillingRoutes");
 
-const FREE_TOKEN_LIMIT = config.plans?.freeTokenLimit ?? 2_000_000;
+const FREE_TOKEN_LIMIT = config.plans?.freeTokenLimit ?? 1_000_000;
 
 /**
  * Register billing and Razorpay routes.
  * @param {import('express').Application} app
  */
 export function registerBillingRoutes(app) {
-  app.get("/api/plans/status", async (req, res) => {
+  app.get("/api/v1/plans/status", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) {
@@ -57,7 +57,7 @@ export function registerBillingRoutes(app) {
     }
   });
 
-  app.post("/api/razorpay/create-order", async (req, res) => {
+  app.post("/api/v1/razorpay/create-order", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) {
@@ -78,7 +78,7 @@ export function registerBillingRoutes(app) {
     }
   });
 
-  app.post("/api/razorpay/verify", async (req, res) => {
+  app.post("/api/v1/razorpay/verify", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) {
@@ -122,7 +122,7 @@ export function registerBillingRoutes(app) {
     }
   });
 
-  app.get("/api/billing/cycle", async (req, res) => {
+  app.get("/api/v1/billing/cycle", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) {
@@ -149,7 +149,7 @@ export function registerBillingRoutes(app) {
     }
   });
 
-  app.get("/api/billing/usage", async (req, res) => {
+  app.get("/api/v1/billing/usage", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) {
@@ -198,7 +198,7 @@ export function registerBillingRoutes(app) {
     }
   });
 
-  app.get("/api/billing/usage/export", async (req, res) => {
+  app.get("/api/v1/billing/usage/export", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) {

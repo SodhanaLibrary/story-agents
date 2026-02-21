@@ -55,7 +55,7 @@ function StoryViewer({
       if (!isAuthenticated || !userId || !storyId) return;
 
       try {
-        await fetch(`/api/users/${userId}/reading/${storyId}`, {
+        await fetch(`/api/v1/users/${userId}/reading/${storyId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

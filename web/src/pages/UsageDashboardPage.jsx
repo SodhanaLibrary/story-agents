@@ -51,7 +51,7 @@ export default function UsageDashboardPage() {
     setLoadingCycle(true);
     setError(null);
     try {
-      const res = await api.get("/api/billing/cycle");
+      const res = await api.get("/api/v1/billing/cycle");
       if (res.ok) {
         const data = await res.json();
         setCycle(data);
@@ -69,7 +69,7 @@ export default function UsageDashboardPage() {
     setError(null);
     try {
       const params = new URLSearchParams({ period });
-      const res = await api.get(`/api/billing/usage?${params}`);
+      const res = await api.get(`/api/v1/billing/usage?${params}`);
       if (res.ok) {
         const data = await res.json();
         setUsage(data);
@@ -93,7 +93,7 @@ export default function UsageDashboardPage() {
   const handleExportCSV = async () => {
     try {
       const params = new URLSearchParams({ period });
-      const res = await api.get(`/api/billing/usage/export?${params}`);
+      const res = await api.get(`/api/v1/billing/usage/export?${params}`);
       if (!res.ok) return;
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

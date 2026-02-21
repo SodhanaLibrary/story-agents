@@ -38,7 +38,7 @@ function FavoritesPage() {
       
       setLoading(true);
       try {
-        const res = await fetch(`/api/users/${userId}/favorites`);
+        const res = await fetch(`/api/v1/users/${userId}/favorites`);
         const data = await res.json();
         setFavorites(data.favorites || []);
       } catch (err) {
@@ -55,7 +55,7 @@ function FavoritesPage() {
   const handleRemoveFavorite = async (story, event) => {
     event.stopPropagation();
     try {
-      await fetch(`/api/users/${userId}/favorites/${story.id}`, { method: "DELETE" });
+      await fetch(`/api/v1/users/${userId}/favorites/${story.id}`, { method: "DELETE" });
       setFavorites((prev) => prev.filter((f) => f.id !== story.id));
     } catch (err) {
       console.error("Failed to remove favorite:", err);

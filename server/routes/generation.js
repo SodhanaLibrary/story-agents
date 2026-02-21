@@ -456,9 +456,9 @@ export function registerGenerationRoutes(app, deps) {
   // ==================== Routes ====================
 
   /**
-   * GET /api/styles - Get all available art styles
+   * GET /api/v1/styles - Get all available art styles
    */
-  app.get("/api/styles", (req, res) => {
+  app.get("/api/v1/styles", (req, res) => {
     const styles = Object.entries(ART_STYLES).map(([key, style]) => ({
       key,
       name: style.name,
@@ -469,9 +469,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/analyze-style - Analyze story and recommend art style
+   * POST /api/v1/analyze-style - Analyze story and recommend art style
    */
-  app.post("/api/analyze-style", async (req, res) => {
+  app.post("/api/v1/analyze-style", async (req, res) => {
     try {
       if (req.userId) {
         const limitCheck = await checkFreePlanTokenLimit(req.userId);
@@ -509,9 +509,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/extract-characters - Extract characters from story (no avatar generation)
+   * POST /api/v1/extract-characters - Extract characters from story (no avatar generation)
    */
-  app.post("/api/extract-characters", async (req, res) => {
+  app.post("/api/v1/extract-characters", async (req, res) => {
     try {
       if (req.userId) {
         const limitCheck = await checkFreePlanTokenLimit(req.userId);
@@ -586,9 +586,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/generate-avatar - Generate avatar for a single character with user input
+   * POST /api/v1/generate-avatar - Generate avatar for a single character with user input
    */
-  app.post("/api/generate-avatar", async (req, res) => {
+  app.post("/api/v1/generate-avatar", async (req, res) => {
     try {
       if (req.userId) {
         const limitCheck = await checkFreePlanTokenLimit(req.userId);
@@ -680,10 +680,10 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/generate/avatars - Generate only characters and avatars (Phase 1)
-   * @deprecated Use /api/extract-characters and /api/generate-avatar instead
+   * POST /api/v1/generate/avatars - Generate only characters and avatars (Phase 1)
+   * @deprecated Use /api/v1/extract-characters and /api/v1/generate-avatar instead
    */
-  app.post("/api/generate/avatars", async (req, res) => {
+  app.post("/api/v1/generate/avatars", async (req, res) => {
     try {
       if (req.userId) {
         const limitCheck = await checkFreePlanTokenLimit(req.userId);
@@ -729,9 +729,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * PUT /api/job/:jobId/character/:characterName/avatar - Update character with existing avatar
+   * PUT /api/v1/job/:jobId/character/:characterName/avatar - Update character with existing avatar
    */
-  app.put("/api/job/:jobId/character/:characterName/avatar", async (req, res) => {
+  app.put("/api/v1/job/:jobId/character/:characterName/avatar", async (req, res) => {
     try {
       const { jobId, characterName } = req.params;
       const { avatarUrl, avatarPath, avatarPrompt } = req.body;
@@ -780,9 +780,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/regenerate-avatar - Regenerate a single avatar with custom prompt
+   * POST /api/v1/regenerate-avatar - Regenerate a single avatar with custom prompt
    */
-  app.post("/api/regenerate-avatar", async (req, res) => {
+  app.post("/api/v1/regenerate-avatar", async (req, res) => {
     try {
       const { jobId, characterName, customPrompt, artStyleKey } = req.body;
 
@@ -854,10 +854,10 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/generate/pages - Generate pages and illustrations (Phase 2)
+   * POST /api/v1/generate/pages - Generate pages and illustrations (Phase 2)
    * Called after user approves avatars
    */
-  app.post("/api/generate/pages", async (req, res) => {
+  app.post("/api/v1/generate/pages", async (req, res) => {
     try {
       if (req.userId) {
         const limitCheck = await checkFreePlanTokenLimit(req.userId);
@@ -913,10 +913,10 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/generate/illustrations - Generate all page illustrations and cover (Phase 3)
+   * POST /api/v1/generate/illustrations - Generate all page illustrations and cover (Phase 3)
    * Called after user reviews and approves page text/prompts
    */
-  app.post("/api/generate/illustrations", async (req, res) => {
+  app.post("/api/v1/generate/illustrations", async (req, res) => {
     try {
       const { jobId, generateCover } = req.body;
 
@@ -953,10 +953,10 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/generate/page/:pageNumber/illustration - Generate a single page illustration
+   * POST /api/v1/generate/page/:pageNumber/illustration - Generate a single page illustration
    * Called when user wants to generate illustration for a specific page
    */
-  app.post("/api/generate/page/:pageNumber/illustration", async (req, res) => {
+  app.post("/api/v1/generate/page/:pageNumber/illustration", async (req, res) => {
     try {
       const { jobId } = req.body;
       const pageNumber = parseInt(req.params.pageNumber);
@@ -1034,10 +1034,10 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/generate/cover/illustration - Generate cover illustration only
+   * POST /api/v1/generate/cover/illustration - Generate cover illustration only
    * Called when user wants to generate only the cover illustration
    */
-  app.post("/api/generate/cover/illustration", async (req, res) => {
+  app.post("/api/v1/generate/cover/illustration", async (req, res) => {
     try {
       const { jobId } = req.body;
 
@@ -1101,9 +1101,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/pages/update - Update page text and description
+   * POST /api/v1/pages/update - Update page text and description
    */
-  app.post("/api/pages/update", async (req, res) => {
+  app.post("/api/v1/pages/update", async (req, res) => {
     try {
       const { jobId, pageNumber, text, imageDescription } = req.body;
 
@@ -1154,9 +1154,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/pages/add - Add a new page
+   * POST /api/v1/pages/add - Add a new page
    */
-  app.post("/api/pages/add", async (req, res) => {
+  app.post("/api/v1/pages/add", async (req, res) => {
     try {
       const { jobId, text, imageDescription } = req.body;
 
@@ -1201,9 +1201,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/pages/delete - Delete a page and renumber remaining pages
+   * POST /api/v1/pages/delete - Delete a page and renumber remaining pages
    */
-  app.post("/api/pages/delete", async (req, res) => {
+  app.post("/api/v1/pages/delete", async (req, res) => {
     try {
       const { jobId, pageNumber } = req.body;
 
@@ -1243,9 +1243,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/regenerate-page - Regenerate a single page illustration
+   * POST /api/v1/regenerate-page - Regenerate a single page illustration
    */
-  app.post("/api/regenerate-page", async (req, res) => {
+  app.post("/api/v1/regenerate-page", async (req, res) => {
     try {
       const { jobId, pageNumber, customDescription, referenceImageBase64 } =
         req.body;
@@ -1329,9 +1329,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/regenerate-cover - Regenerate the cover illustration
+   * POST /api/v1/regenerate-cover - Regenerate the cover illustration
    */
-  app.post("/api/regenerate-cover", async (req, res) => {
+  app.post("/api/v1/regenerate-cover", async (req, res) => {
     try {
       const { jobId, customDescription, referenceImageBase64 } = req.body;
 
@@ -1404,9 +1404,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * POST /api/finalize-story - Finalize the story after page review
+   * POST /api/v1/finalize-story - Finalize the story after page review
    */
-  app.post("/api/finalize-story", async (req, res) => {
+  app.post("/api/v1/finalize-story", async (req, res) => {
     try {
       const { jobId } = req.body;
 
@@ -1482,9 +1482,9 @@ export function registerGenerationRoutes(app, deps) {
   });
 
   /**
-   * GET /api/job/:jobId - Get job status
+   * GET /api/v1/job/:jobId - Get job status
    */
-  app.get("/api/job/:jobId", (req, res) => {
+  app.get("/api/v1/job/:jobId", (req, res) => {
     const { jobId } = req.params;
     const job = activeJobs.get(jobId);
 

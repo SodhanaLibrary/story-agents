@@ -11,7 +11,7 @@ export const openStoryKeys = {
 export function useOpenStoriesList() {
   return useQuery({
     queryKey: openStoryKeys.list(),
-    queryFn: () => fetchWithAuth("/api/open-stories"),
+    queryFn: () => fetchWithAuth("/api/v1/open-stories"),
     select: (data) => data.submissions || [],
   });
 }
@@ -19,7 +19,7 @@ export function useOpenStoriesList() {
 export function useOpenStory(id) {
   return useQuery({
     queryKey: openStoryKeys.detail(id),
-    queryFn: () => fetchWithAuth(`/api/open-stories/${id}`),
+    queryFn: () => fetchWithAuth(`/api/v1/open-stories/${id}`),
     enabled: !!id,
   });
 }
@@ -27,7 +27,7 @@ export function useOpenStory(id) {
 export function useOpenStoryComments(submissionId) {
   return useQuery({
     queryKey: openStoryKeys.comments(submissionId),
-    queryFn: () => fetchWithAuth(`/api/open-stories/${submissionId}/comments`),
+    queryFn: () => fetchWithAuth(`/api/v1/open-stories/${submissionId}/comments`),
     enabled: !!submissionId,
     select: (data) => data.comments || [],
   });
@@ -37,7 +37,7 @@ export function useCreateOpenStory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body) =>
-      fetchWithAuth("/api/open-stories", {
+      fetchWithAuth("/api/v1/open-stories", {
         method: "POST",
         body: JSON.stringify(body),
       }),
@@ -51,7 +51,7 @@ export function useUpdateOpenStory(id) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body) =>
-      fetchWithAuth(`/api/open-stories/${id}`, {
+      fetchWithAuth(`/api/v1/open-stories/${id}`, {
         method: "PUT",
         body: JSON.stringify(body),
       }),
@@ -66,7 +66,7 @@ export function useDeleteOpenStory(id) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      fetchWithAuth(`/api/open-stories/${id}`, { method: "DELETE" }),
+      fetchWithAuth(`/api/v1/open-stories/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: openStoryKeys.list() });
     },
@@ -77,7 +77,7 @@ export function useVoteOpenStory(submissionId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      fetchWithAuth(`/api/open-stories/${submissionId}/vote`, {
+      fetchWithAuth(`/api/v1/open-stories/${submissionId}/vote`, {
         method: "POST",
       }),
     onSuccess: () => {
@@ -91,7 +91,7 @@ export function usePostOpenStoryComment(submissionId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body) =>
-      fetchWithAuth(`/api/open-stories/${submissionId}/comments`, {
+      fetchWithAuth(`/api/v1/open-stories/${submissionId}/comments`, {
         method: "POST",
         body: JSON.stringify(body),
       }),
@@ -106,7 +106,7 @@ export function useUpdateOpenStoryComment(submissionId, commentId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (body) =>
-      fetchWithAuth(`/api/open-stories/${submissionId}/comments/${commentId}`, {
+      fetchWithAuth(`/api/v1/open-stories/${submissionId}/comments/${commentId}`, {
         method: "PUT",
         body: JSON.stringify(body),
       }),
@@ -121,7 +121,7 @@ export function useDeleteOpenStoryComment(submissionId, commentId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      fetchWithAuth(`/api/open-stories/${submissionId}/comments/${commentId}`, {
+      fetchWithAuth(`/api/v1/open-stories/${submissionId}/comments/${commentId}`, {
         method: "DELETE",
       }),
     onSuccess: () => {
@@ -135,7 +135,7 @@ export function useOpenStoryImages(submissionId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ image }) =>
-      fetchWithAuth(`/api/open-stories/${submissionId}/images`, {
+      fetchWithAuth(`/api/v1/open-stories/${submissionId}/images`, {
         method: "POST",
         body: JSON.stringify({ image }),
       }),
@@ -149,7 +149,7 @@ export function useDeleteOpenStoryImage(submissionId, imageId) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      fetchWithAuth(`/api/open-stories/${submissionId}/images/${imageId}`, {
+      fetchWithAuth(`/api/v1/open-stories/${submissionId}/images/${imageId}`, {
         method: "DELETE",
       }),
     onSuccess: () => {

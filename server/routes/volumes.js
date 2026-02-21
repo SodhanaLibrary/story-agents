@@ -17,7 +17,7 @@ const logger = createLogger("VolumesRoutes");
  */
 export function registerVolumesRoutes(app) {
   // List volumes by user (public)
-  app.get("/api/users/:userId/volumes", async (req, res) => {
+  app.get("/api/v1/users/:userId/volumes", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId, 10);
       if (isNaN(userId)) return res.status(400).json({ error: "Invalid user ID" });
@@ -30,7 +30,7 @@ export function registerVolumesRoutes(app) {
   });
 
   // Create volume (auth, must be own userId)
-  app.post("/api/users/:userId/volumes", async (req, res) => {
+  app.post("/api/v1/users/:userId/volumes", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) return res.status(401).json({ error: "Authentication required" });
@@ -49,7 +49,7 @@ export function registerVolumesRoutes(app) {
   });
 
   // Get single volume (public metadata)
-  app.get("/api/volumes/:volumeId", async (req, res) => {
+  app.get("/api/v1/volumes/:volumeId", async (req, res) => {
     try {
       const volumeId = parseInt(req.params.volumeId, 10);
       if (isNaN(volumeId)) return res.status(400).json({ error: "Invalid volume ID" });
@@ -63,7 +63,7 @@ export function registerVolumesRoutes(app) {
   });
 
   // Get volume with its stories (public, respecting is_public)
-  app.get("/api/volumes/:volumeId/stories", async (req, res) => {
+  app.get("/api/v1/volumes/:volumeId/stories", async (req, res) => {
     try {
       const volumeId = parseInt(req.params.volumeId, 10);
       if (isNaN(volumeId)) return res.status(400).json({ error: "Invalid volume ID" });
@@ -77,7 +77,7 @@ export function registerVolumesRoutes(app) {
   });
 
   // Update volume (auth, owner only)
-  app.put("/api/volumes/:volumeId", async (req, res) => {
+  app.put("/api/v1/volumes/:volumeId", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) return res.status(401).json({ error: "Authentication required" });
@@ -94,7 +94,7 @@ export function registerVolumesRoutes(app) {
   });
 
   // Delete volume (auth, owner only)
-  app.delete("/api/volumes/:volumeId", async (req, res) => {
+  app.delete("/api/v1/volumes/:volumeId", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) return res.status(401).json({ error: "Authentication required" });
@@ -109,7 +109,7 @@ export function registerVolumesRoutes(app) {
   });
 
   // Assign story to volume or remove (auth, story owner only)
-  app.put("/api/stories/:storyId/volume", async (req, res) => {
+  app.put("/api/v1/stories/:storyId/volume", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) return res.status(401).json({ error: "Authentication required" });

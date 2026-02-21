@@ -33,20 +33,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
-const OPEN_STORY_GENRES = [
-  "Real life",
-  "Fantasy",
-  "Science Fiction",
-  "Mystery",
-  "Horror",
-  "Romance",
-  "Adventure",
-  "Realistic Fiction",
-  "Historical Fiction",
-  "Comedy",
-  "Children's Stories",
-  "Biography",
-];
+import { STORY_GENRES } from "../constants/genres";
 
 function OpenStoriesPage() {
   const navigate = useNavigate();
@@ -107,8 +94,8 @@ function OpenStoriesPage() {
     try {
       if (isAuthenticated && userId) {
         const [openRes, plansRes] = await Promise.all([
-          fetch("/api/open-stories"),
-          api.get("/api/plans/status"),
+          fetch("/api/v1/open-stories"),
+          api.get("/api/v1/plans/status"),
         ]);
         const openData = await openRes.json();
         setOpenSubmissions(openData.submissions || []);
@@ -119,7 +106,7 @@ function OpenStoriesPage() {
           setPlansStatus(null);
         }
       } else {
-        const openRes = await fetch("/api/open-stories");
+        const openRes = await fetch("/api/v1/open-stories");
         const openData = await openRes.json();
         setOpenSubmissions(openData.submissions || []);
       }
@@ -149,7 +136,7 @@ function OpenStoriesPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await api.post("/api/open-stories", {
+      const res = await api.post("/api/v1/open-stories", {
         title: submitTitle.trim(),
         story: submitStory.trim(),
         genre: submitGenre.trim() || null,
@@ -185,7 +172,7 @@ function OpenStoriesPage() {
     setDeletingCommentId(null);
     setCommentsLoading(true);
     try {
-      const res = await fetch(`/api/open-stories/${sub.id}/comments`);
+      const res = await fetch(`/api/v1/open-stories/${sub.id}/comments`);
       const data = await res.json();
       setComments(data.comments || []);
     } catch (err) {
@@ -206,7 +193,7 @@ function OpenStoriesPage() {
     setSubmittingComment(true);
     try {
       const res = await api.post(
-        `/api/open-stories/${commentsSubmission.id}/comments`,
+        `/api/v1/open-stories/${commentsSubmission.id}/comments`,
         { comment: commentText.trim() },
       );
       setComments((prev) => [...prev, res.data]);
@@ -222,7 +209,7 @@ function OpenStoriesPage() {
     if (!isAuthenticated) return;
     setVotingId(sub.id);
     try {
-      const res = await api.post(`/api/open-stories/${sub.id}/vote`);
+      const res = await api.post(`/api/v1/open-stories/${sub.id}/vote`);
       const data = await res.json();
       setOpenSubmissions((prev) =>
         prev.map((s) =>
@@ -266,7 +253,7 @@ function OpenStoriesPage() {
 
   useEffect(() => {
     if (!editDialogOpen || !editSubmission?.id) return;
-    api.get(`/api/open-stories/${editSubmission.id}`)
+    api.get(`/api/v1/open-stories/${editSubmission.id}`)
       .then((res) => res.json())
       .then((data) => setEditImages(data.images || []))
       .catch(() => setEditImages([]));
@@ -280,7 +267,7 @@ function OpenStoriesPage() {
     reader.onload = async () => {
       setUploadingImage(true);
       try {
-        const res = await api.post(`/api/open-stories/${editSubmission.id}/images`, {
+        const res = await api.post(`/api/v1/open-stories/${editSubmission.id}/images`, {
           image: reader.result,
         });
         if (res.ok) {
@@ -301,7 +288,7 @@ function OpenStoriesPage() {
     if (!editSubmission) return;
     setDeletingImageId(img.id);
     try {
-      const res = await api.del(`/api/open-stories/${editSubmission.id}/images/${img.id}`);
+      const res = await api.del(`/api/v1/open-stories/${editSubmission.id}/images/${img.id}`);
       if (res.ok) {
         setEditImages((prev) => prev.filter((i) => i.id !== img.id));
       }
@@ -326,7 +313,7 @@ function OpenStoriesPage() {
     if (!editSubmission || !editTitle.trim() || !editStory.trim()) return;
     setSavingEdit(true);
     try {
-      const res = await api.put(`/api/open-stories/${editSubmission.id}`, {
+      const res = await api.put(`/api/v1/open-stories/${editSubmission.id}`, {
         title: editTitle.trim(),
         story: editStory.trim(),
         genre: editGenre.trim() || null,
@@ -365,7 +352,7 @@ function OpenStoriesPage() {
     if (!deleteSubmission) return;
     setDeleting(true);
     try {
-      const res = await api.del(`/api/open-stories/${deleteSubmission.id}`);
+      const res = await api.del(`/api/v1/open-stories/${deleteSubmission.id}`);
       if (res.ok) {
         setOpenSubmissions((prev) => prev.filter((s) => s.id !== deleteSubmission.id));
         closeDeleteDialog();
@@ -400,7 +387,7 @@ function OpenStoriesPage() {
     setSavingCommentEdit(true);
     try {
       const res = await api.put(
-        `/api/open-stories/${commentsSubmission.id}/comments/${editingCommentId}`,
+        `/api/v1/open-stories/${commentsSubmission.id}/comments/${editingCommentId}`,
         { comment: editingCommentText.trim() },
       );
       if (res.ok) {
@@ -426,7 +413,7 @@ function OpenStoriesPage() {
     setDeletingCommentId(c.id);
     try {
       const res = await api.del(
-        `/api/open-stories/${commentsSubmission.id}/comments/${c.id}`,
+        `/api/v1/open-stories/${commentsSubmission.id}/comments/${c.id}`,
       );
       if (res.ok) {
         setComments((prev) => prev.filter((x) => x.id !== c.id));
@@ -835,7 +822,7 @@ function OpenStoriesPage() {
               onChange={(e) => setSubmitGenre(e.target.value)}
             >
               <MenuItem value="">Select genre</MenuItem>
-              {OPEN_STORY_GENRES.map((g) => (
+              {STORY_GENRES.map((g) => (
                 <MenuItem key={g} value={g}>
                   {g}
                 </MenuItem>
@@ -907,7 +894,7 @@ function OpenStoriesPage() {
               onChange={(e) => setEditGenre(e.target.value)}
             >
               <MenuItem value="">Select genre</MenuItem>
-              {OPEN_STORY_GENRES.map((g) => (
+              {STORY_GENRES.map((g) => (
                 <MenuItem key={g} value={g}>
                   {g}
                 </MenuItem>

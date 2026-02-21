@@ -13,7 +13,7 @@ const logger = createLogger("S3Routes");
  * @param {import('express').Application} app
  */
 export function registerS3Routes(app) {
-  app.get("/api/s3/info", async (req, res) => {
+  app.get("/api/v1/s3/info", async (req, res) => {
     try {
       const info = getS3BucketInfo();
       res.json(info);
@@ -23,7 +23,7 @@ export function registerS3Routes(app) {
     }
   });
 
-  app.get("/api/s3/objects", async (req, res) => {
+  app.get("/api/v1/s3/objects", async (req, res) => {
     try {
       const { prefix } = req.query;
 
@@ -68,7 +68,7 @@ export function registerS3Routes(app) {
     }
   });
 
-  app.delete("/api/s3/objects", async (req, res) => {
+  app.delete("/api/v1/s3/objects", async (req, res) => {
     try {
       const { keys } = req.body;
 
@@ -108,7 +108,7 @@ export function registerS3Routes(app) {
     }
   });
 
-  app.delete("/api/s3/orphans", async (req, res) => {
+  app.delete("/api/v1/s3/orphans", async (req, res) => {
     try {
       const { prefix } = req.query;
 

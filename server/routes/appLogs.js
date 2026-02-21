@@ -12,7 +12,7 @@ const logger = createLogger("AppLogsRoutes");
  * @param {import('express').Application} app
  */
 export function registerAppLogsRoutes(app) {
-  app.get("/api/app-logs", async (req, res) => {
+  app.get("/api/v1/app-logs", async (req, res) => {
     try {
       const { level, context, jobId, userId, search, limit, offset } =
         req.query;
@@ -34,7 +34,7 @@ export function registerAppLogsRoutes(app) {
     }
   });
 
-  app.get("/api/app-logs/stats", async (req, res) => {
+  app.get("/api/v1/app-logs/stats", async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
 
@@ -50,7 +50,7 @@ export function registerAppLogsRoutes(app) {
     }
   });
 
-  app.delete("/api/app-logs/clear", async (req, res) => {
+  app.delete("/api/v1/app-logs/clear", async (req, res) => {
     try {
       const { daysOld } = req.query;
 
@@ -66,7 +66,7 @@ export function registerAppLogsRoutes(app) {
     }
   });
 
-  app.get("/api/jobs/:jobId/app-logs", async (req, res) => {
+  app.get("/api/v1/jobs/:jobId/app-logs", async (req, res) => {
     try {
       const { jobId } = req.params;
       const { limit } = req.query;

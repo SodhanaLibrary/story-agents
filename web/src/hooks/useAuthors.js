@@ -16,7 +16,7 @@ export function useAuthors(params = {}) {
   return useQuery({
     queryKey: authorKeys.list(params),
     queryFn: () =>
-      fetchWithAuth(`/api/authors${queryString ? `?${queryString}` : ""}`),
+      fetchWithAuth(`/api/v1/authors${queryString ? `?${queryString}` : ""}`),
     select: (data) => data.authors || [],
   });
 }

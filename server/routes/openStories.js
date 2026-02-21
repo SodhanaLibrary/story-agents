@@ -32,7 +32,7 @@ function imageUrlToPublic(url) {
  * @param {import('express').Application} app
  */
 export function registerOpenStoriesRoutes(app) {
-  app.get("/api/open-stories", async (req, res) => {
+  app.get("/api/v1/open-stories", async (req, res) => {
     try {
       const userId = req.userId || null;
       const list = await getOpenStorySubmissions(userId);
@@ -43,7 +43,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.get("/api/open-stories/:id", async (req, res) => {
+  app.get("/api/v1/open-stories/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
@@ -71,7 +71,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.post("/api/open-stories", async (req, res) => {
+  app.post("/api/v1/open-stories", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -103,7 +103,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.put("/api/open-stories/:id", async (req, res) => {
+  app.put("/api/v1/open-stories/:id", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -136,7 +136,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.delete("/api/open-stories/:id", async (req, res) => {
+  app.delete("/api/v1/open-stories/:id", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -167,7 +167,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.post("/api/open-stories/:id/vote", async (req, res) => {
+  app.post("/api/v1/open-stories/:id/vote", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -182,7 +182,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.get("/api/open-stories/:id/comments", async (req, res) => {
+  app.get("/api/v1/open-stories/:id/comments", async (req, res) => {
     try {
       const id = parseInt(req.params.id, 10);
       if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });
@@ -197,7 +197,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.post("/api/open-stories/:id/comments", async (req, res) => {
+  app.post("/api/v1/open-stories/:id/comments", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -222,7 +222,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.put("/api/open-stories/:id/comments/:commentId", async (req, res) => {
+  app.put("/api/v1/open-stories/:id/comments/:commentId", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -251,7 +251,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.delete("/api/open-stories/:id/comments/:commentId", async (req, res) => {
+  app.delete("/api/v1/open-stories/:id/comments/:commentId", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -269,7 +269,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.post("/api/open-stories/:id/images", async (req, res) => {
+  app.post("/api/v1/open-stories/:id/images", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -302,7 +302,7 @@ export function registerOpenStoriesRoutes(app) {
     }
   });
 
-  app.delete("/api/open-stories/:id/images/:imageId", async (req, res) => {
+  app.delete("/api/v1/open-stories/:id/images/:imageId", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)

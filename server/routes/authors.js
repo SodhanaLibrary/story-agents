@@ -8,7 +8,7 @@ const logger = createLogger("AuthorsRoutes");
  * @param {import('express').Application} app
  */
 export function registerAuthorsRoutes(app) {
-  app.get("/api/authors", async (req, res) => {
+  app.get("/api/v1/authors", async (req, res) => {
     try {
       const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
       const limit = Math.min(parseInt(req.query.limit, 10) || 48, 100);

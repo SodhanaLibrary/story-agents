@@ -26,8 +26,8 @@ function TagManager({ storyId, isEditable = false }) {
       setLoading(true);
       try {
         const [storyTagsRes, allTagsRes] = await Promise.all([
-          fetch(`/api/stories/${storyId}/tags`),
-          fetch("/api/tags"),
+          fetch(`/api/v1/stories/${storyId}/tags`),
+          fetch("/api/v1/tags"),
         ]);
 
         const storyTagsData = await storyTagsRes.json();
@@ -53,14 +53,14 @@ function TagManager({ storyId, isEditable = false }) {
     setSaving(true);
     try {
       const newTags = [...tags.map((t) => t.name), tagName.trim().toLowerCase()];
-      await fetch(`/api/stories/${storyId}/tags`, {
+      await fetch(`/api/v1/stories/${storyId}/tags`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tags: [...new Set(newTags)] }),
       });
 
       // Refresh tags
-      const res = await fetch(`/api/stories/${storyId}/tags`);
+      const res = await fetch(`/api/v1/stories/${storyId}/tags`);
       const data = await res.json();
       setTags(data.tags || []);
       setInputValue("");
@@ -77,7 +77,7 @@ function TagManager({ storyId, isEditable = false }) {
     setSaving(true);
     try {
       const newTags = tags.filter((t) => t.id !== tagId).map((t) => t.name);
-      await fetch(`/api/stories/${storyId}/tags`, {
+      await fetch(`/api/v1/stories/${storyId}/tags`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tags: newTags }),

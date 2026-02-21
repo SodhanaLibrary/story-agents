@@ -78,7 +78,7 @@ function PromptLogsPage() {
       if (requestTypeFilter) params.append("requestType", requestTypeFilter);
       if (statusFilter) params.append("status", statusFilter);
 
-      const response = await api.get(`/api/prompts?${params}`);
+      const response = await api.get(`/api/v1/prompts?${params}`);
       const data = await response.json();
 
       if (data.logs) {
@@ -100,7 +100,7 @@ function PromptLogsPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get("/api/prompts/stats");
+      const response = await api.get("/api/v1/prompts/stats");
       const data = await response.json();
       if (data.stats) {
         setStats(data.stats);

@@ -52,7 +52,7 @@ function BatchRequestsPage() {
     if (!userId) return;
 
     try {
-      const response = await fetch("/api/batch/list", {
+      const response = await fetch("/api/v1/batch/list", {
         headers: { "X-User-Id": userId },
       });
 
@@ -80,7 +80,7 @@ function BatchRequestsPage() {
   const handleCancel = async (batchId) => {
     setCancelling(batchId);
     try {
-      const response = await fetch(`/api/batch/${batchId}/cancel`, {
+      const response = await fetch(`/api/v1/batch/${batchId}/cancel`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

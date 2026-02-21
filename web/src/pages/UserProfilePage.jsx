@@ -68,11 +68,11 @@ function UserProfilePage() {
     setLoading(true);
     try {
       const [profileRes, storiesRes, volumesRes, followersRes, followingRes] = await Promise.all([
-        fetch(`/api/users/${userId}/profile`),
-        fetch(`/api/users/${userId}/stories?viewerId=${currentUserId || ""}`),
-        fetch(`/api/users/${userId}/volumes`),
-        fetch(`/api/users/${userId}/followers`),
-        fetch(`/api/users/${userId}/following`),
+        fetch(`/api/v1/users/${userId}/profile`),
+        fetch(`/api/v1/users/${userId}/stories?viewerId=${currentUserId || ""}`),
+        fetch(`/api/v1/users/${userId}/volumes`),
+        fetch(`/api/v1/users/${userId}/followers`),
+        fetch(`/api/v1/users/${userId}/following`),
       ]);
 
       const [profileData, storiesData, volumesData, followersData, followingData] = await Promise.all([
@@ -90,7 +90,7 @@ function UserProfilePage() {
       setFollowing(followingData.following || []);
 
       if (currentUserId && !isOwnProfile) {
-        const followRes = await fetch(`/api/users/${currentUserId}/is-following/${userId}`);
+        const followRes = await fetch(`/api/v1/users/${currentUserId}/is-following/${userId}`);
         const followData = await followRes.json();
         setIsFollowing(followData.isFollowing);
       }
@@ -111,11 +111,11 @@ function UserProfilePage() {
     setFollowLoading(true);
     try {
       if (isFollowing) {
-        await fetch(`/api/users/${userId}/follow?followerId=${currentUserId}`, { method: "DELETE" });
+        await fetch(`/api/v1/users/${userId}/follow?followerId=${currentUserId}`, { method: "DELETE" });
         setIsFollowing(false);
         setProfile((prev) => prev && { ...prev, followerCount: prev.followerCount - 1 });
       } else {
-        await fetch(`/api/users/${userId}/follow`, {
+        await fetch(`/api/v1/users/${userId}/follow`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ followerId: currentUserId }),
@@ -132,7 +132,7 @@ function UserProfilePage() {
 
   const handleEditProfile = async () => {
     try {
-      await fetch(`/api/users/${userId}/profile`, {
+      await fetch(`/api/v1/users/${userId}/profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
@@ -164,12 +164,12 @@ function UserProfilePage() {
     setVolumeSaving(true);
     try {
       if (volumeEditId) {
-        await api.put(`/api/volumes/${volumeEditId}`, volumeForm);
+        await api.put(`/api/v1/volumes/${volumeEditId}`, volumeForm);
       } else {
-        await api.post(`/api/users/${userId}/volumes`, volumeForm);
+        await api.post(`/api/v1/users/${userId}/volumes`, volumeForm);
       }
       setVolumeDialogOpen(false);
-      const volRes = await fetch(`/api/users/${userId}/volumes`);
+      const volRes = await fetch(`/api/v1/users/${userId}/volumes`);
       const volData = await volRes.json();
       setVolumes(volData.volumes || []);
     } catch (err) {
@@ -182,7 +182,7 @@ function UserProfilePage() {
   const handleDeleteVolume = async (vol) => {
     if (!window.confirm(`Delete volume "${vol.title}"? Stories will be unassigned.`)) return;
     try {
-      await api.delete(`/api/volumes/${vol.id}`);
+      await api.delete(`/api/v1/volumes/${vol.id}`);
       setVolumes((prev) => prev.filter((v) => v.id !== vol.id));
     } catch (err) {
       console.error("Failed to delete volume:", err);
@@ -191,10 +191,10 @@ function UserProfilePage() {
 
   const handleStoryVolumeChange = async (storyId, volumeId) => {
     try {
-      await api.put(`/api/stories/${storyId}/volume`, { volumeId: volumeId || null });
+      await api.put(`/api/v1/stories/${storyId}/volume`, { volumeId: volumeId || null });
       setStories((prev) => prev.map((s) => (s.id === storyId ? { ...s, volumeId: volumeId || null } : s)));
       setStoryVolumeAssign(null);
-      const volRes = await fetch(`/api/users/${userId}/volumes`);
+      const volRes = await fetch(`/api/v1/users/${userId}/volumes`);
       const volData = await volRes.json();
       setVolumes(volData.volumes || []);
     } catch (err) {
@@ -259,6 +259,13 @@ function UserProfilePage() {
                 <Typography variant="body1" sx={{ color: "text.secondary" }}>
                   @{profile.username}
                 </Typography>
+              )}
+              {profile.role && (
+                <Chip
+                  label={profile.role === "admin" ? "Admin" : profile.role === "super-admin" ? "Super Admin" : profile.role.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                  size="small"
+                  sx={{ mt: 0.5, fontWeight: 600, bgcolor: "primary.main", color: "primary.contrastText" }}
+                />
               )}
               {profile.bio && (
                 <Typography variant="body2" sx={{ mt: 1, color: "text.secondary" }}>

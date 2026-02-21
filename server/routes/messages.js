@@ -14,7 +14,7 @@ const logger = createLogger("MessagesRoutes");
  * @param {import('express').Application} app
  */
 export function registerMessagesRoutes(app) {
-  app.get("/api/messages/conversations", async (req, res) => {
+  app.get("/api/v1/messages/conversations", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId)
@@ -27,7 +27,7 @@ export function registerMessagesRoutes(app) {
     }
   });
 
-  app.get("/api/messages/with/:userId", async (req, res) => {
+  app.get("/api/v1/messages/with/:userId", async (req, res) => {
     try {
       const currentUserId = req.userId;
       if (!currentUserId)
@@ -49,7 +49,7 @@ export function registerMessagesRoutes(app) {
     }
   });
 
-  app.post("/api/messages", async (req, res) => {
+  app.post("/api/v1/messages", async (req, res) => {
     try {
       const senderId = req.userId;
       if (!senderId)
@@ -73,7 +73,7 @@ export function registerMessagesRoutes(app) {
     }
   });
 
-  app.patch("/api/messages/with/:userId/read", async (req, res) => {
+  app.patch("/api/v1/messages/with/:userId/read", async (req, res) => {
     try {
       const recipientUserId = req.userId;
       if (!recipientUserId)

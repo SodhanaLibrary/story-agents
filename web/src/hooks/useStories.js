@@ -20,8 +20,8 @@ export function useStories(searchQuery = "") {
     queryKey: searchQuery ? storyKeys.search(searchQuery) : storyKeys.lists(),
     queryFn: () => {
       const url = searchQuery
-        ? `/api/stories?q=${encodeURIComponent(searchQuery)}`
-        : "/api/stories";
+        ? `/api/v1/stories?q=${encodeURIComponent(searchQuery)}`
+        : "/api/v1/stories";
       return fetchWithAuth(url);
     },
     select: (data) => data.stories || [],
@@ -34,7 +34,7 @@ export function useStories(searchQuery = "") {
 export function useFeed(userId) {
   return useQuery({
     queryKey: storyKeys.feed(userId),
-    queryFn: () => fetchWithAuth(`/api/feed?userId=${userId}`),
+    queryFn: () => fetchWithAuth(`/api/v1/feed?userId=${userId}`),
     enabled: !!userId,
     select: (data) => data.stories || [],
   });
@@ -46,7 +46,7 @@ export function useFeed(userId) {
 export function useStory(storyId) {
   return useQuery({
     queryKey: storyKeys.detail(storyId),
-    queryFn: () => fetchWithAuth(`/api/stories/${storyId}`),
+    queryFn: () => fetchWithAuth(`/api/v1/stories/${storyId}`),
     enabled: !!storyId,
   });
 }
@@ -59,7 +59,7 @@ export function useCreateStory() {
 
   return useMutation({
     mutationFn: (storyData) =>
-      fetchWithAuth("/api/stories", {
+      fetchWithAuth("/api/v1/stories", {
         method: "POST",
         body: JSON.stringify(storyData),
       }),
@@ -78,7 +78,7 @@ export function useDeleteStory() {
 
   return useMutation({
     mutationFn: (storyId) =>
-      fetchWithAuth(`/api/stories/${storyId}`, {
+      fetchWithAuth(`/api/v1/stories/${storyId}`, {
         method: "DELETE",
       }),
     onSuccess: () => {
@@ -95,7 +95,7 @@ export function usePublishStory() {
 
   return useMutation({
     mutationFn: (storyData) =>
-      fetchWithAuth("/api/stories/publish", {
+      fetchWithAuth("/api/v1/stories/publish", {
         method: "POST",
         body: JSON.stringify(storyData),
       }),

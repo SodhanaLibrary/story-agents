@@ -49,7 +49,7 @@ export default function PricingPage() {
     }
     let cancelled = false;
     api
-      .get("/api/plans/status")
+      .get("/api/v1/plans/status")
       .then((res) => res.json())
       .then((data) => {
         if (!cancelled) setStatus(data);
@@ -68,7 +68,7 @@ export default function PricingPage() {
     setSuccess(null);
     setPayLoading(true);
     try {
-      const orderRes = await api.post("/api/razorpay/create-order");
+      const orderRes = await api.post("/api/v1/razorpay/create-order");
       if (!orderRes.ok) {
         const err = await orderRes.json().catch(() => ({}));
         throw new Error(err.error || "Failed to create order");
@@ -85,10 +85,10 @@ export default function PricingPage() {
         amount,
         currency,
         name: "Story Agents",
-        description: "Pro plan — unlimited AI usage",
+        description: "Pro plan (monthly) — unlimited AI usage",
         handler: async (response) => {
           try {
-            const verifyRes = await api.post("/api/razorpay/verify", {
+            const verifyRes = await api.post("/api/v1/razorpay/verify", {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
@@ -146,7 +146,7 @@ export default function PricingPage() {
         Plans
       </Typography>
       <Typography color="text.secondary" sx={{ textAlign: "center", mb: 3 }}>
-        Free: 2M tokens once. Pro: unlimited. Team: create an org and add members for shared usage.
+        Free: 1M tokens once. Pro: unlimited, monthly. Team: create an org and add members for shared usage.
       </Typography>
 
       {!isAuthenticated && (
@@ -184,7 +184,7 @@ export default function PricingPage() {
               $0
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              2 million tokens total (one-time)
+              1 million tokens total (one-time)
             </Typography>
             {isAuthenticated && status && (
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
@@ -196,7 +196,7 @@ export default function PricingPage() {
                 <ListItemIcon sx={{ minWidth: 28 }}>
                   <Check color="primary" fontSize="small" />
                 </ListItemIcon>
-                <ListItemText primary="2M tokens once" />
+                <ListItemText primary="1M tokens once" />
               </ListItem>
               <ListItem disablePadding>
                 <ListItemIcon sx={{ minWidth: 28 }}>
@@ -223,10 +223,10 @@ export default function PricingPage() {
               <Star sx={{ color: "primary.main", fontSize: 18 }} />
             </Box>
             <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-              {loading ? "—" : proPrice}
+              {loading ? "—" : proPrice}/month
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Unlimited AI usage
+              Unlimited AI usage (monthly)
             </Typography>
             <List dense disablePadding sx={{ mb: 2 }}>
               <ListItem disablePadding sx={{ mb: 0.5 }}>
@@ -245,7 +245,7 @@ export default function PricingPage() {
                 <ListItemIcon sx={{ minWidth: 28 }}>
                   <Check color="primary" fontSize="small" />
                 </ListItemIcon>
-                <ListItemText primary="Pay once via Razorpay" />
+                <ListItemText primary="Billed monthly via Razorpay" />
               </ListItem>
             </List>
             {isPro ? (

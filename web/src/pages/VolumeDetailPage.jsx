@@ -23,7 +23,7 @@ function VolumeDetailPage() {
     const run = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/volumes/${volumeId}/stories`);
+        const res = await fetch(`/api/v1/volumes/${volumeId}/stories`);
         const json = await res.json();
         if (!cancelled) setData(json);
       } catch (err) {

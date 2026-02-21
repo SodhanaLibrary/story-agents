@@ -45,7 +45,7 @@ export function AuthProvider({ children }) {
   // Verify session with server (uses X-User-Id from localStorage via fetchWithAuth)
   const verifySession = useCallback(async () => {
     try {
-      const data = await fetchWithAuth("/api/auth/verify");
+      const data = await fetchWithAuth("/api/v1/auth/verify");
       return data.valid && data.user ? data.user : false;
     } catch (error) {
       console.error("Session verification failed:", error);
@@ -172,7 +172,7 @@ export function AuthProvider({ children }) {
     const userId = user?.id || user?.dbUser?.id;
     if (!userId) return;
     try {
-      const data = await fetchWithAuth("/api/users/me");
+      const data = await fetchWithAuth("/api/v1/users/me");
       const updated = {
         ...user,
         dbUser: { ...(user?.dbUser || {}), ...data },

@@ -101,7 +101,7 @@ function UserManagementPage() {
 
   const fetchCurrentUserRole = async () => {
     try {
-      const response = await api.get("/api/users/me");
+      const response = await api.get("/api/v1/users/me");
       const data = await response.json();
       setCurrentUserRole(data.role);
     } catch (err) {
@@ -121,7 +121,7 @@ function UserManagementPage() {
       if (searchFilter) params.append("search", searchFilter);
       if (roleFilter) params.append("role", roleFilter);
 
-      const response = await api.get(`/api/admin/users?${params}`);
+      const response = await api.get(`/api/v1/admin/users?${params}`);
       
       if (!response.ok) {
         const errorData = await response.json();
@@ -140,7 +140,7 @@ function UserManagementPage() {
 
   const fetchStats = async () => {
     try {
-      const response = await api.get("/api/admin/users/stats");
+      const response = await api.get("/api/v1/admin/users/stats");
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -181,7 +181,7 @@ function UserManagementPage() {
     setError(null);
     try {
       const response = await api.put(
-        `/api/admin/users/${selectedUser.id}/role`,
+        `/api/v1/admin/users/${selectedUser.id}/role`,
         { role: newRole }
       );
 

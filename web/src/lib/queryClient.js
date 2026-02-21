@@ -53,7 +53,7 @@ export async function fetchWithAuth(url, options = {}) {
     headers,
   });
 
-  if (response.status === 401 && !String(url).includes("/api/auth/")) {
+  if (response.status === 401 && !String(url).includes("/api/v1/auth/")) {
     triggerAuthFailure();
   }
 

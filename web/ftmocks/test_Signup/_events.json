@@ -1,0 +1,409 @@
+[
+  {
+    "id": "4f1d061b-5b7d-44eb-9f11-900f609bb80a",
+    "type": "url",
+    "target": "http://localhost:3000/",
+    "time": "2026-02-20T14:45:44.866Z",
+    "value": "http://localhost:3000/"
+  },
+  {
+    "type": "replacestate-url",
+    "target": "/",
+    "time": "2026-02-20T14:45:46.340Z",
+    "value": "http://localhost:3000/",
+    "id": "400d8db3-e127-4ad1-a814-2e77343a39e6"
+  },
+  {
+    "type": "click",
+    "target": "//a[@href='/login']",
+    "time": "2026-02-20T14:45:52.454Z",
+    "value": {
+      "clientX": 1210.0859375,
+      "clientY": 37.109375,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//a[@href='/login']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Log in']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='header-login']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/header/div/a"
+      }
+    ],
+    "element": {
+      "tagName": "A",
+      "textContent": "Log in",
+      "id": "header-login",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "type": "",
+      "title": "",
+      "href": "/login",
+      "src": null
+    },
+    "id": "c75db619-69f7-48b9-8334-bcf9246d177e"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/login",
+    "time": "2026-02-20T14:45:52.524Z",
+    "value": "http://localhost:3000/login",
+    "id": "82572e60-af51-4685-a509-2be6725cad1d"
+  },
+  {
+    "type": "click",
+    "target": "//a[@href='/signup']",
+    "time": "2026-02-20T14:45:55.076Z",
+    "value": {
+      "clientX": 720.47265625,
+      "clientY": 607.44921875,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//a[@href='/signup']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Sign up']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='root']/div[1]/div/div/div/p/a"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/p/a"
+      }
+    ],
+    "element": {
+      "tagName": "A",
+      "textContent": "Sign up",
+      "id": "",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "type": "",
+      "title": "",
+      "href": "/signup",
+      "src": null
+    },
+    "id": "3380e5b3-ef6a-48e2-b238-1629990bfddf"
+  },
+  {
+    "type": "pushstate-url",
+    "target": "/signup",
+    "time": "2026-02-20T14:45:55.118Z",
+    "value": "http://localhost:3000/signup",
+    "id": "da4040f1-e306-4d37-b5d3-19fa552127d2"
+  },
+  {
+    "type": "click",
+    "target": "//*[@id='signup-email']",
+    "time": "2026-02-20T14:46:01.482Z",
+    "value": {
+      "clientX": 559.33984375,
+      "clientY": 286.59765625,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='signup-email']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/form/div/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "signup-email",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "email",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "0eaa580f-bce8-4124-a389-4fceee34d0e3"
+  },
+  {
+    "type": "input",
+    "target": "//*[@id='signup-email']",
+    "time": "2026-02-20T14:46:02.647Z",
+    "value": "sodhanaware@gmail.co",
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='signup-email']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/form/div/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "signup-email",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "email",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "a1da8a80-016b-41e4-a2ce-38cd256953b2"
+  },
+  {
+    "type": "click",
+    "target": "//*[@id='signup-name']",
+    "time": "2026-02-20T14:46:13.756Z",
+    "value": {
+      "clientX": 516.6484375,
+      "clientY": 348.79296875,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='signup-name']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/form/div[2]/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "signup-name",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "text",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "9acb7826-bd69-4de6-9095-7bb3c28dc947"
+  },
+  {
+    "type": "input",
+    "target": "//*[@id='signup-name']",
+    "time": "2026-02-20T14:46:14.440Z",
+    "value": "Sriniva",
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='signup-name']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/form/div[2]/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "signup-name",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "text",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "c07a79a0-7d51-4f09-8189-e6a43aa73a18"
+  },
+  {
+    "type": "click",
+    "target": "//*[@id='signup-password']",
+    "time": "2026-02-20T14:46:16.286Z",
+    "value": {
+      "clientX": 507.78125,
+      "clientY": 434.3515625,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='signup-password']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/form/div[3]/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "signup-password",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "password",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "669ac294-4851-4a6e-ae0c-9ec164883ebc"
+  },
+  {
+    "type": "input",
+    "target": "//*[@id='signup-password']",
+    "time": "2026-02-20T14:46:26.909Z",
+    "value": "mypassword12",
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[@id='signup-password']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/form/div[3]/div/input"
+      }
+    ],
+    "element": {
+      "tagName": "INPUT",
+      "textContent": null,
+      "id": "signup-password",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "password",
+      "checked": false,
+      "disabled": false,
+      "placeholder": "",
+      "title": "",
+      "href": null,
+      "src": null,
+      "alt": ""
+    },
+    "id": "dfb643d1-c85c-4dfe-b2d7-6b13eb387214"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Sign up']",
+    "time": "2026-02-20T14:46:37.027Z",
+    "value": {
+      "clientX": 603.671875,
+      "clientY": 540.8203125,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Sign up']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='signup-submit']"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/form/button"
+      }
+    ],
+    "element": {
+      "tagName": "BUTTON",
+      "textContent": "Sign up",
+      "id": "signup-submit",
+      "role": null,
+      "name": "",
+      "ariaLabel": null,
+      "value": "",
+      "type": "submit",
+      "disabled": false,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "99f6bb77-1bbe-4918-878d-97f44979225e"
+  },
+  {
+    "type": "click",
+    "target": "//*[normalize-space(text())='Account created. Please check your email to verify your account.']",
+    "time": "2026-02-20T14:46:46.085Z",
+    "value": {
+      "clientX": 532.97265625,
+      "clientY": 261.59765625,
+      "windowWidth": 1280,
+      "windowHeight": 720
+    },
+    "selectors": [
+      {
+        "type": "locator",
+        "value": "//*[normalize-space(text())='Account created. Please check your email to verify your account.']"
+      },
+      {
+        "type": "locator",
+        "value": "//*[@id='root']/div[1]/div/div/div/form/div[1]/div[2]"
+      },
+      {
+        "type": "locator",
+        "value": "/html/body/div/div/div/div/div/form/div/div[2]"
+      }
+    ],
+    "element": {
+      "tagName": "DIV",
+      "textContent": "Account created. Please check your email to verify your account.",
+      "id": "",
+      "role": null,
+      "ariaLabel": null,
+      "title": "",
+      "href": null,
+      "src": null
+    },
+    "id": "5d1e57d2-0ff6-4cc3-bc4b-fa86b21c6da5"
+  }
+]

@@ -37,6 +37,8 @@ import { registerGenerationRoutes } from "./routes/generation.js";
 import { registerMessagesRoutes } from "./routes/messages.js";
 import { registerAuthorsRoutes } from "./routes/authors.js";
 import { registerVolumesRoutes } from "./routes/volumes.js";
+import { registerImagesRoutes } from "./routes/images.js";
+import { isEmailConfigured } from "./services/email.js";
 
 const logger = createLogger("Server");
 
@@ -101,8 +103,8 @@ app.use("/storage", express.static(path.join(__dirname, "..", "storage")));
 const activeJobs = new Map();
 const activeBatchJobs = new Map();
 
-/** Free plan: 2M tokens once. Pro: unlimited. */
-const FREE_TOKEN_LIMIT = config.plans?.freeTokenLimit ?? 2_000_000;
+/** Free plan: 1M tokens once. Pro: unlimited (monthly). */
+const FREE_TOKEN_LIMIT = config.plans?.freeTokenLimit ?? 1_000_000;
 
 /**
  * Convert image path to URL
@@ -205,6 +207,7 @@ registerGenerationRoutes(app, deps);
 registerMessagesRoutes(app);
 registerAuthorsRoutes(app);
 registerVolumesRoutes(app);
+registerImagesRoutes(app);
 
 // Start server
 app.listen(PORT, () => {
@@ -212,6 +215,7 @@ app.listen(PORT, () => {
   logger.success(`Server running on http://localhost:${PORT}`);
   logger.info(`API Key configured: ${config.openai.apiKey ? "Yes" : "No"}`);
   logger.info(`AI Provider: ${config.aiProvider || "openai"}`);
+  logger.info(`Email (verification/reset): ${isEmailConfigured() ? "Yes" : "No (set SMTP_HOST, SMTP_USER, SMTP_PASS)"}`);
   logger.info(`Log level: ${process.env.LOG_LEVEL || "info"}`);
 });
 

@@ -11,6 +11,7 @@ import {
 } from "../../src/services/storyRepository.js";
 import { setContext as setPromptContext } from "../../src/services/promptLogger.js";
 import { createLogger } from "../../src/utils/logger.js";
+import { sendVerificationEmail, sendPasswordResetEmail } from "../services/email.js";
 
 const logger = createLogger("AuthRoutes");
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -20,7 +21,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
  * @param {import('express').Application} app
  */
 export function registerAuthRoutes(app) {
-  app.get("/api/auth/verify", async (req, res) => {
+  app.get("/api/v1/auth/verify", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) {
@@ -51,7 +52,7 @@ export function registerAuthRoutes(app) {
     }
   });
 
-  app.post("/api/auth/google", async (req, res) => {
+  app.post("/api/v1/auth/google", async (req, res) => {
     try {
       const { credential } = req.body;
       if (!credential) {
@@ -80,7 +81,7 @@ export function registerAuthRoutes(app) {
   });
 
   // ----- Email signup -----
-  app.post("/api/auth/signup", async (req, res) => {
+  app.post("/api/v1/auth/signup", async (req, res) => {
     try {
       const { email, name, password } = req.body || {};
       if (!email || typeof email !== "string" || !password || typeof password !== "string") {
@@ -100,7 +101,9 @@ export function registerAuthRoutes(app) {
       const { user, verificationToken } = result;
       const verifyUrl = `${FRONTEND_URL}/verify-email?token=${encodeURIComponent(verificationToken)}`;
       logger.info(`Signup: ${user.email} – verification link: ${verifyUrl}`);
-      // TODO: send email with verifyUrl when email transport is configured
+      sendVerificationEmail(user.email, verifyUrl).catch((err) =>
+        logger.error("Verification email failed:", err.message)
+      );
       res.status(201).json({
         message: "Account created. Please check your email to verify your account.",
         userId: user.id,
@@ -113,18 +116,32 @@ export function registerAuthRoutes(app) {
   });
 
   // ----- Verify email (GET for link click) -----
-  app.get("/api/auth/verify-email", async (req, res) => {
+  app.get("/api/v1/auth/verify-email", async (req, res) => {
     try {
       const token = req.query.token;
       if (!token) {
         return res.status(400).json({ error: "Verification token is required" });
       }
-      const user = await verifyEmailByToken(token);
-      if (!user) {
-        return res.status(400).json({ error: "Invalid or expired verification link" });
+      const result = await verifyEmailByToken(token);
+      if (result.user) {
+        logger.info(`Email verified: ${result.user.email}`);
+        return res.json({
+          verified: true,
+          user: {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.name,
+          },
+        });
       }
-      logger.info(`Email verified: ${user.email}`);
-      res.json({ verified: true, user: { id: user.id, email: user.email, name: user.name } });
+      if (result.error === "expired") {
+        return res.status(400).json({
+          error: "Verification link has expired. Please sign up again or request a new verification email.",
+        });
+      }
+      return res.status(400).json({
+        error: "Invalid verification link. Please use the link from your email or sign up again.",
+      });
     } catch (error) {
       logger.error("Verify email error:", error.message);
       res.status(500).json({ error: error.message });
@@ -132,7 +149,7 @@ export function registerAuthRoutes(app) {
   });
 
   // ----- Login with email/password -----
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/v1/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body || {};
       if (!email || !password) {
@@ -148,9 +165,6 @@ export function registerAuthRoutes(app) {
       if (!checkUserPassword(user, password)) {
         return res.status(401).json({ error: "Invalid email or password" });
       }
-      if (!user.email_verified) {
-        return res.status(403).json({ error: "Please verify your email before signing in.", code: "EMAIL_NOT_VERIFIED" });
-      }
       setPromptContext({ userId: user.id });
       logger.info(`User logged in: ${user.email} (ID: ${user.id})`);
       const safeUser = {
@@ -161,6 +175,7 @@ export function registerAuthRoutes(app) {
         role: user.role || "user",
         plan: user.plan || "free",
         hasPassword: true,
+        emailVerified: !!user.email_verified,
       };
       res.json({ user: safeUser });
     } catch (error) {
@@ -170,7 +185,7 @@ export function registerAuthRoutes(app) {
   });
 
   // ----- Change password (authenticated) -----
-  app.post("/api/auth/change-password", async (req, res) => {
+  app.post("/api/v1/auth/change-password", async (req, res) => {
     try {
       const userId = req.userId;
       if (!userId) {
@@ -201,7 +216,7 @@ export function registerAuthRoutes(app) {
   });
 
   // ----- Forgot password -----
-  app.post("/api/auth/forgot-password", async (req, res) => {
+  app.post("/api/v1/auth/forgot-password", async (req, res) => {
     try {
       const { email } = req.body || {};
       if (!email || typeof email !== "string") {
@@ -213,7 +228,9 @@ export function registerAuthRoutes(app) {
       }
       const resetUrl = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(result.token)}`;
       logger.info(`Forgot password: ${email} – reset link: ${resetUrl}`);
-      // TODO: send email with resetUrl when email transport is configured
+      sendPasswordResetEmail(email, resetUrl).catch((err) =>
+        logger.error("Password reset email failed:", err.message)
+      );
       res.json({
         message: "If an account exists with this email, you will receive a password reset link.",
         resetUrl: process.env.NODE_ENV === "development" ? resetUrl : undefined,
@@ -225,7 +242,7 @@ export function registerAuthRoutes(app) {
   });
 
   // ----- Reset password (with token from email) -----
-  app.post("/api/auth/reset-password", async (req, res) => {
+  app.post("/api/v1/auth/reset-password", async (req, res) => {
     try {
       const { token, newPassword } = req.body || {};
       if (!token || !newPassword) {

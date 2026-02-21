@@ -30,8 +30,8 @@
     "parentId": null
   },
   {
-    "id": "73edff83-11f3-4d15-93c7-ba40bae04103",
-    "name": "Read stories",
+    "id": "5a8d010a-12bb-4c3a-bdb1-a5569a20bd5b",
+    "name": "Signup",
     "type": "testcase",
     "parentId": "f0566876-8728-4648-8c48-6113a9884a64"
   }

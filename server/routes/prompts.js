@@ -11,7 +11,7 @@ const logger = createLogger("PromptsRoutes");
  * @param {import('express').Application} app
  */
 export function registerPromptsRoutes(app) {
-  app.get("/api/prompts", async (req, res) => {
+  app.get("/api/v1/prompts", async (req, res) => {
     try {
       const {
         provider,
@@ -43,7 +43,7 @@ export function registerPromptsRoutes(app) {
     }
   });
 
-  app.get("/api/prompts/stats", async (req, res) => {
+  app.get("/api/v1/prompts/stats", async (req, res) => {
     try {
       const { startDate, endDate, provider } = req.query;
 
@@ -60,7 +60,7 @@ export function registerPromptsRoutes(app) {
     }
   });
 
-  app.get("/api/jobs/:jobId/prompts", async (req, res) => {
+  app.get("/api/v1/jobs/:jobId/prompts", async (req, res) => {
     try {
       const { jobId } = req.params;
 
@@ -76,7 +76,7 @@ export function registerPromptsRoutes(app) {
     }
   });
 
-  app.get("/api/stories/:storyId/prompts", async (req, res) => {
+  app.get("/api/v1/stories/:storyId/prompts", async (req, res) => {
     try {
       const { storyId } = req.params;
 

@@ -102,7 +102,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
 
     const checkActiveBatch = async () => {
       try {
-        const response = await fetch("/api/batch/list", {
+        const response = await fetch("/api/v1/batch/list", {
           headers: { "X-User-Id": String(userId) },
         });
         if (!response.ok) return;
@@ -139,7 +139,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
 
     const pollJob = async () => {
       try {
-        const response = await fetch(`/api/job/${jobId}`);
+        const response = await fetch(`/api/v1/job/${jobId}`);
         const data = await response.json();
         setJob(data);
         setStoryPages(data.storyPages);
@@ -178,7 +178,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           headers["X-User-Id"] = userId;
         }
 
-        const response = await fetch(`/api/batch/${batchRequest.batchId}`, {
+        const response = await fetch(`/api/v1/batch/${batchRequest.batchId}`, {
           headers,
         });
 
@@ -238,7 +238,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
 
     setRegeneratingPages(true);
     try {
-      await fetch("/api/generate/pages", {
+      await fetch("/api/v1/generate/pages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -268,7 +268,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
       }
 
       if (mode === "batch") {
-        const response = await fetch("/api/batch/create", {
+        const response = await fetch("/api/v1/batch/create", {
           method: "POST",
           headers,
           body: JSON.stringify({ jobId }),
@@ -289,7 +289,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           console.warn(
             "Batch creation failed, falling back to immediate generation"
           );
-          await fetch("/api/generate/illustrations", {
+          await fetch("/api/v1/generate/illustrations", {
             method: "POST",
             headers,
             body: JSON.stringify({
@@ -299,7 +299,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
           });
         }
       } else {
-        await fetch("/api/generate/illustrations", {
+        await fetch("/api/v1/generate/illustrations", {
           method: "POST",
           headers,
           body: JSON.stringify({
@@ -318,7 +318,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
     setGeneratingPage(pageNumber);
     try {
       const response = await fetch(
-        `/api/generate/page/${pageNumber}/illustration`,
+        `/api/v1/generate/page/${pageNumber}/illustration`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -348,7 +348,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
   const handleGenerateCoverIllustration = async () => {
     setRegenerating((prev) => ({ ...prev, cover: true }));
     try {
-      const response = await fetch("/api/generate/cover/illustration", {
+      const response = await fetch("/api/v1/generate/cover/illustration", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobId }),
@@ -384,7 +384,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
     setSavingText(true);
     try {
       const isNew = textEditDialog.isNew;
-      const endpoint = isNew ? "/api/pages/add" : "/api/pages/update";
+      const endpoint = isNew ? "/api/v1/pages/add" : "/api/v1/pages/update";
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -437,7 +437,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
     if (!deleteDialog.page) return;
     setDeleting(true);
     try {
-      const response = await fetch("/api/pages/delete", {
+      const response = await fetch("/api/v1/pages/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -502,7 +502,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
     }
 
     try {
-      const response = await fetch("/api/regenerate-page", {
+      const response = await fetch("/api/v1/regenerate-page", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -544,7 +544,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
     }
 
     try {
-      const response = await fetch("/api/regenerate-cover", {
+      const response = await fetch("/api/v1/regenerate-cover", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -583,7 +583,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
         headers["X-User-Id"] = userId;
       }
 
-      const response = await fetch("/api/finalize-story", {
+      const response = await fetch("/api/v1/finalize-story", {
         method: "POST",
         headers,
         body: JSON.stringify({ jobId }),
@@ -620,7 +620,7 @@ function PageReview({ jobId, onComplete, onBack, setStoryPages }) {
         headers["X-User-Id"] = userId;
       }
 
-      await fetch(`/api/batch/${batchRequest.batchId}/cancel`, {
+      await fetch(`/api/v1/batch/${batchRequest.batchId}/cancel`, {
         method: "POST",
         headers,
       });

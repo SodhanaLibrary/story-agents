@@ -5,7 +5,7 @@ import config from "../../src/config.js";
  * @param {import('express').Application} app
  */
 export function registerHealthRoutes(app) {
-  app.get("/api/health", (req, res) => {
+  app.get("/api/v1/health", (req, res) => {
     res.json({
       status: "ok",
       aiProvider: config.aiProvider || "openai",
@@ -17,7 +17,7 @@ export function registerHealthRoutes(app) {
     });
   });
 
-  app.get("/api/providers", (req, res) => {
+  app.get("/api/v1/providers", (req, res) => {
     res.json({
       current: config.aiProvider || "openai",
       available: {

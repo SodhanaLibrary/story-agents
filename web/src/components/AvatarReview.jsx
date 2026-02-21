@@ -41,7 +41,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
-
 function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
   const navigate = useNavigate();
   const { userId, isAuthenticated } = useAuth();
@@ -77,7 +76,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
 
   const fetchSavedAvatars = async () => {
     try {
-      const response = await fetch(`/api/users/${userId}/avatars`);
+      const response = await fetch(`/api/v1/users/${userId}/avatars`);
       const data = await response.json();
       setSavedAvatars(data.avatars || []);
     } catch (err) {
@@ -90,7 +89,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
 
     setSavingAvatar((prev) => ({ ...prev, [character.name]: true }));
     try {
-      const response = await fetch(`/api/users/${userId}/avatars`, {
+      const response = await fetch(`/api/v1/users/${userId}/avatars`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +121,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
     try {
       // Update the character with the saved avatar
       const response = await fetch(
-        `/api/job/${jobId}/character/${charName}/avatar`,
+        `/api/v1/job/${jobId}/character/${charName}/avatar`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -165,7 +164,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
 
     const pollJob = async () => {
       try {
-        const response = await fetch(`/api/job/${jobId}`);
+        const response = await fetch(`/api/v1/job/${jobId}`);
         const data = await response.json();
         setJob(data);
         setCharacters(data.characters);
@@ -248,7 +247,7 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
     }
 
     try {
-      const response = await api.post("/api/generate-avatar", {
+      const response = await api.post("/api/v1/generate-avatar", {
         jobId,
         characterName: charName,
         customDescription: useDialog
@@ -388,12 +387,18 @@ function AvatarReview({ jobId, onApprove, onBack, setCharacters }) {
           sx={{ mb: 2 }}
           onClose={() => setUpgradeAlert(false)}
           action={
-            <Button id="btn-avatar-upgrade" color="inherit" size="small" onClick={() => navigate("/pricing")}>
+            <Button
+              id="btn-avatar-upgrade"
+              color="inherit"
+              size="small"
+              onClick={() => navigate("/pricing")}
+            >
               Upgrade to Pro
             </Button>
           }
         >
-          Free plan limit reached (2M tokens). Upgrade to Pro for unlimited usage.
+          Free plan limit reached (1M tokens). Upgrade to Pro for unlimited
+          usage.
         </Alert>
       )}
       <Box sx={{ textAlign: "center", mb: 4 }}>

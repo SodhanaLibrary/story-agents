@@ -73,7 +73,7 @@ export async function apiFetch(url, options = {}) {
 
   // Handle auth failures (401 Unauthorized)
   // Skip for auth endpoints to avoid loops
-  if (response.status === 401 && !url.includes("/api/auth/")) {
+  if (response.status === 401 && !url.includes("/api/v1/auth/")) {
     handleAuthFailure();
   }
 

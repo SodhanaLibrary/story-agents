@@ -68,15 +68,25 @@ export const config = {
   logging: {
     level: process.env.LOG_LEVEL || "info", // debug, info, warn, error, silent
   },
-  // Plans: free = 2M tokens once; pro = $19 (Razorpay)
+  // Plans: free = 1M tokens once; pro = $19/month (Razorpay)
   plans: {
-    freeTokenLimit: parseInt(process.env.PLAN_FREE_TOKEN_LIMIT || "2000000", 10),
-    proPriceCents: parseInt(process.env.RAZORPAY_PRO_AMOUNT_CENTS || "1900", 10), // $19 = 1900 cents
+    freeTokenLimit: parseInt(process.env.PLAN_FREE_TOKEN_LIMIT || "1000000", 10),
+    proPriceCents: parseInt(process.env.RAZORPAY_PRO_AMOUNT_CENTS || "1900", 10), // $19/month = 1900 cents
     proCurrency: process.env.RAZORPAY_CURRENCY || "USD",
   },
   razorpay: {
     keyId: process.env.RAZORPAY_KEY_ID || "",
     keySecret: process.env.RAZORPAY_KEY_SECRET || "",
+  },
+  // Email (verification + password reset). If not set, links are only logged (dev).
+  email: {
+    smtpHost: process.env.SMTP_HOST || "",
+    smtpPort: parseInt(process.env.SMTP_PORT || "587", 10),
+    smtpSecure: process.env.SMTP_SECURE === "true",
+    smtpUser: process.env.SMTP_USER || "",
+    smtpPass: process.env.SMTP_PASS || "",
+    mailFrom: process.env.MAIL_FROM || process.env.SMTP_USER || "noreply@localhost",
+    appName: process.env.APP_NAME || "Story Agents",
   },
 };
 

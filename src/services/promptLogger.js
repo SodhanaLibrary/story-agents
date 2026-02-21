@@ -406,7 +406,7 @@ export async function getIncludedUsageSum(userId, startDate, endDate) {
 }
 
 /**
- * Total tokens used by a user (lifetime). Used for free plan limit (2M once).
+ * Total tokens used by a user (lifetime). Used for free plan limit (1M once).
  * @param {number} userId
  * @returns {Promise<number>}
  */

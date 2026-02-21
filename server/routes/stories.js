@@ -38,7 +38,7 @@ function extractStoryId(storyIdParam) {
 export function registerStoriesRoutes(app, deps) {
   const { activeJobs } = deps;
 
-  app.get("/api/stories", async (req, res) => {
+  app.get("/api/v1/stories", async (req, res) => {
     try {
       const { q, tag, userId } = req.query;
 
@@ -58,7 +58,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.get("/api/tags", async (req, res) => {
+  app.get("/api/v1/tags", async (req, res) => {
     try {
       const tags = await getAllTags();
       res.json({ tags });
@@ -68,7 +68,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.post("/api/tags", async (req, res) => {
+  app.post("/api/v1/tags", async (req, res) => {
     try {
       const { name, color } = req.body;
       if (!name) {
@@ -82,7 +82,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.get("/api/stories/:storyId/tags", async (req, res) => {
+  app.get("/api/v1/stories/:storyId/tags", async (req, res) => {
     try {
       const id = extractStoryId(req.params.storyId);
       const tags = await getTagsByStoryId(id);
@@ -93,7 +93,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.put("/api/stories/:storyId/tags", async (req, res) => {
+  app.put("/api/v1/stories/:storyId/tags", async (req, res) => {
     try {
       const id = extractStoryId(req.params.storyId);
       const { tags } = req.body;
@@ -109,7 +109,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.get("/api/users/:userId/favorites", async (req, res) => {
+  app.get("/api/v1/users/:userId/favorites", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const favorites = await getUserFavorites(userId);
@@ -120,7 +120,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.get("/api/users/:userId/favorite-ids", async (req, res) => {
+  app.get("/api/v1/users/:userId/favorite-ids", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const ids = await getUserFavoriteIds(userId);
@@ -131,7 +131,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.post("/api/users/:userId/favorites", async (req, res) => {
+  app.post("/api/v1/users/:userId/favorites", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const { storyId } = req.body;
@@ -146,7 +146,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.delete("/api/users/:userId/favorites/:storyId", async (req, res) => {
+  app.delete("/api/v1/users/:userId/favorites/:storyId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const storyId = extractStoryId(req.params.storyId);
@@ -158,7 +158,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.get("/api/users/:userId/reading", async (req, res) => {
+  app.get("/api/v1/users/:userId/reading", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const reading = await getCurrentlyReading(userId);
@@ -169,7 +169,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.get("/api/users/:userId/reading/history", async (req, res) => {
+  app.get("/api/v1/users/:userId/reading/history", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const history = await getReadingHistory(userId);
@@ -180,7 +180,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.get("/api/users/:userId/reading/:storyId", async (req, res) => {
+  app.get("/api/v1/users/:userId/reading/:storyId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const storyId = extractStoryId(req.params.storyId);
@@ -192,7 +192,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.put("/api/users/:userId/reading/:storyId", async (req, res) => {
+  app.put("/api/v1/users/:userId/reading/:storyId", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       const storyId = extractStoryId(req.params.storyId);
@@ -217,7 +217,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.get("/api/stories/:storyId", async (req, res) => {
+  app.get("/api/v1/stories/:storyId", async (req, res) => {
     try {
       const { storyId } = req.params;
 
@@ -243,7 +243,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.delete("/api/stories/:storyId", async (req, res) => {
+  app.delete("/api/v1/stories/:storyId", async (req, res) => {
     try {
       const { storyId } = req.params;
 
@@ -283,7 +283,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.post("/api/stories/:storyId/edit", async (req, res) => {
+  app.post("/api/v1/stories/:storyId/edit", async (req, res) => {
     try {
       const { storyId } = req.params;
 
@@ -355,7 +355,7 @@ export function registerStoriesRoutes(app, deps) {
     }
   });
 
-  app.post("/api/stories/:storyId/save", async (req, res) => {
+  app.post("/api/v1/stories/:storyId/save", async (req, res) => {
     try {
       const { storyId } = req.params;
       const { jobId } = req.body;
