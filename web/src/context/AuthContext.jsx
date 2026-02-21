@@ -201,12 +201,14 @@ export function AuthProvider({ children }) {
   const isSuperAdmin = userRole === 'super-admin';
   const isPremium = hasRoleLevel(userRole, 'premium-user');
   const isPro = userPlan === 'pro';
+  const emailVerified = user?.dbUser?.emailVerified ?? user?.emailVerified ?? false;
 
   const value = {
     user,
     userId: user?.id || user?.dbUser?.id || null,
     loading,
     isAuthenticated: !!user,
+    emailVerified,
     login,
     loginWithEmail,
     signup,

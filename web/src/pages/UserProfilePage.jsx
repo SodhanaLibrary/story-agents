@@ -23,6 +23,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Snackbar,
 } from "@mui/material";
 import {
   Edit,
@@ -36,6 +37,7 @@ import {
   Add,
   Folder,
   Delete,
+  MarkEmailRead,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -43,7 +45,7 @@ import api from "../services/api";
 function UserProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, userId: currentUserId } = useAuth();
+  const { isAuthenticated, userId: currentUserId, emailVerified, refreshUser } = useAuth();
   
   const [profile, setProfile] = useState(null);
   const [stories, setStories] = useState([]);
@@ -61,6 +63,8 @@ function UserProfilePage() {
   const [volumeForm, setVolumeForm] = useState({ title: "", description: "" });
   const [volumeSaving, setVolumeSaving] = useState(false);
   const [storyVolumeAssign, setStoryVolumeAssign] = useState(null);
+  const [verifyEmailSnackbar, setVerifyEmailSnackbar] = useState(null);
+  const [resendVerifyLoading, setResendVerifyLoading] = useState(false);
 
   const isOwnProfile = currentUserId === parseInt(userId);
 
@@ -151,6 +155,25 @@ function UserProfilePage() {
       bio: profile?.bio || "",
     });
     setEditDialogOpen(true);
+  };
+
+  const handleResendVerification = async () => {
+    setResendVerifyLoading(true);
+    setVerifyEmailSnackbar(null);
+    try {
+      const res = await api.post("/api/v1/auth/resend-verification", {});
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setVerifyEmailSnackbar(data.error || "Failed to send verification email.");
+        return;
+      }
+      await refreshUser();
+      setVerifyEmailSnackbar(data.message || "Check your email for the verification link.");
+    } catch (err) {
+      setVerifyEmailSnackbar(err.message || "Failed to send verification email.");
+    } finally {
+      setResendVerifyLoading(false);
+    }
   };
 
   const openVolumeDialog = (volume = null) => {
@@ -291,9 +314,23 @@ function UserProfilePage() {
 
             <Stack spacing={1} direction="row" flexWrap="wrap">
               {isOwnProfile ? (
-                <Button id="btn-edit-profile" variant="outlined" startIcon={<Edit />} onClick={openEditDialog} sx={{ borderColor: "primary.main", color: "primary.main" }}>
-                  Edit Profile
-                </Button>
+                <>
+                  <Button id="btn-edit-profile" variant="outlined" startIcon={<Edit />} onClick={openEditDialog} sx={{ borderColor: "primary.main", color: "primary.main" }}>
+                    Edit Profile
+                  </Button>
+                  {!emailVerified && (
+                    <Button
+                      id="btn-verify-email"
+                      variant="outlined"
+                      startIcon={<MarkEmailRead />}
+                      onClick={handleResendVerification}
+                      disabled={resendVerifyLoading}
+                      sx={{ borderColor: "warning.main", color: "warning.main" }}
+                    >
+                      {resendVerifyLoading ? "Sending…" : "Verify email"}
+                    </Button>
+                  )}
+                </>
               ) : (
                 <>
                   {isAuthenticated && (
@@ -573,6 +610,14 @@ function UserProfilePage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={!!verifyEmailSnackbar}
+        autoHideDuration={6000}
+        onClose={() => setVerifyEmailSnackbar(null)}
+        message={verifyEmailSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
     </Box>
   );
 }

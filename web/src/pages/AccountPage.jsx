@@ -11,13 +11,15 @@ import {
   IconButton,
   Avatar,
   Divider,
+  Snackbar,
 } from "@mui/material";
-import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { Visibility, VisibilityOff, MarkEmailRead } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 export default function AccountPage() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, changePassword, logout } = useAuth();
+  const { user, isAuthenticated, emailVerified, refreshUser, changePassword, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -25,6 +27,8 @@ export default function AccountPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verifyEmailSnackbar, setVerifyEmailSnackbar] = useState(null);
+  const [resendVerifyLoading, setResendVerifyLoading] = useState(false);
 
   if (!isAuthenticated || !user) {
     navigate("/login", { replace: true });
@@ -58,6 +62,25 @@ export default function AccountPage() {
       setError(err.message || "Failed to change password");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendVerifyLoading(true);
+    setVerifyEmailSnackbar(null);
+    try {
+      const res = await api.post("/api/v1/auth/resend-verification", {});
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setVerifyEmailSnackbar(data.error || "Failed to send verification email.");
+        return;
+      }
+      await refreshUser();
+      setVerifyEmailSnackbar(data.message || "Check your email for the verification link.");
+    } catch (err) {
+      setVerifyEmailSnackbar(err.message || "Failed to send verification email.");
+    } finally {
+      setResendVerifyLoading(false);
     }
   };
 
@@ -97,6 +120,24 @@ export default function AccountPage() {
         <Typography variant="body2" color="text.secondary">
           To update your name or profile picture, use your sign-in method (Google or email). Profile editing may be added later.
         </Typography>
+        {!emailVerified && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              Your email is not verified. Check your inbox for the verification link or request a new one.
+            </Typography>
+            <Button
+              id="account-verify-email"
+              size="small"
+              variant="outlined"
+              startIcon={<MarkEmailRead />}
+              onClick={handleResendVerification}
+              disabled={resendVerifyLoading}
+              sx={{ borderColor: "warning.main", color: "warning.main" }}
+            >
+              {resendVerifyLoading ? "Sending…" : "Verify email"}
+            </Button>
+          </Alert>
+        )}
         <Button
           id="account-view-profile"
           variant="outlined"
@@ -107,6 +148,14 @@ export default function AccountPage() {
           View public profile
         </Button>
       </Paper>
+
+      <Snackbar
+        open={!!verifyEmailSnackbar}
+        autoHideDuration={6000}
+        onClose={() => setVerifyEmailSnackbar(null)}
+        message={verifyEmailSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      />
 
       {hasPassword && (
         <Paper

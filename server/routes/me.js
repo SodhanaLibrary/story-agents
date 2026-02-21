@@ -27,6 +27,7 @@ export function registerMeRoutes(app) {
         role: user.role,
         plan: user.plan || "free",
         hasPassword: !!user.password_hash,
+        emailVerified: !!user.email_verified,
         createdAt: user.created_at,
       });
     } catch (error) {

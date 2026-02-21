@@ -103,6 +103,23 @@ export async function verifyEmailByToken(token) {
   return { error: "invalid" };
 }
 
+/**
+ * Create a new verification token for a user who has not verified email.
+ * Returns { verificationToken, email } or { error: 'already_verified' | 'not_found' }.
+ */
+export async function createEmailVerificationToken(userId) {
+  const user = await getUserById(userId);
+  if (!user) return { error: "not_found" };
+  if (user.email_verified) return { error: "already_verified" };
+  const verificationToken = crypto.randomBytes(32).toString("hex");
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+  await query(
+    "UPDATE users SET email_verification_token = ?, email_verification_expires = ? WHERE id = ?",
+    [verificationToken, expires, userId],
+  );
+  return { verificationToken, email: user.email };
+}
+
 /** Set password for user (for change-password and reset-password). */
 export async function setUserPassword(userId, newPassword) {
   const hash = hashPassword(newPassword);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Box, Paper, Typography, Button, Alert, CircularProgress } from "@mui/material";
 import { CheckCircle, Error as ErrorIcon } from "@mui/icons-material";
@@ -10,6 +10,10 @@ export default function VerifyEmailPage() {
   const { verifyEmail } = useAuth();
   const [status, setStatus] = useState("loading"); // loading | success | error
   const [message, setMessage] = useState("");
+  const verifyEmailRef = useRef(verifyEmail);
+  const attemptedTokenRef = useRef(null);
+
+  verifyEmailRef.current = verifyEmail;
 
   useEffect(() => {
     if (!token) {
@@ -17,22 +21,35 @@ export default function VerifyEmailPage() {
       setMessage("Missing verification link.");
       return;
     }
+    // Run verification only once per token to avoid re-running when context callbacks change
+    if (attemptedTokenRef.current === token) return;
+    attemptedTokenRef.current = token;
+
     let cancelled = false;
-    verifyEmail(token)
-      .then((data) => {
+    verifyEmailRef.current(token)
+      .then(() => {
         if (!cancelled) {
           setStatus("success");
           setMessage("Your email is verified. You can now sign in.");
         }
       })
       .catch((err) => {
+        const msg =
+          err?.message ||
+          err?.error ||
+          (typeof err?.data?.error === "string" ? err.data.error : null) ||
+          "Verification failed.";
         if (!cancelled) {
           setStatus("error");
-          setMessage(err.message || "Verification failed.");
+          setMessage(msg);
         }
       });
-    return () => { cancelled = true; };
-  }, [token, verifyEmail]);
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally depend only on token so we don't re-run when verifyEmail identity changes (avoids infinite loop)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   return (
     <Box sx={{ maxWidth: 420, mx: "auto", py: 4 }}>

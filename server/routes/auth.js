@@ -4,6 +4,7 @@ import {
   getUserByEmail,
   createUserWithEmail,
   verifyEmailByToken,
+  createEmailVerificationToken,
   setUserPassword,
   checkUserPassword,
   createPasswordResetToken,
@@ -43,6 +44,7 @@ export function registerAuthRoutes(app) {
         role: user.role,
         plan: user.plan || "free",
         hasPassword: !!user.password_hash,
+        emailVerified: !!user.email_verified,
       };
       logger.info(`Session verified for user: ${user.email} (ID: ${user.id})`);
       res.json({ valid: true, user: safeUser });
@@ -144,6 +146,30 @@ export function registerAuthRoutes(app) {
       });
     } catch (error) {
       logger.error("Verify email error:", error.message);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // ----- Resend verification email (authenticated) -----
+  app.post("/api/v1/auth/resend-verification", async (req, res) => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const result = await createEmailVerificationToken(userId);
+      if (result.error === "already_verified") {
+        return res.status(400).json({ error: "Email is already verified." });
+      }
+      if (result.error === "not_found") {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const verifyUrl = `${FRONTEND_URL}/verify-email?token=${encodeURIComponent(result.verificationToken)}`;
+      await sendVerificationEmail(result.email, verifyUrl);
+      logger.info(`Resend verification email: ${result.email}`);
+      res.json({ message: "Verification email sent. Please check your inbox." });
+    } catch (error) {
+      logger.error("Resend verification error:", error.message);
       res.status(500).json({ error: error.message });
     }
   });
