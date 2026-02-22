@@ -81,7 +81,7 @@ function AuthorsPage() {
         </Box>
       </Box>
       <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Discover writers who have published stories on Story Agents.
+        Discover writers who have published stories on Epic Woven.
       </Typography>
 
       {isLoading ? (

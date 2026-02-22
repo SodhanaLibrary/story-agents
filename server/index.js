@@ -211,7 +211,7 @@ registerImagesRoutes(app);
 
 // Start server
 app.listen(PORT, () => {
-  logger.section("Story Agents API Server");
+  logger.section("Epic Woven API Server");
   logger.success(`Server running on http://localhost:${PORT}`);
   logger.info(`API Key configured: ${config.openai.apiKey ? "Yes" : "No"}`);
   logger.info(`AI Provider: ${config.aiProvider || "openai"}`);

@@ -75,7 +75,7 @@ export default function LoginPrompt() {
             WebkitTextFillColor: "transparent",
           }}
         >
-          Story Agents
+          Epic Woven
         </Typography>
         <Typography
           variant="h5"

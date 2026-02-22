@@ -24,7 +24,7 @@ const artStyleChoices = [
 ];
 
 async function main() {
-  console.log(chalk.cyan.bold("\n📖 Story Agents - AI Story Generator\n"));
+  console.log(chalk.cyan.bold("\n📖 Epic Woven - AI Story Generator\n"));
   console.log(chalk.gray("Generate illustrated stories with AI-powered agents\n"));
 
   // Get story input

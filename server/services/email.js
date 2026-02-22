@@ -10,7 +10,7 @@ const SMTP_USER = process.env.SMTP_USER;
 // Gmail App Passwords are 16 chars; env may have spaces (e.g. "abcd efgh ijkl mnop") – strip them
 const SMTP_PASS = (process.env.SMTP_PASS || "").replace(/\s/g, "");
 const MAIL_FROM = process.env.MAIL_FROM || process.env.SMTP_USER || "noreply@localhost";
-const APP_NAME = process.env.APP_NAME || "Story Agents";
+const APP_NAME = process.env.APP_NAME || "Epic Woven";
 
 /**
  * Whether email sending is configured (SMTP credentials present).

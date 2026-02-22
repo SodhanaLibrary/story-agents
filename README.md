@@ -1,4 +1,4 @@
-# Story Agents 📖
+# Epic Woven 📖
 
 AI-powered story generation system that creates illustrated storybooks using OpenAI's GPT-4 and DALL-E.
 

@@ -63,7 +63,7 @@ export default function LoginPage() {
         Welcome back
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", mb: 3 }}>
-        Sign in to continue to Story Agents
+        Sign in to continue to Epic Woven
       </Typography>
 
       <Paper

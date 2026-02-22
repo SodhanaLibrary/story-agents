@@ -137,7 +137,7 @@ function Header() {
               display: { xs: "none", sm: "block" },
             }}
           >
-            Story Agents
+            Epic Woven
           </Typography>
         </Box>
 

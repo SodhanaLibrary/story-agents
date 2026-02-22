@@ -181,7 +181,7 @@ function AppContent() {
         }}
       >
         <Typography variant="body2" sx={{ color: "text.secondary" }}>
-          Powered by OpenAI GPT-4 &amp; DALL-E 3 • Story Agents v1.0
+          Powered by OpenAI GPT-4 &amp; DALL-E 3 • Epic Woven v1.0
         </Typography>
       </Box>
     </Box>

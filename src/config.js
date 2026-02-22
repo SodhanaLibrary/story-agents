@@ -86,7 +86,7 @@ export const config = {
     smtpUser: process.env.SMTP_USER || "",
     smtpPass: process.env.SMTP_PASS || "",
     mailFrom: process.env.MAIL_FROM || process.env.SMTP_USER || "noreply@localhost",
-    appName: process.env.APP_NAME || "Story Agents",
+    appName: process.env.APP_NAME || "Epic Woven",
   },
 };
 

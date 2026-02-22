@@ -84,7 +84,7 @@ export default function PricingPage() {
         order_id: orderId,
         amount,
         currency,
-        name: "Story Agents",
+        name: "Epic Woven",
         description: "Pro plan (monthly) — unlimited AI usage",
         handler: async (response) => {
           try {

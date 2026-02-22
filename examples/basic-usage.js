@@ -1,8 +1,8 @@
 /**
- * Basic Usage Example for Story Agents
+ * Basic Usage Example for Epic Woven
  *
  * This example demonstrates how to generate an illustrated story
- * using the Story Agents system with art style selection.
+ * using the Epic Woven system with art style selection.
  *
  * Run with: node examples/basic-usage.js
  */
@@ -48,7 +48,7 @@ garden every full moon, creating memories that would last a lifetime.
 `;
 
 async function main() {
-  console.log("🚀 Story Agents - Art Style Demo\n");
+  console.log("🚀 Epic Woven - Art Style Demo\n");
 
   // Show available art styles
   console.log("📚 Available Art Styles:");
@@ -62,7 +62,7 @@ async function main() {
   const styleAnalysis = await analyzeStoryStyle(sampleStory);
 
   console.log(
-    `   Recommended: ${ART_STYLES[styleAnalysis.recommendedStyle]?.name}`
+    `   Recommended: ${ART_STYLES[styleAnalysis.recommendedStyle]?.name}`,
   );
   console.log(`   Confidence: ${(styleAnalysis.confidence * 100).toFixed(0)}%`);
   console.log(`   Reason: ${styleAnalysis.reasoning}\n`);
@@ -73,14 +73,14 @@ async function main() {
     console.log(`   - Audience: ${styleAnalysis.storyAnalysis.targetAudience}`);
     console.log(`   - Tone: ${styleAnalysis.storyAnalysis.tone}`);
     console.log(
-      `   - Themes: ${styleAnalysis.storyAnalysis.themes?.join(", ")}`
+      `   - Themes: ${styleAnalysis.storyAnalysis.themes?.join(", ")}`,
     );
     console.log();
   }
 
   if (styleAnalysis.alternativeStyles) {
     console.log(
-      `   Alternative styles: ${styleAnalysis.alternativeStyles.join(", ")}\n`
+      `   Alternative styles: ${styleAnalysis.alternativeStyles.join(", ")}\n`,
     );
   }
 
@@ -125,7 +125,7 @@ async function main() {
 
     console.log(`\n📚 Story: ${result.storyPages.title}`);
     console.log(
-      `🎨 Art Style: ${ART_STYLES[result.artStyleDecision?.selectedStyle]?.name}`
+      `🎨 Art Style: ${ART_STYLES[result.artStyleDecision?.selectedStyle]?.name}`,
     );
     console.log(`📄 Pages: ${result.storyPages.pages.length}`);
     console.log(`👥 Characters: ${result.characters.length}`);

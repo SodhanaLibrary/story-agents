@@ -1,4 +1,4 @@
--- Story Agents MySQL Database Schema
+-- Epic Woven MySQL Database Schema
 -- Run this file to set up the database structure
 
 -- Create database if not exists
