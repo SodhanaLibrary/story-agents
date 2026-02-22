@@ -29,6 +29,9 @@ Thumbs.db
 node_modules/
 .env
 story-agents.pem
+_logs.json
+_snaps
+playwright/.cache
 
 ignore/*
 web/dist/*

@@ -6,6 +6,7 @@ set -e
 # Check if domain is provided
 if [ -z "$1" ]; then
     echo "Usage: ./setup-ssl.sh your-domain.com [email@example.com]"
+    echo "Example: ./setup-ssl.sh www.epicwoven.com admin@epicwoven.com"
     exit 1
 fi
 
